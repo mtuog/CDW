@@ -1,0 +1,50 @@
+.horizontal-slider {
+    width: 100%;
+    height: 25px;
+    position: relative;
+}
+
+.example-thumb {
+    height: 20px;
+    width: 20px;
+    background-color: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.example-track {
+    height: 5px;
+    top: 50%;
+    background: #ddd;
+    transform: translateY(-50%);
+    position: absolute;
+}
+
+.example-track-0 {
+    background: #ddd;
+}
+
+.example-track-1 {
+    background: #007bff;
+}
+
+.example-track-2 {
+    background: #ddd;
+}
+
+.price-range-values {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.thumb-value {
+    position: absolute;
+    top: -30px;
+    color: #000;
+    font-weight: bold;
+    white-space: nowrap;
+}
