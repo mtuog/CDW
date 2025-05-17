@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../config';
 
-const API_URL = `http://${BACKEND_URL_HTTP}/api`;
+const API_URL = `${BACKEND_URL_HTTP}/api`;
 
 // Hàm lấy tất cả đơn hàng với phân trang
 export const getAllOrders = async (params = {}) => {
@@ -26,16 +26,35 @@ export const getAllOrders = async (params = {}) => {
       url += `&search=${encodeURIComponent(params.search)}`;
     }
     
+    console.log("Fetching orders from URL:", url);
+    
     const token = localStorage.getItem('token');
     const response = await axios.get(url, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     });
+    
+    console.log("Response received:", response);
+    
+    if (response.status !== 200) {
+      console.error("API request failed with status:", response.status);
+      throw new Error(`API request failed with status: ${response.status}`);
+    }
     
     return response.data;
   } catch (error) {
     console.error('Error fetching orders:', error);
+    if (error.response) {
+      console.error("Error response data:", error.response.data);
+      console.error("Error response status:", error.response.status);
+      console.error("Error response headers:", error.response.headers);
+    } else if (error.request) {
+      console.error("Error request:", error.request);
+    } else {
+      console.error("Error message:", error.message);
+    }
     throw error;
   }
 };

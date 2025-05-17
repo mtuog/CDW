@@ -64,22 +64,33 @@ const OrderList = () => {
         sortDir: 'desc'      // Luôn sắp xếp từ mới nhất đến cũ nhất
       });
       
+      console.log("Orders API response:", response);
+      
       // Kiểm tra có đúng cấu trúc dữ liệu không
       if (response && response.orders) {
-        const formattedOrders = response.orders.map(order => ({
-          id: order.id,
-          orderCode: order.orderCode || `ORD-${order.id}`,
-          customer: order.user ? order.user.username : 'Khách vãng lai',
-          email: order.user ? order.user.email : 'N/A',
-          phone: order.phone,
-          date: new Date(order.createdAt).toISOString().split('T')[0],
-          amount: order.totalAmount,
-          items: order.orderItems ? order.orderItems.length : 0,
-          payment_method: order.paymentMethod,
-          status: order.status,
-          statusVi: statusTranslations[order.status] || order.status,
-          createdAt: new Date(order.createdAt) // Add createdAt for sorting
-        }));
+        const formattedOrders = response.orders.map(order => {
+          console.log("Processing order:", order);
+          
+          return {
+            id: order.id,
+            orderCode: order.orderCode || `ORD-${order.id}`,
+            customer: order.user ? order.user.username : 'Khách vãng lai',
+            email: order.user ? order.user.email : 'N/A',
+            phone: order.phone,
+            date: new Date(order.createdAt).toISOString().split('T')[0],
+            amount: order.totalAmount,
+            subtotalAmount: order.subtotalAmount,
+            discountCodeValue: order.discountCodeValue,
+            discountCodeId: order.discountCodeId,
+            items: order.orderItems ? order.orderItems.length : 0,
+            payment_method: order.paymentMethod,
+            status: order.status,
+            statusVi: statusTranslations[order.status] || order.status,
+            createdAt: new Date(order.createdAt) // Add createdAt for sorting
+          };
+        });
+        
+        console.log("Formatted orders:", formattedOrders);
         
         // Store all orders for filtering
         setAllOrders(formattedOrders);
@@ -90,6 +101,7 @@ const OrderList = () => {
           totalItems: formattedOrders.length
         }));
       } else {
+        console.error("Invalid response structure:", response);
         toast.error("Dữ liệu không đúng định dạng");
       }
       

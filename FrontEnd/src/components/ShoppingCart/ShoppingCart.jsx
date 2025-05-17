@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { updateQuantity, removeFromCart, loadCart } from '../../store/Actions';
 import { getProductById } from '../../api/productApi';
 import { findProductSizesById } from '../../sizeColorHelpers';
+import discountCodeApi from '../../api/discountCodeApi';
 import Swal from 'sweetalert2';
 
 export async function loadcart() {
@@ -23,6 +24,8 @@ const ShoppingCart = () => {
 	const [couponError, setCouponError] = useState('');
 	const [couponSuccess, setCouponSuccess] = useState('');
 	const [editingSizeItemId, setEditingSizeItemId] = useState(null);
+	const [validDiscountCode, setValidDiscountCode] = useState(null);
+	const [processing, setProcessing] = useState(false);
 
 	// Phí vận chuyển cố định
 	const shippingFee = 30000;
@@ -107,23 +110,149 @@ const ShoppingCart = () => {
 	};
 
 	const handleCheckout = () => {
+		// Save discount code to localStorage if valid
+		if (validDiscountCode) {
+			localStorage.setItem('discountCode', validDiscountCode);
+			localStorage.setItem('discountAmount', discount.toString());
+		} else {
+			localStorage.removeItem('discountCode');
+			localStorage.removeItem('discountAmount');
+		}
 		navigate('/payment');
 	};
 
-	const handleApplyCoupon = () => {
-		// Giả lập xử lý mã giảm giá
-		if (couponCode.toUpperCase() === 'SALE10') {
-			setDiscount(calculateSubtotal() * 0.1);
-			setCouponSuccess('Áp dụng mã giảm giá thành công!');
-			setCouponError('');
-		} else if (couponCode.toUpperCase() === 'SHIP0') {
-			setDiscount(shippingFee);
-			setCouponSuccess('Miễn phí vận chuyển áp dụng thành công!');
-			setCouponError('');
-		} else {
-			setDiscount(0);
-			setCouponError('Mã giảm giá không hợp lệ hoặc đã hết hạn');
+	const handleApplyCoupon = async () => {
+		if (!couponCode.trim()) {
+			setCouponError('Vui lòng nhập mã giảm giá');
 			setCouponSuccess('');
+			return;
+		}
+
+		try {
+			setProcessing(true);
+			setCouponError('');
+			setCouponSuccess('');
+			
+			// First, check if the discount code is valid
+			console.log(`Checking validity of discount code: ${couponCode}`);
+			const validityCheck = await discountCodeApi.checkDiscountCode(
+				couponCode,
+				localStorage.getItem('userId')
+			);
+			
+			console.log('Validity check response:', validityCheck);
+			
+			// If the code is not valid, show an error message
+			if (!validityCheck.valid) {
+				setDiscount(0);
+				setValidDiscountCode(null);
+				setCouponError(validityCheck.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn');
+				setProcessing(false);
+				return;
+			}
+			
+			// Calculate subtotal for validation
+			const subtotal = calculateSubtotal();
+			console.log(`Attempting to validate discount code: ${couponCode} for subtotal: ${subtotal}`);
+			
+			// Check if the order meets the minimum purchase amount
+			if (validityCheck.minimumPurchaseAmount && 
+				subtotal < validityCheck.minimumPurchaseAmount) {
+				setDiscount(0);
+				setValidDiscountCode(null);
+				setCouponError(`Giá trị đơn hàng phải từ ${validityCheck.minimumPurchaseAmount.toLocaleString()} VND trở lên để sử dụng mã giảm giá này`);
+				setProcessing(false);
+				return;
+			}
+			
+			// If the code is valid and meets minimum purchase, calculate the discount
+			let discountAmount = 0;
+			
+			// Use the discountType and value from the validity check
+			if (validityCheck.discountType === 'PERCENTAGE') {
+				// Calculate percentage discount
+				discountAmount = subtotal * (validityCheck.value / 100);
+				
+				// Apply maximum discount if set
+				if (validityCheck.maximumDiscountAmount && 
+					validityCheck.maximumDiscountAmount > 0 && 
+					discountAmount > validityCheck.maximumDiscountAmount) {
+					discountAmount = validityCheck.maximumDiscountAmount;
+				}
+			} else {
+				// Fixed amount discount
+				discountAmount = validityCheck.value;
+				
+				// Ensure discount doesn't exceed subtotal
+				if (discountAmount > subtotal) {
+					discountAmount = subtotal;
+				}
+			}
+			
+			console.log(`Calculated discount amount: ${discountAmount}`);
+			
+			// Set discount amount and success message
+			setDiscount(discountAmount);
+			setValidDiscountCode(couponCode);
+			setCouponSuccess('Áp dụng mã giảm giá thành công!');
+			
+		} catch (error) {
+			console.error('Error applying discount code:', error);
+			setDiscount(0);
+			setValidDiscountCode(null);
+			
+			// Default error message
+			let errorMessage = 'Mã giảm giá không hợp lệ hoặc đã hết hạn';
+			
+			if (error.response) {
+				console.log('Error response:', error.response);
+				
+				// Handle structured error response
+				if (error.response.data) {
+					if (typeof error.response.data === 'string') {
+						errorMessage = error.response.data;
+					} else if (error.response.data.message) {
+						errorMessage = error.response.data.message;
+						
+						// Use specific error code handling for better UX
+						if (error.response.data.reason) {
+							console.log('Error reason:', error.response.data.reason);
+							switch(error.response.data.reason) {
+								case 'CODE_NOT_FOUND':
+									errorMessage = 'Mã giảm giá không tồn tại.';
+									break;
+								case 'CODE_EXPIRED':
+									errorMessage = 'Mã giảm giá đã hết hạn.';
+									break;
+								case 'CODE_NOT_STARTED':
+									errorMessage = 'Mã giảm giá chưa có hiệu lực.';
+									break;
+								case 'CODE_INACTIVE':
+									errorMessage = 'Mã giảm giá không được kích hoạt.';
+									break;
+								case 'USAGE_LIMIT_REACHED':
+									errorMessage = 'Mã giảm giá đã đạt giới hạn sử dụng.';
+									break;
+								case 'ORDER_TOO_SMALL':
+									errorMessage = 'Giá trị đơn hàng chưa đạt mức tối thiểu để áp dụng mã giảm giá này.';
+									break;
+								case 'INVALID_FORMAT':
+									errorMessage = 'Định dạng đơn hàng không hợp lệ.';
+									break;
+								case 'SERVER_ERROR':
+									errorMessage = 'Đã xảy ra lỗi khi kiểm tra mã giảm giá. Vui lòng thử lại sau.';
+									break;
+								default:
+									// Use the message provided by the server
+							}
+						}
+					}
+				}
+			}
+			
+			setCouponError(errorMessage);
+		} finally {
+			setProcessing(false);
 		}
 	};
 
@@ -143,6 +272,7 @@ const ShoppingCart = () => {
 	// Tính tổng cộng
 	const calculateTotal = () => {
 		const subtotal = calculateSubtotal();
+		console.log(`Calculating total: Subtotal ${subtotal} - Discount ${discount} + Shipping ${shippingFee} = ${subtotal + shippingFee - discount}`);
 		return subtotal + shippingFee - discount;
 	};
 
@@ -283,14 +413,39 @@ const ShoppingCart = () => {
 										placeholder="Mã giảm giá" 
 										value={couponCode}
 										onChange={(e) => setCouponCode(e.target.value)}
+										disabled={processing || validDiscountCode !== null}
 									/>
-									<div 
-										className="flex-c-m stext-101 cl2 size-118 bg8 bor13 hov-btn3 p-lr-15 trans-04 pointer m-tb-5"
-										onClick={handleApplyCoupon}
-									>
-										Áp dụng
-									</div>
+									{validDiscountCode ? (
+										<div 
+											className="flex-c-m stext-101 cl2 size-118 bg8 bor13 hov-btn3 p-lr-15 trans-04 pointer m-tb-5"
+											onClick={() => {
+												setValidDiscountCode(null);
+												setDiscount(0);
+												setCouponCode('');
+												setCouponSuccess('');
+											}}
+										>
+											Xóa mã
+										</div>
+									) : (
+										<div 
+											className={`flex-c-m stext-101 cl2 size-118 bg8 bor13 hov-btn3 p-lr-15 trans-04 pointer m-tb-5 ${processing ? 'disabled-btn' : ''}`}
+											onClick={!processing ? handleApplyCoupon : undefined}
+										>
+											{processing ? 'Đang kiểm tra...' : 'Áp dụng'}
+										</div>
+									)}
 								</div>
+								{validDiscountCode && (
+									<div className="flex-w flex-m m-r-20 m-tb-5">
+										<div className="discount-applied-badge">
+											<i className="zmdi zmdi-check-circle"></i> Mã giảm giá đã áp dụng: {validDiscountCode}
+										</div>
+										<div className="discount-amount">
+											-{discount.toLocaleString()} VND
+										</div>
+									</div>
+								)}
 								{couponError && (
 									<div className="coupon-error m-t-10">{couponError}</div>
 								)}
@@ -431,6 +586,36 @@ const ShoppingCart = () => {
 					text-align: center;
 				}
 				.text-danger {
+					color: #e65540;
+				}
+				.disabled-btn {
+					opacity: 0.6;
+					cursor: not-allowed;
+				}
+				.discount-applied-badge {
+					display: flex;
+					align-items: center;
+					background-color: #e8f5e9;
+					color: #2e7d32;
+					padding: 8px 12px;
+					border-radius: 4px;
+					margin-right: 10px;
+					font-size: 14px;
+					margin-bottom: 10px;
+					width: 100%;
+				}
+				
+				.discount-applied-badge i {
+					margin-right: 8px;
+					font-size: 16px;
+				}
+				
+				.discount-amount {
+					font-weight: bold;
+					color: #e65540;
+				}
+				
+				.discount-text {
 					color: #e65540;
 				}
 			`}</style>

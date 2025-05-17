@@ -36,6 +36,9 @@ import BankTransfer from './components/Payment/BankTransfer';
 import CreditCardPayment from './components/Payment/CreditCardPayment';
 import PaymentResult from './components/Payment/PaymentResult';
 import OrderSuccess from './components/Payment/OrderSuccess';
+import DiscountList from './admin/pages/discount';
+import AddDiscount from './admin/pages/discount/add';
+import EditDiscount from './admin/pages/discount/edit';
 
 const Layout = () => {
     return (
@@ -106,6 +109,11 @@ const router = createBrowserRouter([
             
             // Customer Analytics
             { path: 'customers', element: <CustomerAnalytics /> },
+            
+            // Discount Codes
+            { path: 'discount', element: <DiscountList /> },
+            { path: 'discount/add', element: <AddDiscount /> },
+            { path: 'discount/edit/:id', element: <EditDiscount /> },
             
             // Settings
             { path: 'settings/store', element: <StoreSettings /> },

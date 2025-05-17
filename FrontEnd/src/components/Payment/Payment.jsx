@@ -4,6 +4,7 @@ import {loadCart, removeFromCart, updateQuantity, clearCart} from "../../store/A
 import {useDispatch, useSelector} from "react-redux";
 import {Link, useNavigate} from "react-router-dom";
 import {getProductById} from '../../api/productApi';
+import discountCodeApi from '../../api/discountCodeApi';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../config';
 import Swal from 'sweetalert2';
@@ -20,6 +21,10 @@ const Payment = () => {
     const [productDetails, setProductDetails] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [discountCode, setDiscountCode] = useState(localStorage.getItem('discountCode') || '');
+    const [discountAmount, setDiscountAmount] = useState(
+        localStorage.getItem('discountAmount') ? parseInt(localStorage.getItem('discountAmount')) : 0
+    );
 
     // Customer information
     const [formData, setFormData] = useState({
@@ -39,6 +44,9 @@ const Payment = () => {
         { id: 'bank', name: 'Chuyển khoản ngân hàng', icon: 'fa-university', description: 'Chuyển khoản trực tiếp đến tài khoản ngân hàng của chúng tôi' },
         { id: 'vnpay', name: 'Thanh toán qua VNPAY', icon: 'fa-credit-card', description: 'Thanh toán bằng thẻ ATM/Visa/Master/JCB/QR Code' }
     ];
+
+    // Phí vận chuyển cố định
+    const shippingFee = 30000;
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -97,6 +105,12 @@ const Payment = () => {
         }, 0);
     };
 
+    // Calculate total with discount
+    const calculateTotal = () => {
+        const subtotal = calculateSubtotal();
+        return subtotal + shippingFee - discountAmount;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -133,12 +147,14 @@ const Payment = () => {
                 };
             });
             
-            const totalAmount = calculateSubtotal();
+            const subtotal = calculateSubtotal();
+            const totalAmount = calculateTotal();
             
             // Tạo đối tượng đơn hàng
             const orderData = {
                 user: userId ? { id: userId } : null,
                 totalAmount: totalAmount,
+                subtotalAmount: subtotal,
                 status: "PENDING",
                 shippingAddress: `${formData.address}, ${formData.city}${formData.zipCode ? ', ' + formData.zipCode : ''}`,
                 phone: formData.phone,
@@ -146,10 +162,25 @@ const Payment = () => {
                 orderItems: orderItems
             };
             
+            // Add discount code information if available
+            if (discountCode) {
+                orderData.discountCodeValue = discountCode;
+                // Attempt to get the discount code ID if a user is logged in
+                try {
+                    const discountCodeDetails = await discountCodeApi.getDiscountCodeByCode(discountCode);
+                    if (discountCodeDetails && discountCodeDetails.id) {
+                        orderData.discountCodeId = discountCodeDetails.id;
+                    }
+                } catch (error) {
+                    console.error('Error fetching discount code details:', error);
+                    // Continue without the discount code ID
+                }
+            }
+            
             console.log('Sending order data:', orderData);
             
             // Gửi đơn hàng đến API
-            const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/orders`, orderData, {
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/orders`, orderData, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': token ? `Bearer ${token}` : ''
@@ -192,11 +223,11 @@ const Payment = () => {
                         };
                         
                         console.log("Dữ liệu thanh toán VNPAY (đơn giản hóa):", vnpayData);
-                        console.log("URL API VNPAY:", `http://${BACKEND_URL_HTTP}/api/vnpay/create-payment`);
+                        console.log("URL API VNPAY:", `${BACKEND_URL_HTTP}/api/vnpay/create-payment`);
                         
                         // Debug API call - kiểm tra xem URL, method, và headers có đúng không
                         console.log("API Call Config:", {
-                            url: `http://${BACKEND_URL_HTTP}/api/vnpay/create-payment`,
+                            url: `${BACKEND_URL_HTTP}/api/vnpay/create-payment`,
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -208,7 +239,7 @@ const Payment = () => {
                         // Gọi API tạo URL thanh toán VNPAY với phương thức POST
                         const vnpayResponse = await axios({
                             method: 'post',
-                            url: `http://${BACKEND_URL_HTTP}/api/vnpay/create-payment`,
+                            url: `${BACKEND_URL_HTTP}/api/vnpay/create-payment`,
                             data: vnpayData,
                             headers: {
                                 'Content-Type': 'application/json',
@@ -258,6 +289,24 @@ const Payment = () => {
                         });
                         return;
                     }
+                }
+                
+                // After successful order, record the discount code usage if applicable
+                if (response.status === 201 && discountCode) {
+                    try {
+                        await discountCodeApi.applyDiscountCode(
+                            discountCode, 
+                            localStorage.getItem('userId')
+                        );
+                        console.log('Discount code usage recorded');
+                    } catch (error) {
+                        console.error('Error recording discount code usage:', error);
+                        // Continue with the order process even if this fails
+                    }
+                    
+                    // Clear discount code from localStorage
+                    localStorage.removeItem('discountCode');
+                    localStorage.removeItem('discountAmount');
                 }
                 
                 // Hiển thị thông báo thành công
@@ -508,7 +557,7 @@ const Payment = () => {
                                     </div>
                             <div className="size-209 p-t-1">
                                 <span className="mtext-110 cl2">
-                                    {calculateSubtotal().toLocaleString()} VND
+                                    {calculateTotal().toLocaleString()} VND
 								</span>
                             </div>
                         </div>

@@ -11,6 +11,7 @@ const OrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [discountDetails, setDiscountDetails] = useState(null);
   
   // Status options
   const statusOptions = ['DELIVERED', 'SHIPPED', 'PROCESSING', 'PENDING', 'CANCELLED'];
@@ -33,7 +34,7 @@ const OrderDetail = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await axios.get(`http://${BACKEND_URL_HTTP}/api/orders/${id}`, {
+      const response = await axios.get(`${BACKEND_URL_HTTP}/api/orders/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -46,6 +47,25 @@ const OrderDetail = () => {
       }
       
       setOrder(orderData);
+      
+      // Fetch discount code details if available
+      if (orderData.discountCodeValue) {
+        try {
+          const discountResponse = await axios.get(
+            `${BACKEND_URL_HTTP}/api/discount-codes/code/${orderData.discountCodeValue}`, 
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          setDiscountDetails(discountResponse.data);
+        } catch (error) {
+          console.error("Error fetching discount code details:", error);
+          // Continue without discount details
+        }
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error("Error fetching order details:", error);
@@ -96,7 +116,7 @@ const OrderDetail = () => {
     try {
       const token = localStorage.getItem('token');
       
-      await axios.put(`http://${BACKEND_URL_HTTP}/api/orders/${id}/status?status=${newStatus}`, {}, {
+      await axios.put(`${BACKEND_URL_HTTP}/api/orders/${id}/status?status=${newStatus}`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -255,6 +275,62 @@ const OrderDetail = () => {
           </div>
         </div>
         
+        {/* Discount Code Info */}
+        {order.discountCodeValue && (
+          <div className="order-section discount-info-section">
+            <h2>Thông tin mã giảm giá</h2>
+            <div className="info-grid">
+              <div className="info-item">
+                <div className="info-label">Mã giảm giá:</div>
+                <div className="info-value">{order.discountCodeValue}</div>
+              </div>
+              
+              {discountDetails && (
+                <>
+                  <div className="info-item">
+                    <div className="info-label">Loại giảm giá:</div>
+                    <div className="info-value">
+                      {discountDetails.discountType === 'PERCENTAGE' 
+                        ? `Giảm ${discountDetails.value}%` 
+                        : `Giảm ${formatPrice(discountDetails.value)}`}
+                    </div>
+                  </div>
+                  
+                  {discountDetails.minimumPurchaseAmount > 0 && (
+                    <div className="info-item">
+                      <div className="info-label">Giá trị đơn hàng tối thiểu:</div>
+                      <div className="info-value">{formatPrice(discountDetails.minimumPurchaseAmount)}</div>
+                    </div>
+                  )}
+                  
+                  {discountDetails.maximumDiscountAmount > 0 && (
+                    <div className="info-item">
+                      <div className="info-label">Giảm tối đa:</div>
+                      <div className="info-value">{formatPrice(discountDetails.maximumDiscountAmount)}</div>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {order.subtotalAmount && (
+                <div className="info-item">
+                  <div className="info-label">Giá trị đơn hàng gốc:</div>
+                  <div className="info-value">{formatPrice(order.subtotalAmount)}</div>
+                </div>
+              )}
+              
+              <div className="info-item">
+                <div className="info-label">Giá trị đã giảm:</div>
+                <div className="info-value discount-amount">
+                  {order.subtotalAmount 
+                    ? formatPrice(order.subtotalAmount - order.totalAmount) 
+                    : "Không xác định"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Order Items */}
         <div className="order-section order-items-section">
           <h2>Sản phẩm đặt mua</h2>
@@ -289,7 +365,7 @@ const OrderDetail = () => {
               <tfoot>
                 <tr>
                   <td colSpan="4" className="text-right">Tổng tiền hàng:</td>
-                  <td>{formatPrice(order.totalAmount)}</td>
+                  <td>{order.subtotalAmount ? formatPrice(order.subtotalAmount) : formatPrice(order.totalAmount)}</td>
                 </tr>
                 {order.shippingFee && (
                   <tr>
@@ -297,10 +373,10 @@ const OrderDetail = () => {
                     <td>{formatPrice(order.shippingFee)}</td>
                   </tr>
                 )}
-                {order.discount && (
+                {order.discountCodeValue && order.subtotalAmount && (
                   <tr>
-                    <td colSpan="4" className="text-right">Giảm giá:</td>
-                    <td>-{formatPrice(order.discount)}</td>
+                    <td colSpan="4" className="text-right">Giảm giá ({order.discountCodeValue}):</td>
+                    <td className="discount-amount">-{formatPrice(order.subtotalAmount - order.totalAmount)}</td>
                   </tr>
                 )}
                 <tr className="total-row">
@@ -314,6 +390,16 @@ const OrderDetail = () => {
       </div>
       
       <style jsx>{`
+        .discount-amount {
+          color: #28a745;
+          font-weight: 600;
+        }
+        
+        .discount-info-section {
+          background-color: #f8f9fa;
+          border-left: 4px solid #28a745;
+        }
+        
         .order-detail-container {
           padding: 20px;
           background-color: #fff;

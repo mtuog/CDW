@@ -770,11 +770,11 @@ const ProductForm = () => {
               <div className="size-options">
                 {availableSizes.map((size, index) => (
                   <div key={index} className="size-option-with-quantity">
-                    <div 
-                      className={`size-option ${formData.sizes.includes(size) ? 'selected' : ''}`}
-                      onClick={() => handleSizeToggle(size)}
-                    >
-                      {size}
+                  <div 
+                    className={`size-option ${formData.sizes.includes(size) ? 'selected' : ''}`}
+                    onClick={() => handleSizeToggle(size)}
+                  >
+                    {size}
                     </div>
                     {formData.sizes.includes(size) && (
                       <div className="size-quantity">

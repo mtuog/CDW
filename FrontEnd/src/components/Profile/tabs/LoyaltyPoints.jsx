@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config.js';
+import React, { useState, useEffect } from 'react';import axios from 'axios';import { BACKEND_URL_HTTP } from '../../../config';
 
 const LoyaltyPoints = ({ user }) => {
     const [loyaltyData, setLoyaltyData] = useState({
@@ -23,7 +21,7 @@ const LoyaltyPoints = ({ user }) => {
             const token = localStorage.getItem('token');
             
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/loyalty/${user.id}`,
+                `${BACKEND_URL_HTTP}/api/loyalty/${user.id}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -132,6 +130,41 @@ const LoyaltyPoints = ({ user }) => {
         return (loyaltyData.points / totalPointsForNextRank) * 100;
     };
     
+    // Function to format transaction description
+    const formatTransactionDescription = (transaction) => {
+        if (transaction.type === 'EARN' && transaction.orderCode) {
+            return `Đơn hàng #${transaction.orderCode}${transaction.discountCodeValue ? ` (Mã giảm giá: ${transaction.discountCodeValue})` : ''}`;
+        }
+        return transaction.description;
+    };
+    
+    // Hiển thị giá trị đơn hàng gốc hoặc sau giảm giá
+    const displayTransactionAmount = (transaction) => {
+        if (transaction.type === 'EARN' && transaction.orderAmount) {
+            const originalAmount = transaction.subtotalAmount || transaction.orderAmount;
+            
+            if (transaction.subtotalAmount && transaction.subtotalAmount > transaction.orderAmount) {
+                return (
+                    <>
+                        <span className="original-price">{formatPrice(originalAmount)}</span>
+                        <span className="discounted-price">{formatPrice(transaction.orderAmount)}</span>
+                    </>
+                );
+            }
+            
+            return formatPrice(transaction.orderAmount);
+        }
+        return null;
+    };
+    
+    // Format price
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('vi-VN', { 
+            style: 'currency', 
+            currency: 'VND' 
+        }).format(price);
+    };
+    
     return (
         <div className="loyalty-points">
             <h4 className="mb-4">Điểm tích lũy & Hạng thành viên</h4>
@@ -224,6 +257,7 @@ const LoyaltyPoints = ({ user }) => {
                                             <tr>
                                                 <th>Ngày</th>
                                                 <th>Mô tả</th>
+                                                <th>Giá trị</th>
                                                 <th className="text-end">Điểm</th>
                                             </tr>
                                         </thead>
@@ -231,7 +265,8 @@ const LoyaltyPoints = ({ user }) => {
                                             {loyaltyData.transactions.map(transaction => (
                                                 <tr key={transaction.id}>
                                                     <td>{formatDate(transaction.date)}</td>
-                                                    <td>{transaction.description}</td>
+                                                    <td>{formatTransactionDescription(transaction)}</td>
+                                                    <td>{displayTransactionAmount(transaction)}</td>
                                                     <td className={`text-end ${transaction.type === 'EARN' ? 'text-success' : 'text-danger'}`}>
                                                         {transaction.type === 'EARN' ? '+' : ''}{transaction.points}
                                                     </td>
@@ -301,6 +336,56 @@ const LoyaltyPoints = ({ user }) => {
                             </div>
                         </div>
                     </div>
+
+                    <style jsx>{`
+                        .loyalty-rank-badge {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 20px;
+                        }
+                        
+                        .loyalty-points-circle {
+                            width: 120px;
+                            height: 120px;
+                            border-radius: 50%;
+                            background-color: #f8f9fa;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto;
+                            border: 5px solid #e9ecef;
+                        }
+                        
+                        .points-number {
+                            font-size: 32px;
+                            font-weight: bold;
+                            color: #28a745;
+                        }
+                        
+                        .points-label {
+                            font-size: 14px;
+                            color: #6c757d;
+                        }
+                        
+                        .original-price {
+                            text-decoration: line-through;
+                            color: #6c757d;
+                            font-size: 0.9em;
+                            margin-right: 8px;
+                        }
+                        
+                        .discounted-price {
+                            color: #28a745;
+                            font-weight: 600;
+                        }
+                    `}</style>
                 </>
             )}
         </div>

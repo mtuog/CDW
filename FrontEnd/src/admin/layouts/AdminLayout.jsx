@@ -19,6 +19,7 @@ const sidebarLinks = [
   { to: '/admin/categories', icon: 'fas fa-tags', text: 'Danh mục' },
   { to: '/admin/orders', icon: 'fas fa-shopping-cart', text: 'Đơn hàng' },
   { to: '/admin/customers', icon: 'fas fa-users', text: 'Khách hàng' },
+  { to: '/admin/discount', icon: 'fas fa-percent', text: 'Mã giảm giá' },
   { 
     icon: 'fas fa-cog', 
     text: 'Cài đặt',
