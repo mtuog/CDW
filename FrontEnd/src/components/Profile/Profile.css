@@ -1,0 +1,259 @@
+/* Profile Container */
+.profile-container {
+    min-height: 600px;
+}
+
+/* Profile Sidebar */
+.profile-sidebar {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Profile Userpic */
+.profile-userpic {
+    width: 120px;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 3px solid #f0f0f0;
+    position: relative;
+}
+
+.profile-userpic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-userpic-default {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, #4e73df, #224abe);
+    color: white;
+    font-size: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Profile User Title */
+.profile-usertitle-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.profile-usertitle-email {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+/* Profile Usermenu */
+.profile-usermenu {
+    margin-top: 20px;
+}
+
+.profile-usermenu .nav-link {
+    border-radius: 6px;
+    color: #555;
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+    background: transparent;
+    border: none;
+    text-align: left;
+    width: 100%;
+}
+
+.profile-usermenu .nav-link i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.profile-usermenu .nav-link:hover,
+.profile-usermenu .nav-link.active {
+    background-color: #f8f9fc;
+    color: #4e73df;
+}
+
+.profile-usermenu .nav-link.active {
+    border-left: 3px solid #4e73df;
+    font-weight: 600;
+}
+
+/* Profile Content */
+.profile-content {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+
+/* Form controls */
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* Tables */
+.table {
+    font-size: 0.9rem;
+}
+
+.table-light {
+    background-color: #f8f9fc;
+}
+
+/* Profile Detail Items */
+.profile-detail-item {
+    margin-bottom: 15px;
+}
+
+.profile-detail-item label {
+    display: block;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.profile-detail-item p {
+    font-weight: 500;
+    margin-bottom: 0;
+    color: #333 !important;
+}
+
+/* Order Detail Content */
+.order-detail-content {
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+/* Loyalty Points */
+.loyalty-points-card {
+    background: linear-gradient(45deg, #4e73df, #224abe);
+    color: white;
+}
+
+.loyalty-points-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.points-number {
+    font-size: 36px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.points-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.loyalty-rank-badge {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Wishlist */
+.wishlist-item {
+    transition: transform 0.2s;
+}
+
+.wishlist-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.wishlist-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    opacity: 0.8;
+}
+
+.wishlist-remove-btn:hover {
+    opacity: 1;
+}
+
+.out-of-stock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+/* Reviews */
+.reviews-list .card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .profile-sidebar {
+        margin-bottom: 30px;
+    }
+    
+    .profile-userpic {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+@media (max-width: 576px) {
+    .profile-content {
+        padding: 15px;
+    }
+    
+    .loyalty-points-circle {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .points-number {
+        font-size: 30px;
+    }
+} 
