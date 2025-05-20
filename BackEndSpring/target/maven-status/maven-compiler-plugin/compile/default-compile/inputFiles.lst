@@ -7,8 +7,10 @@ E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\config\Sec
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\AuthResponse.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\CategoryRepository.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\CategoryController.java
+E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\PaymentLogRepository.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\DiscountCode.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\service\LoyaltyService.java
+E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\EmailTestController.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ReviewRepository.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\dto\DiscountCodeDTO.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\security\JwtAuthenticationFilter.java
@@ -32,6 +34,7 @@ E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Sett
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\VerifyAccountRequest.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ProductRepository.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\SettingController.java
+E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\PaymentLog.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\model\AddressBook.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\service\CategoryService.java
 E:\GitHub\CDWeb\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\DiscountCodeController.java

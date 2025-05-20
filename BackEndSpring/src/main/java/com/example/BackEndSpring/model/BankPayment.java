@@ -2,9 +2,11 @@ package com.example.BackEndSpring.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "bank_payments")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class BankPayment {
     
     public enum PaymentStatus {
@@ -20,6 +22,7 @@ public class BankPayment {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order order;
     
     @Column(nullable = false)

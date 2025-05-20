@@ -78,7 +78,7 @@ public class SettingService {
         // Email settings
         Map<String, String> emailSettings = new HashMap<>();
         emailSettings.put("email_notifications", "true");
-        emailSettings.put("admin_email", "admin@fashionstore.com");
+        emailSettings.put("admin_email", "minhtuong6030@gmail.com");
         emailSettings.put("send_order_confirmation", "true");
         emailSettings.put("send_order_status_updates", "true");
         emailSettings.put("email_footer", "");

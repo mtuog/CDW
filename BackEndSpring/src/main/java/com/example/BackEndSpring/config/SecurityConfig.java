@@ -41,6 +41,7 @@ public class SecurityConfig {
                 // Public endpoints - không yêu cầu xác thực
                 .requestMatchers("/api/auth/**", "/api/products/**", "/api/categories/**", "/api/public/**", "/api/files/qr-codes/**").permitAll()
                 .requestMatchers("/api/vnpay/**").permitAll()
+                .requestMatchers("/api/test-email/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
                 // Protected endpoints - yêu cầu xác thực
                 .requestMatchers("/api/wishlist/**").authenticated()

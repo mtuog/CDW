@@ -222,11 +222,16 @@ public class OrderController {
             }
 
             // Log thông tin đơn hàng
-            System.out.println("Creating new order: " + order);
+            System.out.println("====================== CREATING NEW ORDER ======================");
+            System.out.println("User: " + (order.getUser() != null ? order.getUser().getUsername() : "Guest"));
+            if (order.getUser() != null) {
+                System.out.println("User Email: " + order.getUser().getEmail());
+            }
             System.out.println("Shipping Address: " + order.getShippingAddress());
             System.out.println("Phone: " + order.getPhone());
             System.out.println("Total Amount: " + order.getTotalAmount());
             System.out.println("Payment Method: " + order.getPaymentMethod());
+            System.out.println("==============================================================");
             
             if (order.getOrderItems() != null) {
                 System.out.println("Order Items Count: " + order.getOrderItems().size());

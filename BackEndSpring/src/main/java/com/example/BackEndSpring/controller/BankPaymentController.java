@@ -3,6 +3,7 @@ package com.example.BackEndSpring.controller;
 import com.example.BackEndSpring.model.BankAccount;
 import com.example.BackEndSpring.model.BankPayment;
 import com.example.BackEndSpring.model.Order;
+import com.example.BackEndSpring.model.PaymentLog;
 import com.example.BackEndSpring.service.BankPaymentService;
 import com.example.BackEndSpring.service.OrderService;
 import com.example.BackEndSpring.service.VietQRService;
@@ -130,6 +131,15 @@ public class BankPaymentController {
         try {
             BankPayment.PaymentStatus paymentStatus = BankPayment.PaymentStatus.valueOf(status.toUpperCase());
             List<BankPayment> payments = bankPaymentService.getPaymentsByStatus(paymentStatus);
+            
+            // Force lazy loading of order to avoid serialization issues
+            payments.forEach(payment -> {
+                if (payment.getOrder() != null) {
+                    // Access order properties to force loading
+                    payment.getOrder().getId();
+                }
+            });
+            
             return ResponseEntity.ok(payments);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
@@ -212,6 +222,34 @@ public class BankPaymentController {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", "Không thể tạo mã QR: " + e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    @Operation(summary = "Lấy lịch sử thanh toán của một giao dịch")
+    @ApiResponse(responseCode = "200", description = "Thành công")
+    @GetMapping("/{paymentId}/logs")
+    public ResponseEntity<?> getPaymentLogs(@PathVariable Long paymentId) {
+        try {
+            List<PaymentLog> logs = bankPaymentService.getPaymentLogs(paymentId);
+            return ResponseEntity.ok(logs);
+        } catch (RuntimeException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+    }
+    
+    @Operation(summary = "Lấy lịch sử thanh toán của một đơn hàng")
+    @ApiResponse(responseCode = "200", description = "Thành công")
+    @GetMapping("/orders/{orderId}/logs")
+    public ResponseEntity<?> getOrderPaymentLogs(@PathVariable Long orderId) {
+        try {
+            List<PaymentLog> logs = bankPaymentService.getOrderPaymentLogs(orderId);
+            return ResponseEntity.ok(logs);
+        } catch (RuntimeException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 } 

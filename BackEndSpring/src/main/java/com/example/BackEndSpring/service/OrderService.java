@@ -26,6 +26,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.mail.MessagingException;
+import java.text.NumberFormat;
+import java.util.Locale;
+
 @Service
 public class OrderService {
 
@@ -35,17 +39,20 @@ public class OrderService {
     private final ProductService productService;
     private final SettingService settingService;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final EmailService emailService;
 
     @Autowired
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, 
                         LoyaltyService loyaltyService, ProductService productService,
-                        SettingService settingService, LoyaltyTransactionRepository loyaltyTransactionRepository) {
+                        SettingService settingService, LoyaltyTransactionRepository loyaltyTransactionRepository,
+                        EmailService emailService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.loyaltyService = loyaltyService;
         this.productService = productService;
         this.settingService = settingService;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
+        this.emailService = emailService;
     }
 
     public List<Order> getAllOrders() {
@@ -133,7 +140,125 @@ public class OrderService {
             }
         }
         
+        // Gửi email xác nhận đơn hàng
+        try {
+            // Always attempt to send order confirmation email
+            System.out.println("Attempting to send order confirmation email for order #" + savedOrder.getId());
+            
+            if (order.getUser() == null) {
+                System.err.println("Cannot send confirmation email: User is null for order #" + savedOrder.getId());
+            } else if (order.getUser().getEmail() == null || order.getUser().getEmail().trim().isEmpty()) {
+                System.err.println("Cannot send confirmation email: User email is null or empty for order #" + savedOrder.getId());
+            } else {
+                // Print email details for debugging
+                System.out.println("User email: " + order.getUser().getEmail());
+                System.out.println("Username: " + order.getUser().getUsername());
+                
+                // Use the simple direct method for sending the email
+                sendSimpleOrderConfirmationEmail(savedOrder);
+            }
+        } catch (Exception e) {
+            // Log lỗi nhưng không gián đoạn quá trình tạo đơn hàng
+            System.err.println("Error sending order confirmation email: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         return savedOrder;
+    }
+    
+    /**
+     * Send a simplified order confirmation email using a direct approach similar to BankPaymentService
+     */
+    private void sendSimpleOrderConfirmationEmail(Order order) {
+        try {
+            if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+                return;
+            }
+            
+            User user = order.getUser();
+            String email = user.getEmail();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            
+            String subject = "Xác nhận đơn hàng #" + order.getId() + " - " + order.getOrderCode();
+            
+            // Create a simplified email content
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #e65540;\">Đơn hàng của bạn đã được xác nhận</h2>");
+            content.append("<p>Xin chào ").append(customerName).append(",</p>");
+            content.append("<p>Cảm ơn bạn đã đặt hàng tại CD Web Shop. Chúng tôi đã nhận được đơn hàng của bạn và sẽ xử lý trong thời gian sớm nhất.</p>");
+            content.append("<p><strong>Thông tin đơn hàng:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
+            content.append("<li>Ngày đặt hàng: ").append(formatDateTime(order.getCreatedAt())).append("</li>");
+            content.append("<li>Phương thức thanh toán: ").append(getPaymentMethodName(order.getPaymentMethod())).append("</li>");
+            content.append("<li>Địa chỉ giao hàng: ").append(order.getShippingAddress()).append("</li>");
+            content.append("<li>Số điện thoại: ").append(order.getPhone()).append("</li>");
+            content.append("</ul>");
+            
+            // Add order items summary
+            content.append("<h3>Chi tiết đơn hàng</h3>");
+            content.append("<table style=\"width:100%; border-collapse: collapse; margin-bottom: 20px;\">");
+            content.append("<tr style=\"background-color: #f2f2f2;\">");
+            content.append("<th style=\"padding: 10px; text-align: left; border: 1px solid #ddd;\">Sản phẩm</th>");
+            content.append("<th style=\"padding: 10px; text-align: center; border: 1px solid #ddd;\">Số lượng</th>");
+            content.append("<th style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\">Thành tiền</th>");
+            content.append("</tr>");
+            
+            if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+                for (OrderItem item : order.getOrderItems()) {
+                    String productName = item.getProduct() != null ? item.getProduct().getName() : "Sản phẩm";
+                    int quantity = item.getQuantity();
+                    double price = item.getPrice();
+                    double total = price * quantity;
+                    
+                    content.append("<tr>");
+                    content.append("<td style=\"padding: 10px; text-align: left; border: 1px solid #ddd;\">").append(productName).append("</td>");
+                    content.append("<td style=\"padding: 10px; text-align: center; border: 1px solid #ddd;\">").append(quantity).append("</td>");
+                    content.append("<td style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\">").append(formatCurrency(total)).append("</td>");
+                    content.append("</tr>");
+                }
+            }
+            
+            content.append("<tr>");
+            content.append("<td colspan=\"2\" style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\"><strong>Tổng cộng:</strong></td>");
+            content.append("<td style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\"><strong>").append(formatCurrency(order.getTotalAmount())).append("</strong></td>");
+            content.append("</tr>");
+            content.append("</table>");
+            
+            // Special instructions for bank transfer
+            if ("Bank Transfer".equals(order.getPaymentMethod())) {
+                content.append("<p><strong>Thông tin thanh toán chuyển khoản:</strong></p>");
+                content.append("<p>Vui lòng chuyển khoản theo thông tin dưới đây để hoàn tất đơn hàng:</p>");
+                content.append("<ul>");
+                content.append("<li>Ngân hàng: Vietcombank</li>");
+                content.append("<li>Số tài khoản: 1234567890</li>");
+                content.append("<li>Chủ tài khoản: CD Web Shop</li>");
+                content.append("<li>Nội dung chuyển khoản: ").append(order.getOrderCode()).append("</li>");
+                content.append("</ul>");
+                content.append("<p>Đơn hàng của bạn sẽ được xử lý sau khi chúng tôi nhận được thanh toán.</p>");
+            }
+            
+            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account\">đây</a>.</p>");
+            content.append("<p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua email hoặc hotline.</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            System.out.println("Directly sending email to: " + email);
+            emailService.sendEmail(email, subject, content.toString());
+            System.out.println("Simple order confirmation email sent successfully to: " + email);
+        } catch (Exception e) {
+            System.err.println("Failed to send simple order confirmation email: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Publicly accessible method to send order confirmation emails for testing
+     */
+    public void sendOrderConfirmationEmail(Order order) {
+        // Delegate to the private implementation
+        sendSimpleOrderConfirmationEmail(order);
     }
     
     /**
@@ -319,5 +444,62 @@ public class OrderService {
         String prefix = settingService.getSettingValue("order_prefix", "ORD-");
         String randomPart = String.valueOf((int) (Math.random() * 900000 + 100000));
         return prefix + randomPart;
+    }
+
+    /**
+     * Format số tiền thành định dạng tiền tệ VNĐ
+     */
+    private String formatCurrency(double amount) {
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        return currencyFormatter.format(amount);
+    }
+
+    /**
+     * Format thời gian theo định dạng Việt Nam
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        if (dateTime == null) return "N/A";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
+        return dateTime.format(formatter);
+    }
+
+    /**
+     * Chuyển đổi mã phương thức thanh toán thành tên hiển thị
+     */
+    private String getPaymentMethodName(String paymentMethod) {
+        if (paymentMethod == null) return "Không xác định";
+        
+        switch (paymentMethod) {
+            case "COD":
+                return "Thanh toán khi nhận hàng (COD)";
+            case "Bank Transfer":
+                return "Chuyển khoản ngân hàng";
+            case "vnpay":
+                return "Thanh toán qua VNPAY";
+            default:
+                return paymentMethod;
+        }
+    }
+
+    /**
+     * Chuyển đổi mã trạng thái đơn hàng thành tên hiển thị
+     */
+    private String getStatusName(Order.Status status) {
+        if (status == null) return "Không xác định";
+        
+        switch (status) {
+            case PENDING:
+                return "Đang chờ xử lý";
+            case PROCESSING:
+                return "Đang xử lý";
+            case SHIPPED:
+                return "Đang giao hàng";
+            case DELIVERED:
+                return "Đã giao hàng";
+            case CANCELLED:
+                return "Đã hủy";
+            default:
+                return status.toString();
+        }
     }
 }
