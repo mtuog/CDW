@@ -119,12 +119,18 @@ public class EmailService {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         
+        try {
         helper.setFrom(fromEmail);
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);
         
         mailSender.send(message);
+            logger.info("Email sent successfully to: {}", to);
+        } catch (Exception e) {
+            logger.error("Error sending email to {}: {}", to, e.getMessage());
+            throw new MessagingException("Failed to send email", e);
+        }
     }
 
     /**

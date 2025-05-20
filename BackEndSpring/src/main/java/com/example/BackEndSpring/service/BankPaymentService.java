@@ -3,13 +3,18 @@ package com.example.BackEndSpring.service;
 import com.example.BackEndSpring.model.BankAccount;
 import com.example.BackEndSpring.model.BankPayment;
 import com.example.BackEndSpring.model.Order;
+import com.example.BackEndSpring.model.PaymentLog;
+import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.repository.BankAccountRepository;
 import com.example.BackEndSpring.repository.BankPaymentRepository;
+import com.example.BackEndSpring.repository.PaymentLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.mail.MessagingException;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,7 +29,18 @@ public class BankPaymentService {
     private BankAccountRepository bankAccountRepository;
     
     @Autowired
+    private PaymentLogRepository paymentLogRepository;
+    
+    @Autowired
     private OrderService orderService;
+    
+    @Autowired
+    private EmailService emailService;
+    
+    @Autowired
+    private UserService userService;
+    
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     
     /**
      * Lấy danh sách tất cả tài khoản ngân hàng đang hoạt động
@@ -46,7 +62,11 @@ public class BankPaymentService {
         Order order = orderOpt.get();
         
         // Kiểm tra nếu đơn hàng đã thanh toán
-        if (!"COD".equals(order.getPaymentMethod()) && !"Bank Transfer".equals(order.getPaymentMethod())) {
+        String paymentMethod = order.getPaymentMethod();
+        if (paymentMethod == null 
+            || (!paymentMethod.equalsIgnoreCase("COD") 
+                && !paymentMethod.equalsIgnoreCase("Bank Transfer") 
+                && !paymentMethod.equalsIgnoreCase("bank"))) {
             throw new RuntimeException("Phương thức thanh toán không hợp lệ, không thể thanh toán qua ngân hàng");
         }
         
@@ -64,7 +84,13 @@ public class BankPaymentService {
             bankPayment.setTransactionCode(generateTransactionCode());
         }
         
-        return bankPaymentRepository.save(bankPayment);
+        // Lưu giao dịch
+        BankPayment savedPayment = bankPaymentRepository.save(bankPayment);
+        
+        // Ghi log giao dịch
+        logPaymentAction(savedPayment, "CREATED", "SYSTEM", "Tạo giao dịch thanh toán mới cho đơn hàng #" + orderId);
+        
+        return savedPayment;
     }
     
     /**
@@ -94,7 +120,18 @@ public class BankPaymentService {
             orderService.updateOrderStatus(order.getId(), Order.Status.PROCESSING);
         }
         
-        return bankPaymentRepository.save(payment);
+        // Lưu thông tin giao dịch
+        BankPayment verifiedPayment = bankPaymentRepository.save(payment);
+        
+        // Ghi log xác nhận thanh toán
+        logPaymentAction(verifiedPayment, "VERIFIED", "ADMIN", 
+            "Xác nhận thanh toán cho đơn hàng #" + order.getId() + 
+            (note != null && !note.isEmpty() ? ". Ghi chú: " + note : ""));
+        
+        // Gửi email thông báo cho khách hàng
+        sendPaymentConfirmationEmail(verifiedPayment);
+        
+        return verifiedPayment;
     }
     
     /**
@@ -114,7 +151,18 @@ public class BankPaymentService {
         payment.setVerifiedAt(LocalDateTime.now());
         payment.setVerificationNote(note);
         
-        return bankPaymentRepository.save(payment);
+        // Lưu thông tin giao dịch
+        BankPayment rejectedPayment = bankPaymentRepository.save(payment);
+        
+        // Ghi log từ chối thanh toán
+        logPaymentAction(rejectedPayment, "REJECTED", "ADMIN", 
+            "Từ chối thanh toán cho đơn hàng #" + payment.getOrder().getId() + 
+            (note != null && !note.isEmpty() ? ". Lý do: " + note : ""));
+        
+        // Gửi email thông báo cho khách hàng
+        sendPaymentRejectionEmail(rejectedPayment);
+        
+        return rejectedPayment;
     }
     
     /**
@@ -134,8 +182,19 @@ public class BankPaymentService {
     /**
      * Lấy danh sách giao dịch theo trạng thái
      */
+    @Transactional(readOnly = true)
     public List<BankPayment> getPaymentsByStatus(BankPayment.PaymentStatus status) {
-        return bankPaymentRepository.findByStatus(status);
+        // Use fetch join to eagerly load the Order to avoid LazyInitializationException
+        List<BankPayment> payments = bankPaymentRepository.findByStatus(status);
+        
+        // Initialize lazy associations to avoid serialization issues
+        for (BankPayment payment : payments) {
+            if (payment.getOrder() != null) {
+                payment.getOrder().getId(); // Access a property to initialize
+            }
+        }
+        
+        return payments;
     }
     
     /**
@@ -194,6 +253,122 @@ public class BankPaymentService {
      */
     public Optional<BankPayment> findById(Long paymentId) {
         return bankPaymentRepository.findById(paymentId);
+    }
+    
+    /**
+     * Ghi log hoạt động liên quan đến giao dịch thanh toán
+     */
+    private void logPaymentAction(BankPayment payment, String action, String performedBy, String notes) {
+        PaymentLog log = new PaymentLog(payment, action, performedBy, notes);
+        paymentLogRepository.save(log);
+    }
+    
+    /**
+     * Gửi email xác nhận thanh toán cho khách hàng
+     */
+    private void sendPaymentConfirmationEmail(BankPayment payment) {
+        try {
+            Order order = payment.getOrder();
+            if (order != null && order.getUser() != null) {
+                User user = order.getUser();
+                String email = user.getEmail();
+                
+                String subject = "Xác nhận thanh toán đơn hàng #" + order.getId();
+                
+                String content = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
+                    + "<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>"
+                    + "<p>Xin chào " + user.getFullName() + ",</p>"
+                    + "<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#" + order.getId() + "</strong>.</p>"
+                    + "<p><strong>Thông tin thanh toán:</strong></p>"
+                    + "<ul>"
+                    + "<li>Mã giao dịch: " + payment.getTransactionCode() + "</li>"
+                    + "<li>Số tiền: " + formatCurrency(payment.getAmount()) + " VNĐ</li>"
+                    + "<li>Thời gian xác nhận: " + formatDateTime(payment.getVerifiedAt()) + "</li>"
+                    + "<li>Phương thức thanh toán: Chuyển khoản ngân hàng</li>"
+                    + "</ul>"
+                    + "<p>Đơn hàng của bạn đang được xử lý và sẽ được giao trong thời gian sớm nhất.</p>"
+                    + "<p>Bạn có thể kiểm tra trạng thái đơn hàng tại <a href=\"http://localhost:3000/account\">đây</a>.</p>"
+                    + "<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>"
+                    + "<p>Trân trọng,<br>CD Web Shop</p>"
+                    + "</div>";
+                
+                emailService.sendEmail(email, subject, content);
+            }
+        } catch (MessagingException e) {
+            // Log the error but don't throw exception to avoid disrupting the transaction
+            System.err.println("Failed to send payment confirmation email: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Gửi email thông báo từ chối thanh toán cho khách hàng
+     */
+    private void sendPaymentRejectionEmail(BankPayment payment) {
+        try {
+            Order order = payment.getOrder();
+            if (order != null && order.getUser() != null) {
+                User user = order.getUser();
+                String email = user.getEmail();
+                
+                String subject = "Thông báo về thanh toán đơn hàng #" + order.getId();
+                
+                String content = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
+                    + "<h2 style=\"color: #f44336;\">Thanh toán không thành công</h2>"
+                    + "<p>Xin chào " + user.getFullName() + ",</p>"
+                    + "<p>Chúng tôi rất tiếc phải thông báo rằng thanh toán của bạn cho đơn hàng <strong>#" + order.getId() + "</strong> chưa được xác nhận.</p>"
+                    + "<p><strong>Thông tin thanh toán:</strong></p>"
+                    + "<ul>"
+                    + "<li>Mã giao dịch: " + payment.getTransactionCode() + "</li>"
+                    + "<li>Số tiền: " + formatCurrency(payment.getAmount()) + " VNĐ</li>"
+                    + "<li>Thời gian: " + formatDateTime(payment.getVerifiedAt()) + "</li>"
+                    + "</ul>"
+                    + "<p><strong>Lý do:</strong> " + (payment.getVerificationNote() != null ? payment.getVerificationNote() : "Không tìm thấy giao dịch thanh toán") + "</p>"
+                    + "<p>Vui lòng kiểm tra lại thông tin chuyển khoản hoặc liên hệ với chúng tôi để được hỗ trợ.</p>"
+                    + "<p>Bạn có thể thực hiện lại thanh toán tại <a href=\"http://localhost:3000/account\">đây</a>.</p>"
+                    + "<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>"
+                    + "<p>Trân trọng,<br>CD Web Shop</p>"
+                    + "</div>";
+                
+                emailService.sendEmail(email, subject, content);
+            }
+        } catch (MessagingException e) {
+            System.err.println("Failed to send payment rejection email: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Format số tiền thành định dạng tiền tệ
+     */
+    private String formatCurrency(Double amount) {
+        if (amount == null) return "0";
+        return String.format("%,.0f", amount);
+    }
+    
+    /**
+     * Format thời gian
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        if (dateTime == null) return "N/A";
+        return dateTime.format(DATE_FORMATTER);
+    }
+    
+    /**
+     * Lấy lịch sử log của một giao dịch
+     */
+    public List<PaymentLog> getPaymentLogs(Long paymentId) {
+        Optional<BankPayment> paymentOpt = bankPaymentRepository.findById(paymentId);
+        if (!paymentOpt.isPresent()) {
+            throw new RuntimeException("Không tìm thấy giao dịch với ID: " + paymentId);
+        }
+        
+        return paymentLogRepository.findByPayment(paymentOpt.get());
+    }
+    
+    /**
+     * Lấy lịch sử log thanh toán của một đơn hàng
+     */
+    public List<PaymentLog> getOrderPaymentLogs(Long orderId) {
+        return paymentLogRepository.findByOrderIdOrderByTimestampDesc(orderId);
     }
     
     /**

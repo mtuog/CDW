@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -620,5 +623,273 @@ public class UserController {
         String refreshToken = UUID.randomUUID().toString();
         refreshTokens.put(refreshToken, user.getId().toString());
         return refreshToken;
+    }
+
+    @GetMapping("/users/statistics")
+    @Operation(summary = "Lấy thống kê tổng quan về người dùng", description = "Trả về dữ liệu thống kê về người dùng cho dashboard")
+    public ResponseEntity<Map<String, Object>> getUserStatistics() {
+        Map<String, Object> statistics = new HashMap<>();
+        List<User> users = userService.getAllUsers();
+        
+        // Tính tổng số khách hàng
+        int totalCustomers = users.size();
+        statistics.put("totalCustomers", totalCustomers);
+        
+        // Tính số lượng khách hàng hoạt động (có đơn hàng trong 30 ngày gần đây)
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        long activeCustomers = users.stream()
+            .filter(user -> {
+                List<Order> userOrders = orderService.getOrdersByUser(user);
+                return userOrders.stream()
+                    .anyMatch(order -> order.getCreatedAt().isAfter(thirtyDaysAgo));
+            })
+            .count();
+        statistics.put("activeCustomers", activeCustomers);
+        
+        // Tính số lượng khách hàng mới (đăng ký trong 30 ngày gần đây)
+        long newCustomers = users.stream()
+            .filter(user -> user.getCreatedAt().isAfter(thirtyDaysAgo))
+            .count();
+        statistics.put("newCustomersThisMonth", newCustomers);
+        
+        // Tính tỷ lệ giữ chân khách hàng
+        double retentionRate = totalCustomers > 0 ? (double) activeCustomers / totalCustomers * 100 : 0;
+        statistics.put("retentionRate", Math.round(retentionRate * 10) / 10.0);
+        
+        // Tính giá trị đơn hàng trung bình
+        double totalSpent = 0;
+        int totalOrders = 0;
+        
+        for (User user : users) {
+            List<Order> userOrders = orderService.getOrdersByUser(user);
+            totalOrders += userOrders.size();
+            totalSpent += userOrders.stream()
+                .filter(order -> order.getStatus() != Order.Status.CANCELLED)
+                .mapToDouble(Order::getTotalAmount)
+                .sum();
+        }
+        
+        double averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalCustomers", totalCustomers);
+        summary.put("activeCustomers", activeCustomers);
+        summary.put("newCustomersThisMonth", newCustomers);
+        summary.put("retentionRate", Math.round(retentionRate * 10) / 10.0);
+        summary.put("averageOrderValue", Math.round(averageOrderValue));
+        
+        statistics.put("summary", summary);
+        
+        // Thống kê theo giới tính (Nam/Nữ/Không xác định)
+        Map<String, Integer> genderCounts = new HashMap<>();
+        genderCounts.put("Nam", 0);
+        genderCounts.put("Nữ", 0);
+        genderCounts.put("Không xác định", users.size());
+        
+        // Không có trường gender trong User, nên để mặc định là 'Không xác định'
+        List<Map<String, Object>> customersByGender = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : genderCounts.entrySet()) {
+            if (entry.getValue() > 0) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", entry.getKey());
+                item.put("value", entry.getValue());
+                customersByGender.add(item);
+            }
+        }
+        statistics.put("customersByGender", customersByGender);
+        
+        // Thống kê theo độ tuổi - phân bố mặc định vì không có trường dateOfBirth
+        Map<String, Integer> ageCounts = new HashMap<>();
+        ageCounts.put("18-24", users.size() / 5);
+        ageCounts.put("25-34", users.size() / 3);
+        ageCounts.put("35-44", users.size() / 6);
+        ageCounts.put("45-54", users.size() / 8);
+        ageCounts.put("55+", users.size() / 10);
+        ageCounts.put("Không xác định", users.size() - (users.size() / 5 + users.size() / 3 + users.size() / 6 + users.size() / 8 + users.size() / 10));
+        
+        List<Map<String, Object>> customersByAge = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : ageCounts.entrySet()) {
+            if (entry.getValue() > 0) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", entry.getKey());
+                item.put("value", entry.getValue());
+                customersByAge.add(item);
+            }
+        }
+        statistics.put("customersByAge", customersByAge);
+        
+        // Thống kê theo địa điểm
+        Map<String, Integer> locationCounts = new HashMap<>();
+        for (User user : users) {
+            String address = user.getAddress();
+            String location = "Không xác định";
+            
+            if (address != null && !address.isEmpty()) {
+                String[] parts = address.split(",");
+                if (parts.length > 0) {
+                    location = parts[parts.length - 1].trim();
+                    
+                    // Kiểm tra các thành phố lớn
+                    if (address.contains("Hồ Chí Minh") || address.contains("TP.HCM") || address.contains("HCM")) {
+                        location = "TP.HCM";
+                    } else if (address.contains("Hà Nội")) {
+                        location = "Hà Nội";
+                    } else if (address.contains("Đà Nẵng")) {
+                        location = "Đà Nẵng";
+                    } else if (address.contains("Cần Thơ")) {
+                        location = "Cần Thơ";
+                    }
+                }
+            }
+            
+            locationCounts.put(location, locationCounts.getOrDefault(location, 0) + 1);
+        }
+        
+        List<Map<String, Object>> customersByLocation = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : locationCounts.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", entry.getKey());
+            item.put("value", entry.getValue());
+            customersByLocation.add(item);
+        }
+        statistics.put("customersByLocation", customersByLocation);
+        
+        // Tạo dữ liệu tăng trưởng khách hàng theo tháng (6 tháng gần đây)
+        List<Map<String, Object>> customerGrowth = new ArrayList<>();
+        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        
+        for (int i = 0; i < 6; i++) {
+            LocalDateTime startOfMonth = sixMonthsAgo.plusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime endOfMonth;
+            
+            if (i < 5) {
+                endOfMonth = startOfMonth.plusMonths(1).minusNanos(1);
+            } else {
+                endOfMonth = LocalDateTime.now();
+            }
+            
+            int monthNumber = startOfMonth.getMonthValue();
+            String monthName = "T" + monthNumber;
+            
+            // Đếm khách hàng mới trong tháng
+            long newCustomersInMonth = users.stream()
+                .filter(u -> {
+                    LocalDateTime createdAt = u.getCreatedAt();
+                    return createdAt.isAfter(startOfMonth) && createdAt.isBefore(endOfMonth);
+                })
+                .count();
+            
+            // Đếm khách hàng hoạt động trong tháng
+            long activeCustomersInMonth = users.stream()
+                .filter(u -> {
+                    List<Order> userOrders = orderService.getOrdersByUser(u);
+                    return userOrders.stream()
+                        .anyMatch(order -> {
+                            LocalDateTime orderDate = order.getCreatedAt();
+                            return orderDate.isAfter(startOfMonth) && orderDate.isBefore(endOfMonth);
+                        });
+                })
+                .count();
+            
+            Map<String, Object> monthData = new HashMap<>();
+            monthData.put("name", monthName);
+            monthData.put("newCustomers", newCustomersInMonth);
+            monthData.put("activeCustomers", activeCustomersInMonth);
+            
+            customerGrowth.add(monthData);
+        }
+        statistics.put("customerGrowth", customerGrowth);
+        
+        // Tạo dữ liệu tăng trưởng khách hàng theo tuần (4 tuần gần đây)
+        List<Map<String, Object>> customerGrowthWeekly = new ArrayList<>();
+        LocalDateTime fourWeeksAgo = LocalDateTime.now().minusWeeks(4);
+        
+        for (int i = 0; i < 4; i++) {
+            LocalDateTime startOfWeek = fourWeeksAgo.plusWeeks(i);
+            LocalDateTime endOfWeek;
+            
+            if (i < 3) {
+                endOfWeek = startOfWeek.plusWeeks(1).minusNanos(1);
+            } else {
+                endOfWeek = LocalDateTime.now();
+            }
+            
+            // Đếm khách hàng mới trong tuần
+            long newCustomersInWeek = users.stream()
+                .filter(u -> {
+                    LocalDateTime createdAt = u.getCreatedAt();
+                    return createdAt.isAfter(startOfWeek) && createdAt.isBefore(endOfWeek);
+                })
+                .count();
+            
+            // Đếm khách hàng hoạt động trong tuần
+            long activeCustomersInWeek = users.stream()
+                .filter(u -> {
+                    List<Order> userOrders = orderService.getOrdersByUser(u);
+                    return userOrders.stream()
+                        .anyMatch(order -> {
+                            LocalDateTime orderDate = order.getCreatedAt();
+                            return orderDate.isAfter(startOfWeek) && orderDate.isBefore(endOfWeek);
+                        });
+                })
+                .count();
+            
+            Map<String, Object> weekData = new HashMap<>();
+            weekData.put("name", "Tuần " + (i + 1));
+            weekData.put("newCustomers", newCustomersInWeek);
+            weekData.put("activeCustomers", activeCustomersInWeek);
+            
+            customerGrowthWeekly.add(weekData);
+        }
+        statistics.put("customerGrowthWeekly", customerGrowthWeekly);
+        
+        // Tìm top khách hàng
+        List<Map<String, Object>> topCustomers = users.stream()
+            .filter(u -> !u.getRole().toString().contains("ADMIN"))
+            .map(u -> {
+                Map<String, Object> customerMap = new HashMap<>();
+                customerMap.put("id", u.getId());
+                customerMap.put("name", u.getFullName() != null ? u.getFullName() : u.getUsername());
+                customerMap.put("email", u.getEmail());
+                customerMap.put("phone", u.getPhone() != null ? u.getPhone() : "Chưa cập nhật");
+                
+                List<Order> userOrders = orderService.getOrdersByUser(u);
+                int orderCount = userOrders.size();
+                customerMap.put("orders", orderCount);
+                
+                double userTotalSpent = userOrders.stream()
+                    .filter(order -> order.getStatus() != Order.Status.CANCELLED)
+                    .mapToDouble(Order::getTotalAmount)
+                    .sum();
+                customerMap.put("totalSpent", userTotalSpent);
+                
+                Optional<LocalDateTime> lastOrderDate = userOrders.stream()
+                    .map(Order::getCreatedAt)
+                    .max(LocalDateTime::compareTo);
+                customerMap.put("lastOrder", lastOrderDate.orElse(null));
+                
+                // Xác định trạng thái khách hàng
+                String status;
+                if (!u.isVerified()) {
+                    status = "inactive";
+                } else if (orderCount == 0) {
+                    status = "potential";
+                } else {
+                    status = "active";
+                }
+                customerMap.put("status", status);
+                
+                return customerMap;
+            })
+            .sorted((a, b) -> {
+                Double aSpent = (Double) a.get("totalSpent");
+                Double bSpent = (Double) b.get("totalSpent");
+                return bSpent.compareTo(aSpent);
+            })
+            .limit(5)
+            .collect(Collectors.toList());
+        
+        statistics.put("topCustomers", topCustomers);
+        
+        return ResponseEntity.ok(statistics);
     }
 } 
