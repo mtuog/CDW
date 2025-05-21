@@ -24,14 +24,31 @@ public class EmailService {
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     
     private final JavaMailSender mailSender;
+    private final SettingService settingService;
     
     @Autowired
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, SettingService settingService) {
         this.mailSender = mailSender;
+        this.settingService = settingService;
     }
     
     @Value("${spring.mail.username}")
     private String fromEmail;
+    
+    /**
+     * Lấy chân trang email từ cài đặt
+     * @return Chuỗi HTML chân trang email
+     */
+    private String getEmailFooter() {
+        String footer = settingService.getSettingValue("email_footer", "");
+        if (footer == null || footer.trim().isEmpty()) {
+            // Chân trang mặc định nếu không có trong cài đặt
+            return "<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; color: #666;\">"
+                + "<p>© " + LocalDateTime.now().getYear() + " CD Web Shop. Tất cả quyền được bảo lưu.</p>"
+                + "</div>";
+        }
+        return footer;
+    }
     
     /**
      * Gửi email xác thực đăng ký tài khoản
@@ -63,6 +80,7 @@ public class EmailService {
                     + "<p>Mã xác thực này sẽ hết hạn sau 30 phút.</p>"
                     + "<p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>"
                     + "<p>Trân trọng,<br>CD Web Shop</p>"
+                    + getEmailFooter()
                     + "</div>";
             
             helper.setText(content, true);
@@ -103,6 +121,7 @@ public class EmailService {
                 + "<p>Liên kết này sẽ hết hạn sau 30 phút.</p>"
                 + "<p>Nếu bạn không yêu cầu đặt lại mật khẩu, bạn có thể bỏ qua email này.</p>"
                 + "<p>Trân trọng,<br>CD Web Shop</p>"
+                + getEmailFooter()
                 + "</div>";
         
         helper.setText(content, true);
@@ -124,12 +143,18 @@ public class EmailService {
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         
         try {
-        helper.setFrom(fromEmail);
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(htmlContent, true);
-        
-        mailSender.send(message);
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            
+            // Đính kèm chân trang vào nội dung email nếu nội dung chưa có chân trang
+            if (!htmlContent.contains(getEmailFooter())) {
+                htmlContent = htmlContent + getEmailFooter();
+            }
+            
+            helper.setText(htmlContent, true);
+            
+            mailSender.send(message);
             logger.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
             logger.error("Error sending email to {}: {}", to, e.getMessage());
@@ -178,7 +203,7 @@ public class EmailService {
         try {
             helper.setFrom(fromEmail);
             helper.setTo(email);
-            helper.setSubject("Xác nhận đã nhận thanh toán qua VNPAY cho đơn hàng #" + orderId);
+            helper.setSubject("Xác nhận đã nhận thanh toán qua VNPAY cho đơn hàng " + orderId);
             
             // Format số tiền từ VNPay (đã được nhân 100)
             long amountLong = Long.parseLong(amount);
@@ -196,7 +221,7 @@ public class EmailService {
             content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
             content.append("<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>");
             content.append("<p>Xin chào,</p>");
-            content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#").append(orderId).append("</strong> qua cổng thanh toán VNPAY.</p>");
+            content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>").append(orderId).append("</strong> qua cổng thanh toán VNPAY.</p>");
             content.append("<p><strong>Thông tin thanh toán:</strong></p>");
             content.append("<ul>");
             content.append("<li>Mã đơn hàng: ").append(orderId).append("</li>");
@@ -210,6 +235,7 @@ public class EmailService {
             content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
             content.append("<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>");
             content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append(getEmailFooter());
             content.append("</div>");
             
             helper.setText(content.toString(), true);

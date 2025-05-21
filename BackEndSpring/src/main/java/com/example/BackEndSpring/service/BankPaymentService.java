@@ -146,9 +146,7 @@ public class BankPaymentService {
         BankPayment verifiedPayment = bankPaymentRepository.save(payment);
         
         // Ghi log xác nhận thanh toán
-        logPaymentAction(verifiedPayment, "VERIFIED", "ADMIN", 
-            "Xác nhận thanh toán cho đơn hàng #" + order.getId() + 
-            (note != null && !note.isEmpty() ? ". Ghi chú: " + note : ""));
+        logPaymentAction(verifiedPayment, "VERIFIED", "ADMIN",             "Xác nhận thanh toán cho đơn hàng " + order.getOrderCode() +             (note != null && !note.isEmpty() ? ". Ghi chú: " + note : ""));
         
         // Gửi email thông báo cho khách hàng
         sendPaymentConfirmationEmail(verifiedPayment);
@@ -180,16 +178,14 @@ public class BankPaymentService {
             // Cập nhật trạng thái đơn hàng trực tiếp mà không điều chỉnh kho
             order.setStatus(Order.Status.CANCELLED);
             orderService.saveOrder(order);
-            System.out.println("Đơn hàng #" + order.getId() + " đã được chuyển sang trạng thái CANCELLED do thanh toán bị từ chối (không điều chỉnh kho)");
+            System.out.println("Đơn hàng " + order.getOrderCode() + " đã được chuyển sang trạng thái CANCELLED do thanh toán bị từ chối (không điều chỉnh kho)");
         }
         
         // Lưu thông tin giao dịch
         BankPayment rejectedPayment = bankPaymentRepository.save(payment);
         
         // Ghi log từ chối thanh toán
-        logPaymentAction(rejectedPayment, "REJECTED", "ADMIN", 
-            "Từ chối thanh toán cho đơn hàng #" + payment.getOrder().getId() + 
-            (note != null && !note.isEmpty() ? ". Lý do: " + note : ""));
+                logPaymentAction(rejectedPayment, "REJECTED", "ADMIN",             "Từ chối thanh toán cho đơn hàng " + payment.getOrder().getOrderCode() +             (note != null && !note.isEmpty() ? ". Lý do: " + note : ""));
         
         // Gửi email thông báo cho khách hàng
         sendPaymentRejectionEmail(rejectedPayment);
@@ -306,16 +302,16 @@ public class BankPaymentService {
                 String email = user.getEmail();
                 String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
                 
-                String subject = "Xác nhận thanh toán thành công cho đơn hàng #" + order.getId();
+                String subject = "Xác nhận thanh toán thành công cho đơn hàng " + order.getOrderCode();
                 
                 StringBuilder content = new StringBuilder();
                 content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
                 content.append("<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>");
                 content.append("<p>Xin chào ").append(customerName).append(",</p>");
-                content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#").append(order.getId()).append("</strong>.</p>");
+                content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>").append(order.getOrderCode()).append("</strong>.</p>");
                 content.append("<p><strong>Thông tin thanh toán:</strong></p>");
                 content.append("<ul>");
-                content.append("<li>Mã đơn hàng: ").append(order.getId()).append("</li>");
+                content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
                 content.append("<li>Mã giao dịch: ").append(payment.getTransactionCode()).append("</li>");
                 content.append("<li>Số tiền: ").append(formatCurrency(payment.getAmount())).append(" VNĐ</li>");
                 content.append("<li>Thời gian xác nhận: ").append(formatDateTime(payment.getVerifiedAt())).append("</li>");
@@ -346,12 +342,12 @@ public class BankPaymentService {
                 User user = order.getUser();
                 String email = user.getEmail();
                 
-                String subject = "Thông báo về thanh toán đơn hàng #" + order.getId();
+                String subject = "Thông báo về thanh toán đơn hàng " + order.getOrderCode();
                 
                 String content = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
                     + "<h2 style=\"color: #f44336;\">Thanh toán không thành công</h2>"
                     + "<p>Xin chào " + user.getFullName() + ",</p>"
-                    + "<p>Chúng tôi rất tiếc phải thông báo rằng thanh toán của bạn cho đơn hàng <strong>#" + order.getId() + "</strong> chưa được xác nhận.</p>"
+                    + "<p>Chúng tôi rất tiếc phải thông báo rằng thanh toán của bạn cho đơn hàng <strong>" + order.getOrderCode() + "</strong> chưa được xác nhận.</p>"
                     + "<p><strong>Thông tin thanh toán:</strong></p>"
                     + "<ul>"
                     + "<li>Mã giao dịch: " + payment.getTransactionCode() + "</li>"

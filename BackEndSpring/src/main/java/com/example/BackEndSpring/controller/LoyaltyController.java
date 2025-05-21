@@ -216,4 +216,33 @@ public class LoyaltyController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+    
+    @GetMapping("/users")
+    @Operation(summary = "Lấy danh sách tất cả người dùng kèm thông tin tích điểm")
+    public ResponseEntity<?> getAllUsersWithLoyaltyInfo() {
+        try {
+            List<User> users = userService.getAllUsers();
+            
+            List<Map<String, Object>> result = users.stream()
+                .map(user -> {
+                    Map<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("id", user.getId());
+                    userInfo.put("username", user.getUsername());
+                    userInfo.put("email", user.getEmail());
+                    userInfo.put("fullName", user.getFullName());
+                    userInfo.put("phone", user.getPhone());
+                    userInfo.put("loyaltyPoints", user.getLoyaltyPoints());
+                    userInfo.put("membershipRank", user.getMembershipRank());
+                    userInfo.put("createdAt", user.getCreatedAt());
+                    
+                    return userInfo;
+                })
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 } 
