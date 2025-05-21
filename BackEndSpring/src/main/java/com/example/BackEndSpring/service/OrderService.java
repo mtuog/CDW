@@ -185,7 +185,7 @@ public class OrderService {
             String email = user.getEmail();
             String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
             
-            String subject = "Xác nhận đơn hàng #" + order.getId() + " - " + order.getOrderCode();
+            String subject = "Xác nhận đơn hàng " + order.getOrderCode();
             
             // Create a simplified email content
             StringBuilder content = new StringBuilder();
@@ -315,7 +315,7 @@ public class OrderService {
             String email = user.getEmail();
             String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
             
-            String subject = "Đơn hàng #" + order.getId() + " đang được xử lý - " + order.getOrderCode();
+            String subject = "Đơn hàng " + order.getOrderCode() + " đang được xử lý";
             
             StringBuilder content = new StringBuilder();
             content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
@@ -364,7 +364,7 @@ public class OrderService {
             String email = user.getEmail();
             String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
             
-            String subject = "Đơn hàng #" + order.getId() + " đang được giao - " + order.getOrderCode();
+            String subject = "Đơn hàng " + order.getOrderCode() + " đang được giao";
             
             StringBuilder content = new StringBuilder();
             content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
@@ -404,7 +404,7 @@ public class OrderService {
             String email = user.getEmail();
             String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
             
-            String subject = "Đơn hàng #" + order.getId() + " đã giao thành công - " + order.getOrderCode();
+            String subject = "Đơn hàng " + order.getOrderCode() + " đã giao thành công";
             
             StringBuilder content = new StringBuilder();
             content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
@@ -445,7 +445,7 @@ public class OrderService {
             String email = user.getEmail();
             String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
             
-            String subject = "Đơn hàng #" + order.getId() + " đã bị hủy - " + order.getOrderCode();
+            String subject = "Đơn hàng " + order.getOrderCode() + " đã bị hủy";
             
             StringBuilder content = new StringBuilder();
             content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");

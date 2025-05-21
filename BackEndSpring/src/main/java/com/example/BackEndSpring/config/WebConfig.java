@@ -16,8 +16,9 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:8080", "http://127.0.0.1:3000", "http://127.0.0.1:5500")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                .allowedHeaders("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Allow-Origin")
+                .exposedHeaders("Access-Control-Allow-Origin")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
@@ -37,16 +38,13 @@ public class WebConfig implements WebMvcConfigurer {
             "http://127.0.0.1:5500"
         ));
         
-        config.addAllowedHeader("Authorization");
-        config.addAllowedHeader("Content-Type");
-        config.addAllowedHeader("X-Requested-With");
-        config.addAllowedHeader("Accept");
-        config.addAllowedHeader("Origin");
+        config.addAllowedHeader("*"); // Allow all headers for simplicity
         
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
         config.addAllowedMethod("PUT");
         config.addAllowedMethod("DELETE");
+        config.addAllowedMethod("PATCH");  // Add PATCH method
         config.addAllowedMethod("OPTIONS");
         
         source.registerCorsConfiguration("/**", config);

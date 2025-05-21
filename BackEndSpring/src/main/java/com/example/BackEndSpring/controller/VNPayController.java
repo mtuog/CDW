@@ -490,7 +490,7 @@ public class VNPayController {
         }
         
         String email = order.getUser().getEmail();
-        String orderId = order.getId().toString();
+        String orderId = order.getOrderCode();
         
         // Gọi phương thức trong EmailService để gửi email xác nhận thanh toán
         emailService.sendVNPaySuccessEmail(email, orderId, amount, orderInfo);
