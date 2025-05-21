@@ -3,7 +3,6 @@ import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { sendConfirmOrderEmail } from '../../../api/orderApi';
 
 const OrderHistory = ({ user }) => {
     const [orders, setOrders] = useState([]);
@@ -328,7 +327,7 @@ const OrderHistory = ({ user }) => {
                 const token = localStorage.getItem('token');
                 
                 const response = await axios.put(
-                    `${BACKEND_URL_HTTP}/api/orders/${orderId}/status?status=CANCELLED`,
+                    `${BACKEND_URL_HTTP}/api/orders/${orderId}/status?status=CANCELLED&sendEmail=true`,
                     {},
                     {
                         headers: {
@@ -356,39 +355,6 @@ const OrderHistory = ({ user }) => {
                 title: 'Lỗi!',
                 text: error.response?.data?.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.',
                 icon: 'error',
-                confirmButtonText: 'Đóng'
-            });
-        }
-    };
-    
-    const handleSendConfirmOrderEmail = async (orderId) => {
-        try {
-            Swal.fire({
-                title: 'Đang gửi email...',
-                text: 'Vui lòng đợi trong giây lát',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            const response = await sendConfirmOrderEmail(orderId);
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Thành công!',
-                text: 'Email xác nhận đơn hàng đã được gửi thành công!',
-                confirmButtonText: 'Đóng'
-            });
-        } catch (error) {
-            console.error('Error sending order confirmation email:', error);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi!',
-                text: 'Không thể gửi email xác nhận đơn hàng. Vui lòng thử lại sau.',
                 confirmButtonText: 'Đóng'
             });
         }
@@ -488,16 +454,9 @@ const OrderHistory = ({ user }) => {
                                                     </div>
                                                     
                                                     <div className="mt-3">
-                                                        <button 
-                                                            className="btn btn-sm btn-outline-success"
-                                                            onClick={() => handleSendConfirmOrderEmail(order.id)}
-                                                        >
-                                                            <i className="fas fa-envelope me-1"></i> Gửi email xác nhận đơn hàng
-                                                        </button>
-                                                        
                                                         <Link 
                                                             to={`/account/orders/${order.id}`} 
-                                                            className="btn btn-sm btn-outline-info ms-2"
+                                                            className="btn btn-sm btn-outline-info"
                                                         >
                                                             <i className="fas fa-search me-1"></i> Xem chi tiết đầy đủ
                                                         </Link>

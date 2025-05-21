@@ -124,12 +124,12 @@ export const createOrder = async (orderData) => {
 };
 
 // Hàm cập nhật trạng thái đơn hàng
-export const updateOrderStatus = async (id, status) => {
+export const updateOrderStatus = async (id, status, sendEmail = true) => {
   try {
     console.log(`API call: Updating order ${id} status to ${status}`);
     const token = localStorage.getItem('token');
     const response = await axios.put(
-      `${API_URL}/orders/${id}/status?status=${status}`, 
+      `${API_URL}/orders/${id}/status?status=${status}&sendEmail=${sendEmail}`, 
       {}, // Empty request body since we're using query params
       {
         headers: {
@@ -215,6 +215,27 @@ export const sendConfirmOrderEmail = async (orderId) => {
     return response.data;
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
+    throw error;
+  }
+};
+
+// Hàm gửi email theo trạng thái đơn hàng
+export const sendOrderStatusEmail = async (orderId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_URL}/test-email/order-status-email`,
+      { orderId },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error sending order status email:', error);
     throw error;
   }
 }; 

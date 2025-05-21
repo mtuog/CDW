@@ -47,6 +47,7 @@ const PaymentResult = () => {
                         const isSuccess = vnpResponseCode === '00';
                         const orderId = vnpTxnRef.split('_')[0]; // Lấy ID đơn hàng từ vnp_TxnRef
                         
+                        // Hiển thị kết quả ban đầu dựa trên tham số URL
                         setResult({
                             success: isSuccess,
                             message: isSuccess ? 'Thanh toán thành công' : 'Thanh toán thất bại: ' + getVnpResponseMessage(vnpResponseCode),
@@ -55,13 +56,41 @@ const PaymentResult = () => {
                             transactionNo: vnpTransactionNo,
                             paymentMethod: 'VNPAY'
                         });
+                        
+                        // Luôn gọi API để xử lý kết quả thanh toán ở phía backend
+                        try {
+                            console.log("Gửi request đến endpoint payment-return", location.search);
+                            
+                            // Tạo URL với query parameters
+                            const apiUrl = `${BACKEND_URL_HTTP}/api/vnpay/payment-return${location.search}`;
+                            console.log("API URL hoàn chỉnh:", apiUrl);
+                            
+                            // Gọi API GET với query parameters trong URL
+                            const response = await axios.get(apiUrl);
+                            console.log("Kết quả từ API:", response.data);
+                            
+                            if (response.data) {
+                                // Cập nhật kết quả từ phản hồi của API
+                                setResult({
+                                    success: response.data.success,
+                                    message: response.data.message,
+                                    orderId: response.data.orderId,
+                                    amount: vnpAmount ? parseInt(vnpAmount) / 100 : null,
+                                    transactionNo: vnpTransactionNo,
+                                    paymentMethod: 'VNPAY'
+                                });
+                            }
+                        } catch (apiError) {
+                            console.error("Lỗi khi gọi API payment-return:", apiError);
+                            // Giữ nguyên kết quả hiển thị từ tham số URL nếu API gặp lỗi
+                        }
                     } else {
                         // Gọi API để lấy thông tin chi tiết
                         try {
                             console.log("Gửi request đến endpoint payment-return", location.search);
                             
                             // Tạo URL với query parameters
-                            const apiUrl = `http://${BACKEND_URL_HTTP}/api/vnpay/payment-return${location.search}`;
+                            const apiUrl = `${BACKEND_URL_HTTP}/api/vnpay/payment-return${location.search}`;
                             console.log("API URL hoàn chỉnh:", apiUrl);
                             
                             // Gọi API GET với query parameters trong URL

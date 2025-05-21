@@ -149,7 +149,7 @@ const OrderSuccess = () => {
                             <div className="d-flex justify-content-center gap-3">
                                 <Button 
                                     variant="primary" 
-                                    onClick={() => navigate('/account')}
+                                    onClick={() => navigate('/account?tab=orders')}
                                     className="px-4"
                                 >
                                     Theo dõi đơn hàng

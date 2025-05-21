@@ -41,12 +41,14 @@ const ChangePassword = ({ user }) => {
         
         try {
             const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
             
             const response = await axios.post(
-                `http://${BACKEND_URL_HTTP}/api/UserServices/change-password`,
+                `http://${BACKEND_URL_HTTP}/api/UserServices/change-password?userId=${userId}`,
                 {
                     currentPassword,
-                    newPassword
+                    newPassword,
+                    confirmPassword: newPassword
                 },
                 {
                     headers: {
