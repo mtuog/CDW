@@ -50,6 +50,7 @@
     "react-select": "^5.10.1",
     "react-slick": "^0.30.2",
     "react-slider": "^2.0.6",
+    "react-tabs": "^6.1.0",
     "react-toastify": "^11.0.5",
     "reactstrap": "^9.2.3",
     "recharts": "^2.15.1",

@@ -2,6 +2,8 @@ import React from 'react';
 import { createBrowserRouter, RouterProvider, Route, Outlet } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import store from './store/Store';
 import Footer from './components/Footer/Footer';
 import Header from './components/Header/Header';
@@ -40,6 +42,7 @@ import DiscountList from './admin/pages/discount';
 import AddDiscount from './admin/pages/discount/add';
 import EditDiscount from './admin/pages/discount/edit';
 import UserOrderDetail from './components/Profile/tabs/OrderDetail';
+import LoyaltyManagement from './admin/pages/loyalty/LoyaltyManagement';
 
 const Layout = () => {
     return (
@@ -120,6 +123,9 @@ const router = createBrowserRouter([
             // Settings
             { path: 'settings/store', element: <StoreSettings /> },
             { path: 'settings/payment', element: <PaymentSettings /> },
+
+            // Loyalty Management
+            { path: 'loyalty', element: <LoyaltyManagement /> },
         ],
     },
 ]);
@@ -130,6 +136,17 @@ function App() {
             <GoogleOAuthProvider clientId="142819065684-4ulb5ra203pjp7vuop3m2sl0fcdmov5m.apps.googleusercontent.com">
                 <div className="App">
                     <RouterProvider router={router} />
+                    <ToastContainer 
+                        position="top-right"
+                        autoClose={3000}
+                        hideProgressBar={false}
+                        newestOnTop
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                    />
                 </div>
             </GoogleOAuthProvider>
         </Provider>

@@ -20,12 +20,13 @@ const sidebarLinks = [
   { to: '/admin/orders', icon: 'fas fa-shopping-cart', text: 'Đơn hàng' },
   { to: '/admin/customers', icon: 'fas fa-users', text: 'Khách hàng' },
   { to: '/admin/discount', icon: 'fas fa-percent', text: 'Mã giảm giá' },
+  { to: '/admin/loyalty', icon: 'fas fa-award', text: 'Tích điểm' },
+  { to: '/admin/settings/payment', icon: 'fas fa-credit-card', text: 'Thanh toán' },
   { 
     icon: 'fas fa-cog', 
     text: 'Cài đặt',
     submenu: [
-      { to: '/admin/settings/store', text: 'Cửa hàng' },
-      { to: '/admin/settings/payment', text: 'Thanh toán' }
+      { to: '/admin/settings/store', text: 'Cửa hàng' }
     ]
   }
 ];

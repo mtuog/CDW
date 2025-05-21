@@ -176,16 +176,31 @@ const discountCodeApi = {
    */
   toggleDiscountCodeStatus: async (id) => {
     try {
-      const response = await axios.patch(`${API_URL}/${id}/toggle-status`, null, {
-        ...CORS_CONFIG,
-        headers: {
-          ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      console.log(`Sending status toggle request for discount code ID: ${id}`);
+      
+      // Use GET request instead of PATCH to avoid CORS preflight issues
+      const response = await axios.get(
+        `${API_URL}/${id}/toggle-status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
         }
-      });
+      );
+      
+      console.log('Toggle status response:', response.data);
       return response.data;
     } catch (error) {
       console.error(`Error toggling status for discount code with id ${id}:`, error);
+      
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      }
+      
       throw error;
     }
   },

@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../config';
+import { BACKEND_URL_HTTP, CORS_CONFIG } from '../config';
 
-const API_URL = `http://${BACKEND_URL_HTTP}/api`;
+const API_URL = `${BACKEND_URL_HTTP}/api`;
 
 /**
  * Upload một file (hình ảnh, tài liệu, v.v.)
@@ -10,34 +10,41 @@ const API_URL = `http://${BACKEND_URL_HTTP}/api`;
  * @returns {Promise<Object>} Thông tin file đã upload
  */
 export const uploadFile = async (file, type = 'general') => {
-  const token = localStorage.getItem('token');
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  // Sử dụng API endpoint khác nhau dựa vào loại file
-  let endpoint = '/upload'; // Endpoint mặc định cho hình ảnh sản phẩm
-  
-  if (type === 'qr-code') {
-    endpoint = '/files/upload/qr-code';
-  }
-  
-  const response = await axios.post(`${API_URL}${endpoint}`, formData, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data'
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Sử dụng API endpoint khác nhau dựa vào loại file
+    let endpoint = '/upload'; // Endpoint mặc định cho hình ảnh sản phẩm
+    
+    if (type === 'qr-code') {
+      endpoint = '/files/upload/qr-code';
     }
-  });
-  
-  const data = response.data;
-  
-  // Chuẩn hóa đầu ra để bảo đảm tính nhất quán
-  return {
-    fileUrl: data.url || data.fileDownloadUri,
-    filename: data.publicId,
-    originalFilename: file.name,
-    size: file.size,
-    contentType: file.type
-  };
+    
+    const headers = {
+      ...CORS_CONFIG.headers,
+      'Content-Type': 'multipart/form-data'
+    };
+    
+    const response = await axios.post(`${API_URL}${endpoint}`, formData, {
+      ...CORS_CONFIG,
+      headers
+    });
+    
+    const data = response.data;
+    
+    // Chuẩn hóa đầu ra để bảo đảm tính nhất quán
+    return {
+      fileUrl: data.url || data.fileDownloadUri,
+      filename: data.publicId,
+      originalFilename: file.name,
+      size: file.size,
+      contentType: file.type
+    };
+  } catch (error) {
+    console.error(`Error uploading file:`, error);
+    throw error;
+  }
 };
 
 /**
@@ -46,13 +53,15 @@ export const uploadFile = async (file, type = 'general') => {
  * @returns {Promise<Object>} Kết quả xóa file
  */
 export const deleteFile = async (fileUrl) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.delete(`${API_URL}/files/delete`, {
-    params: { url: fileUrl },
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  
-  return response.data;
+  try {
+    const response = await axios.delete(`${API_URL}/files/delete`, {
+      params: { url: fileUrl },
+      ...CORS_CONFIG
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting file:`, error);
+    throw error;
+  }
 }; 

@@ -300,14 +300,19 @@ const OrderHistory = ({ user }) => {
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         
-        const options = { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
-        return new Date(dateString).toLocaleDateString('vi-VN', options);
+        try {
+            const options = { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleDateString('vi-VN', options);
+        } catch (error) {
+            console.error('Error formatting date:', error, dateString);
+            return dateString || 'N/A';
+        }
     };
     
     const handleCancelOrder = async (orderId) => {
@@ -400,8 +405,8 @@ const OrderHistory = ({ user }) => {
                             {orders.map(order => (
                                 <React.Fragment key={order.id}>
                                     <tr>
-                                        <td>{order.id}</td>
-                                        <td>{formatDate(order.orderDate)}</td>
+                                        <td>{order.orderCode || order.id}</td>
+                                        <td>{formatDate(order.orderDate || order.createdAt)}</td>
                                         <td>{formatCurrency(order.totalAmount)}</td>
                                         <td>
                                             <span className={getStatusClass(order.status)}>
@@ -520,7 +525,9 @@ const OrderHistory = ({ user }) => {
                                                         <p className="mb-1"><strong>Tổng sản phẩm:</strong> {formatCurrency(order.subtotal || (order.totalAmount - (order.shippingFee || 0)))}</p>
                                                         <p className="mb-1"><strong>Phí vận chuyển:</strong> {formatCurrency(order.shippingFee || 0)}</p>
                                                         <p className="mb-1"><strong>Giảm giá:</strong> {formatCurrency(order.discount || 0)}</p>
-                                                        <h5><strong>Tổng thanh toán:</strong> {formatCurrency(order.totalAmount)}</h5>
+                                                        <div className="border-top pt-2">
+                                                            <h5 className="text-danger" style={{ fontSize: '1rem' }}><strong>Tổng thanh toán:</strong> {formatCurrency(order.totalAmount)}</h5>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
