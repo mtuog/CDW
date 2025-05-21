@@ -107,11 +107,17 @@ const OrderSuccess = () => {
                                         <h5 className="mb-3">Thông tin đơn hàng</h5>
                                         <div className="d-flex justify-content-between mb-2">
                                             <span>Mã đơn hàng:</span>
-                                            <span className="fw-bold">#{orderId}</span>
+                                            <span className="fw-bold">{order.orderCode || `#${orderId}`}</span>
                                         </div>
                                         <div className="d-flex justify-content-between mb-2">
                                             <span>Ngày đặt hàng:</span>
-                                            <span>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</span>
+                                            <span>{order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) : 'N/A'}</span>
                                         </div>
                                         <div className="d-flex justify-content-between mb-2">
                                             <span>Trạng thái:</span>
@@ -123,9 +129,9 @@ const OrderSuccess = () => {
                                                   order.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng' : 
                                                   'Thanh toán online'}</span>
                                         </div>
-                                        <div className="d-flex justify-content-between">
-                                            <span>Tổng tiền:</span>
-                                            <span className="fw-bold text-danger">
+                                        <div className="d-flex justify-content-between border-top pt-2">
+                                            <span className="fw-bold">Tổng tiền:</span>
+                                            <span className="fw-bold text-danger" style={{ fontSize: '1rem' }}>
                                                 {new Intl.NumberFormat('vi-VN', { 
                                                     style: 'currency', 
                                                     currency: 'VND' 

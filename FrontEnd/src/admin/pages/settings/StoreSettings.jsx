@@ -36,16 +36,6 @@ const StoreSettings = () => {
     country: 'Việt Nam'
   });
   
-  // State for Payment Settings
-  const [paymentSettings, setPaymentSettings] = useState({
-    enableCod: true,
-    enableBankTransfer: true,
-    bankName: '',
-    accountNumber: '',
-    accountName: '',
-    paymentInstructions: ''
-  });
-  
   // State for Shipping Settings
   const [shippingSettings, setShippingSettings] = useState({
     enableFreeShipping: false,
@@ -86,6 +76,8 @@ const StoreSettings = () => {
       try {
         setLoading(true);
         
+        console.log('Fetching settings from backend...');
+        
         // Fetch general settings
         const generalSettingsData = await getSettingsByGroup('general');
         if (generalSettingsData && generalSettingsData.length > 0) {
@@ -93,6 +85,8 @@ const StoreSettings = () => {
           generalSettingsData.forEach(setting => {
             settingsMap[setting.settingKey] = setting.settingValue;
           });
+          
+          console.log('Loaded general settings:', settingsMap);
           
           setGeneralSettings(prev => ({
             ...prev,
@@ -106,6 +100,8 @@ const StoreSettings = () => {
             currencySymbol: settingsMap.currency_symbol || prev.currencySymbol,
             orderPrefix: settingsMap.order_prefix || prev.orderPrefix
           }));
+        } else {
+          console.log('No general settings found in response');
         }
         
         // Fetch address settings
@@ -123,25 +119,6 @@ const StoreSettings = () => {
             district: settingsMap.district || prev.district,
             zipCode: settingsMap.zip_code || prev.zipCode,
             country: settingsMap.country || prev.country
-          }));
-        }
-        
-        // Fetch payment settings
-        const paymentSettingsData = await getSettingsByGroup('payment');
-        if (paymentSettingsData && paymentSettingsData.length > 0) {
-          const settingsMap = {};
-          paymentSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          setPaymentSettings(prev => ({
-            ...prev,
-            enableCod: settingsMap.enable_cod === 'true' || prev.enableCod,
-            enableBankTransfer: settingsMap.enable_bank_transfer === 'true' || prev.enableBankTransfer,
-            bankName: settingsMap.bank_name || prev.bankName,
-            accountNumber: settingsMap.account_number || prev.accountNumber,
-            accountName: settingsMap.account_name || prev.accountName,
-            paymentInstructions: settingsMap.payment_instructions || prev.paymentInstructions
           }));
         }
         
@@ -205,85 +182,17 @@ const StoreSettings = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error loading settings:', error);
-        toast.error('Không thể tải cài đặt từ máy chủ');
+        if (error.response) {
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+        }
+        toast.error('Không thể tải cài đặt từ máy chủ. Vui lòng thử lại sau.');
         setLoading(false);
-        
-        // Load mock data as fallback
-        loadMockData();
       }
     };
     
     loadSettings();
   }, []);
-  
-  // Load mock data function for fallback
-  const loadMockData = () => {
-    setTimeout(() => {
-      // Mock data - keeping existing implementation as fallback
-      setGeneralSettings({
-        storeName: 'Fashion Store',
-        storeDescription: 'Cửa hàng thời trang cao cấp',
-        storeEmail: 'contact@fashionstore.com',
-        storePhone: '0912345678',
-        logoUrl: 'https://via.placeholder.com/200x50',
-        faviconUrl: 'https://via.placeholder.com/32x32',
-        currencyCode: 'VND',
-        currencySymbol: '₫',
-        orderPrefix: 'ORD-'
-      });
-      
-      // Khôi phục lại mock data cho address settings
-      setAddressSettings({
-        address: '123 Đường Lê Lợi',
-        city: 'TP. Hồ Chí Minh',
-        district: 'Quận 1',
-        zipCode: '70000',
-        country: 'Việt Nam'
-      });
-      
-      // Khôi phục lại mock data cho payment settings
-      setPaymentSettings({
-        enableCod: true,
-        enableBankTransfer: true,
-        bankName: 'Vietcombank',
-        accountNumber: '1234567890',
-        accountName: 'FASHION STORE JSC',
-        paymentInstructions: 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
-      });
-      
-      // Khôi phục lại mock data cho shipping settings
-      setShippingSettings({
-        enableFreeShipping: true,
-        freeShippingThreshold: 500000,
-        flatRate: 30000,
-        shippingFromAddress: true,
-        enableLocalPickup: false
-      });
-      
-      // Khôi phục lại mock data cho email settings
-      setEmailSettings({
-        emailNotifications: true,
-        adminEmail: 'admin@fashionstore.com',
-        sendOrderConfirmation: true,
-        sendOrderStatusUpdates: true,
-        emailFooter: 'Fashion Store - 123 Đường Lê Lợi, Quận 1, TP.HCM'
-      });
-      
-      // Khôi phục lại mock data cho social settings
-      setSocialSettings({
-        facebook: 'https://facebook.com/fashionstore',
-        instagram: 'https://instagram.com/fashionstore',
-        twitter: '',
-        youtube: 'https://youtube.com/channel/fashionstore',
-        tiktok: 'https://tiktok.com/@fashionstore',
-        linkedin: '',
-        enableSocialIcons: true,
-        shareBtnsOnProduct: true
-      });
-      
-      setLoading(false);
-    }, 800);
-  };
   
   // Handle input changes
   const handleGeneralChange = (e) => {
@@ -294,14 +203,6 @@ const StoreSettings = () => {
   const handleAddressChange = (e) => {
     const { name, value } = e.target;
     setAddressSettings(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handlePaymentChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setPaymentSettings(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
-    }));
   };
   
   const handleShippingChange = (e) => {
@@ -595,16 +496,6 @@ const StoreSettings = () => {
           country: addressSettings.country
         };
         await bulkUpdateSettings(addressSettingsData, 'address');
-      } else if (activeTab === 'payment') {
-        const paymentSettingsData = {
-          enable_cod: paymentSettings.enableCod.toString(),
-          enable_bank_transfer: paymentSettings.enableBankTransfer.toString(),
-          bank_name: paymentSettings.bankName,
-          account_number: paymentSettings.accountNumber,
-          account_name: paymentSettings.accountName,
-          payment_instructions: paymentSettings.paymentInstructions
-        };
-        await bulkUpdateSettings(paymentSettingsData, 'payment');
       } else if (activeTab === 'shipping') {
         const shippingSettingsData = {
           enable_free_shipping: shippingSettings.enableFreeShipping.toString(),
@@ -801,12 +692,6 @@ const StoreSettings = () => {
             onClick={() => setActiveTab('address')}
           >
             <i className="fa fa-map-marker-alt"></i> Địa chỉ
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'payment' ? 'active' : ''}`}
-            onClick={() => setActiveTab('payment')}
-          >
-            <i className="fa fa-credit-card"></i> Thanh toán
           </button>
           <button 
             className={`tab-button ${activeTab === 'shipping' ? 'active' : ''}`}
@@ -1098,88 +983,6 @@ const StoreSettings = () => {
               </div>
             </div>
             
-            {/* Payment Settings */}
-            <div className={`tab-content ${activeTab === 'payment' ? 'active' : ''}`}>
-              <h2>Thanh toán</h2>
-              
-              <div className="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="enableCod"
-                    checked={paymentSettings.enableCod}
-                    onChange={handlePaymentChange}
-                  />
-                  Thanh toán khi nhận hàng (COD)
-                </label>
-              </div>
-              
-              <div className="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="enableBankTransfer"
-                    checked={paymentSettings.enableBankTransfer}
-                    onChange={handlePaymentChange}
-                  />
-                  Chuyển khoản ngân hàng
-                </label>
-              </div>
-              
-              {paymentSettings.enableBankTransfer && (
-                <div className="bank-details">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="bankName">Tên ngân hàng</label>
-                      <input
-                        type="text"
-                        id="bankName"
-                        name="bankName"
-                        value={paymentSettings.bankName}
-                        onChange={handlePaymentChange}
-                        required={paymentSettings.enableBankTransfer}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="accountNumber">Số tài khoản</label>
-                      <input
-                        type="text"
-                        id="accountNumber"
-                        name="accountNumber"
-                        value={paymentSettings.accountNumber}
-                        onChange={handlePaymentChange}
-                        required={paymentSettings.enableBankTransfer}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="accountName">Tên chủ tài khoản</label>
-                    <input
-                      type="text"
-                      id="accountName"
-                      name="accountName"
-                      value={paymentSettings.accountName}
-                      onChange={handlePaymentChange}
-                      required={paymentSettings.enableBankTransfer}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="paymentInstructions">Hướng dẫn thanh toán</label>
-                    <textarea
-                      id="paymentInstructions"
-                      name="paymentInstructions"
-                      value={paymentSettings.paymentInstructions}
-                      onChange={handlePaymentChange}
-                      rows="3"
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-            </div>
-            
             {/* Shipping Settings */}
             <div className={`tab-content ${activeTab === 'shipping' ? 'active' : ''}`}>
               <h2>Vận chuyển</h2>
@@ -1251,6 +1054,13 @@ const StoreSettings = () => {
             <div className={`tab-content ${activeTab === 'email' ? 'active' : ''}`}>
               <h2>Email</h2>
               
+              <div className="email-settings-description">
+                <p>
+                  <i className="fa fa-info-circle"></i> Cấu hình thông báo email tự động gửi đến khách hàng và admin. 
+                  Đảm bảo cài đặt đúng để nâng cao trải nghiệm mua sắm.
+                </p>
+              </div>
+              
               <div className="form-group checkbox-group">
                 <label>
                   <input
@@ -1261,6 +1071,7 @@ const StoreSettings = () => {
                   />
                   Bật thông báo email
                 </label>
+                <small>Gửi email tự động cho các sự kiện như đơn hàng mới, cập nhật trạng thái, v.v.</small>
               </div>
               
               <div className="form-group">
@@ -1273,7 +1084,7 @@ const StoreSettings = () => {
                   onChange={handleEmailChange}
                   required={emailSettings.emailNotifications}
                 />
-                <small>Email nhận thông báo đơn hàng mới và các thông báo hệ thống</small>
+                <small>Email nhận thông báo khi có đơn hàng mới, liên hệ từ khách hàng và các thông báo hệ thống khác</small>
               </div>
               
               <div className="form-group checkbox-group">
@@ -1286,6 +1097,7 @@ const StoreSettings = () => {
                   />
                   Gửi email xác nhận đơn hàng
                 </label>
+                <small>Gửi email tự động cho khách hàng khi họ đặt hàng thành công</small>
               </div>
               
               <div className="form-group checkbox-group">
@@ -1298,6 +1110,7 @@ const StoreSettings = () => {
                   />
                   Gửi cập nhật trạng thái đơn hàng
                 </label>
+                <small>Thông báo cho khách hàng khi trạng thái đơn hàng thay đổi (xử lý, đang giao, đã giao, v.v.)</small>
               </div>
               
               <div className="form-group">
@@ -1307,8 +1120,21 @@ const StoreSettings = () => {
                   name="emailFooter"
                   value={emailSettings.emailFooter}
                   onChange={handleEmailChange}
-                  rows="3"
+                  rows="4"
+                  placeholder="Thông tin liên hệ, địa chỉ cửa hàng, v.v."
                 ></textarea>
+                <small>Thông tin này sẽ hiển thị ở cuối tất cả các email gửi từ hệ thống</small>
+              </div>
+
+              <div className="example-box">
+                <h4><i className="fa fa-envelope"></i> Thông báo email được gửi khi:</h4>
+                <ul>
+                  <li>Khách hàng đăng ký tài khoản mới</li>
+                  <li>Khách hàng đặt đơn hàng mới</li>
+                  <li>Trạng thái đơn hàng thay đổi</li>
+                  <li>Hệ thống xác nhận thanh toán</li>
+                  <li>Khách hàng yêu cầu đặt lại mật khẩu</li>
+                </ul>
               </div>
             </div>
             
@@ -1431,7 +1257,15 @@ const StoreSettings = () => {
             
             <div className="form-actions">
               <button type="submit" className="save-button" disabled={saving}>
-                {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
+                {saving ? (
+                  <>
+                    <i className="fa fa-spinner fa-spin"></i> Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa fa-save"></i> Lưu cài đặt
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -1788,17 +1622,21 @@ const StoreSettings = () => {
         }
         
         .save-button {
-          padding: 10px 20px;
+          padding: 10px 24px;
           background-color: #28a745;
           color: white;
           border: none;
           border-radius: 4px;
-          font-size: 14px;
+          font-size: 16px;
+          font-weight: 500;
           cursor: pointer;
           transition: background-color 0.3s;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
         
-        .save-button:hover {
+        .save-button:hover:not(:disabled) {
           background-color: #218838;
         }
         
@@ -1979,6 +1817,52 @@ const StoreSettings = () => {
         
         .save-btn.small-btn i {
           margin-right: 6px;
+        }
+        
+        /* Email settings */
+        .email-settings-description {
+          background-color: #f8f9fa;
+          border-left: 4px solid #17a2b8;
+          padding: 12px 15px;
+          margin-bottom: 20px;
+          border-radius: 0 4px 4px 0;
+        }
+        
+        .email-settings-description p {
+          margin: 0;
+          color: #495057;
+        }
+        
+        .form-group small {
+          display: block;
+          margin-top: 5px;
+          color: #6c757d;
+          font-size: 13px;
+        }
+        
+        .example-box {
+          background-color: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 4px;
+          padding: 15px;
+          margin-top: 20px;
+        }
+        
+        .example-box h4 {
+          font-size: 16px;
+          margin-top: 0;
+          margin-bottom: 10px;
+          color: #495057;
+        }
+        
+        .example-box ul {
+          padding-left: 20px;
+          margin-bottom: 0;
+        }
+        
+        .example-box li {
+          margin-bottom: 5px;
+          color: #495057;
         }
       `}</style>
     </div>

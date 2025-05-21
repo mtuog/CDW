@@ -258,14 +258,19 @@ const OrderDetail = () => {
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         
-        const options = { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
-        return new Date(dateString).toLocaleDateString('vi-VN', options);
+        try {
+            const options = { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleDateString('vi-VN', options);
+        } catch (error) {
+            console.error('Error formatting date:', error, dateString);
+            return dateString || 'N/A';
+        }
     };
 
     const handleCancelOrder = async () => {
@@ -656,7 +661,7 @@ const OrderDetail = () => {
                     <i className="fas fa-arrow-left me-2"></i>
                     Quay lại
                 </button>
-                <h2 className="mb-0">Chi tiết đơn hàng #{order.id}</h2>
+                <h2 className="mb-0">Chi tiết đơn hàng {order.orderCode || `#${order.id}`}</h2>
                 <div>
                     <Badge bg={getStatusClass(order.status)} className="fs-6 px-3 py-2">
                         {getStatusText(order.status)}
@@ -721,7 +726,7 @@ const OrderDetail = () => {
                                 <tbody>
                                     <tr>
                                         <td className="fw-bold">Mã đơn hàng:</td>
-                                        <td>{order.id}</td>
+                                        <td>{order.orderCode || order.id}</td>
                                     </tr>
                                     <tr>
                                         <td className="fw-bold">Ngày đặt hàng:</td>
@@ -739,22 +744,14 @@ const OrderDetail = () => {
                                         <td className="fw-bold">Giảm giá:</td>
                                         <td>{formatCurrency(order.discount || 0)}</td>
                                     </tr>
-                                    <tr>
+                                    <tr className="border-top">
                                         <td className="fw-bold">Tổng thanh toán:</td>
-                                        <td className="text-primary fw-bold fs-5">{formatCurrency(order.totalAmount)}</td>
+                                        <td className="text-danger fw-bold" style={{ fontSize: '1rem' }}>{formatCurrency(order.totalAmount)}</td>
                                     </tr>
                                 </tbody>
                             </table>
 
-                            <div className="text-end mt-3">
-                                <Button 
-                                    variant="outline-primary" 
-                                    onClick={handleSendConfirmOrderEmail}
-                                >
-                                    <i className="fas fa-envelope me-2"></i>
-                                    Gửi email xác nhận
-                                </Button>
-                            </div>
+
                         </Card.Body>
                     </Card>
                 </Col>
@@ -846,7 +843,7 @@ const OrderDetail = () => {
                             <tfoot className="table-light">
                                 <tr>
                                     <td colSpan={order.status === 'DELIVERED' ? "5" : "4"} className="text-end fw-bold">Tổng cộng:</td>
-                                    <td className="text-end fw-bold">{formatCurrency(order.totalAmount)}</td>
+                                    <td className="text-end fw-bold text-danger">{formatCurrency(order.totalAmount)}</td>
                                 </tr>
                             </tfoot>
                         </table>

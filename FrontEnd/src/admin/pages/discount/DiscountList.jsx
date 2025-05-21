@@ -22,19 +22,31 @@ const DiscountList = () => {
       
       // Kiểm tra và đảm bảo trạng thái isValid được tính toán chính xác
       const processedData = data.map(code => {
+        // Convert string dates to Date objects
         const startDate = new Date(code.startDate);
         const endDate = new Date(code.endDate);
         const now = new Date();
         
-        // Tính lại trạng thái isValid dựa trên các điều kiện
-        const isValid = code.active && 
-                      (now >= startDate) && 
-                      (now <= endDate) && 
-                      (code.maxUsage === 0 || code.usageCount < code.maxUsage);
+        // Fix timezone issues by comparing only dates
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);  // End of day for end date
+        
+        // Kiểm tra hạn sử dụng riêng biệt với trạng thái kích hoạt
+        const isDateValid = now >= startDate && now <= endDate;
+        const isUsageValid = code.maxUsage === 0 || code.usageCount < code.maxUsage;
+        
+        // Mã giảm giá có hiệu lực khi đang kích hoạt VÀ còn trong thời hạn VÀ chưa vượt quá giới hạn sử dụng
+        const isValid = code.active && isDateValid && isUsageValid;
+        
+        console.log(`Code ${code.code}: active=${code.active}, dateValid=${isDateValid}, usageValid=${isUsageValid}`);
         
         return {
           ...code,
-          isValid: isValid
+          isValid: isValid,
+          isDateValid: isDateValid,
+          isUsageValid: isUsageValid,
+          startDate: startDate,
+          endDate: endDate
         };
       });
       
@@ -53,8 +65,57 @@ const DiscountList = () => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await discountCodeApi.toggleDiscountCodeStatus(id);
-      fetchDiscountCodes();
+      console.log(`Toggling status for discount code with ID: ${id}`);
+      
+      // Show loading indicator
+      const loadingToast = Swal.fire({
+        title: 'Đang xử lý...',
+        text: 'Vui lòng đợi trong giây lát',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      // Call the API to toggle status
+      const response = await discountCodeApi.toggleDiscountCodeStatus(id);
+      
+      // Close loading indicator
+      loadingToast.close();
+      
+      // Find the discount code that was toggled
+      const discountToUpdate = discountCodes.find(c => c.id === id);
+      
+      if (discountToUpdate) {
+        // Calculate new validity based on the updated active status
+        const newActive = !discountToUpdate.active;
+        const now = new Date();
+        const startDate = discountToUpdate.startDate;
+        const endDate = discountToUpdate.endDate;
+        
+        // Recalculate validity
+        const newIsDateValid = now >= startDate && now <= endDate;
+        const newIsUsageValid = discountToUpdate.maxUsage === 0 || discountToUpdate.usageCount < discountToUpdate.maxUsage;
+        
+        // Mã giảm giá có hiệu lực khi đang kích hoạt VÀ còn trong thời hạn VÀ chưa vượt quá giới hạn sử dụng
+        const newIsValid = newActive && newIsDateValid && newIsUsageValid;
+        
+        // Update the state with new values
+        setDiscountCodes(prevCodes => 
+          prevCodes.map(code => 
+            code.id === id 
+              ? { 
+                  ...code, 
+                  active: newActive, 
+                  isValid: newIsValid,
+                  isDateValid: newIsDateValid,
+                  isUsageValid: newIsUsageValid
+                } 
+              : code
+          )
+        );
+      }
+      
       Swal.fire({
         icon: 'success',
         title: 'Thành công',
@@ -64,11 +125,21 @@ const DiscountList = () => {
       });
     } catch (error) {
       console.error('Error toggling discount code status:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Không thể thay đổi trạng thái mã giảm giá';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       Swal.fire({
         icon: 'error',
         title: 'Lỗi',
-        text: 'Không thể thay đổi trạng thái mã giảm giá'
+        text: errorMessage
       });
+      
+      // Since the toggle failed, re-fetch all discount codes to ensure UI is in sync
+      fetchDiscountCodes();
     }
   };
 
@@ -106,9 +177,23 @@ const DiscountList = () => {
     });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+  const formatDate = (dateInput) => {
+    if (!dateInput) return '';
+    
+    let date;
+    // Handle both string dates and Date objects
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else {
+      date = new Date(dateInput);
+    }
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', dateInput);
+      return 'Invalid date';
+    }
+    
     return date.toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
@@ -129,8 +214,8 @@ const DiscountList = () => {
       if (filterActive === 'all') return true;
       if (filterActive === 'active') return code.active;
       if (filterActive === 'inactive') return !code.active;
-      if (filterActive === 'valid') return code.isValid;
-      if (filterActive === 'expired') return !code.isValid;
+      if (filterActive === 'valid') return code.isDateValid && code.isUsageValid;
+      if (filterActive === 'expired') return !code.isDateValid || !code.isUsageValid;
       return true;
     })
     .filter(code => 
@@ -240,13 +325,27 @@ const DiscountList = () => {
                       <span className={`status-badge ${discount.active ? 'active' : 'inactive'}`}>
                         {discount.active ? 'Đang kích hoạt' : 'Không kích hoạt'}
                       </span>
-                      <span className={`validity-badge ${discount.isValid ? 'valid' : 'invalid'}`}>
-                        {discount.isValid ? 'Còn hiệu lực' : 'Hết hạn'}
+                      <span className={`validity-badge ${(discount.isDateValid && discount.isUsageValid) ? 'valid' : 'invalid'}`}>
+                        {(discount.isDateValid && discount.isUsageValid) ? 'Còn hiệu lực' : 'Hết hạn'}
                       </span>
+                      {!discount.isDateValid && 
+                        <div className="validity-reason">
+                          {new Date() < discount.startDate 
+                            ? 'Chưa đến ngày bắt đầu' 
+                            : new Date() > discount.endDate 
+                              ? 'Đã quá hạn' 
+                              : 'Không hợp lệ'}
+                        </div>
+                      }
+                      {discount.isDateValid && !discount.isUsageValid && 
+                        <div className="validity-reason">
+                          Đã đạt giới hạn sử dụng
+                        </div>
+                      }
                     </td>
                     <td className="actions-cell">
                       <button
-                        className="action-btn toggle-btn"
+                        className={`action-btn toggle-btn ${discount.active ? 'toggle-active' : 'toggle-inactive'}`}
                         onClick={() => handleToggleStatus(discount.id)}
                         title={discount.active ? 'Vô hiệu hóa' : 'Kích hoạt'}
                       >
@@ -384,26 +483,39 @@ const DiscountList = () => {
           border-radius: 20px;
           font-size: 12px;
           margin-right: 5px;
+          margin-bottom: 5px;
         }
 
         .status-badge.active {
           background-color: #d1fae5;
           color: #065f46;
+          border: 1px solid #10b981;
         }
 
         .status-badge.inactive {
           background-color: #fee2e2;
           color: #991b1b;
+          border: 1px solid #ef4444;
         }
 
         .validity-badge.valid {
           background-color: #e0f2fe;
           color: #0c4a6e;
+          border: 1px solid #0ea5e9;
         }
 
         .validity-badge.invalid {
           background-color: #fef3c7;
           color: #92400e;
+          border: 1px solid #f59e0b;
+        }
+        
+        .validity-reason {
+          font-size: 11px;
+          color: #ef4444;
+          margin-top: 4px;
+          margin-bottom: 4px;
+          font-style: italic;
         }
 
         .min-purchase {
@@ -433,7 +545,23 @@ const DiscountList = () => {
 
         .toggle-btn {
           color: #2c7be5;
-          font-size: 18px;
+          font-size: 20px;
+          transition: all 0.3s ease;
+          padding: 5px 10px;
+          border-radius: 4px;
+        }
+        
+        .toggle-btn:hover {
+          transform: scale(1.1);
+          background-color: #f0f9ff;
+        }
+        
+        .toggle-active {
+          color: #10b981;
+        }
+        
+        .toggle-inactive {
+          color: #9ca3af;
         }
 
         .edit-btn {
