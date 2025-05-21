@@ -13,6 +13,10 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import java.io.UnsupportedEncodingException;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class EmailService {
@@ -155,6 +159,65 @@ public class EmailService {
         } catch (Exception e) {
             logger.error("SMTP connection test failed", e);
             return false;
+        }
+    }
+
+    /**
+     * Gửi email xác nhận thanh toán VNPAY
+     * 
+     * @param email Địa chỉ email người nhận
+     * @param orderId Mã đơn hàng
+     * @param amount Số tiền thanh toán
+     * @param orderInfo Thông tin giao dịch
+     * @throws MessagingException Nếu có lỗi khi gửi email
+     */
+    public void sendVNPaySuccessEmail(String email, String orderId, String amount, String orderInfo) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        
+        try {
+            helper.setFrom(fromEmail);
+            helper.setTo(email);
+            helper.setSubject("Xác nhận đã nhận thanh toán qua VNPAY cho đơn hàng #" + orderId);
+            
+            // Format số tiền từ VNPay (đã được nhân 100)
+            long amountLong = Long.parseLong(amount);
+            double actualAmount = amountLong / 100.0;
+            
+            // Format thành tiền VND
+            NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+            String formattedAmount = currencyFormatter.format(actualAmount);
+            
+            // Format thời gian hiện tại
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
+            String formattedDateTime = LocalDateTime.now().format(formatter);
+            
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>");
+            content.append("<p>Xin chào,</p>");
+            content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#").append(orderId).append("</strong> qua cổng thanh toán VNPAY.</p>");
+            content.append("<p><strong>Thông tin thanh toán:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(orderId).append("</li>");
+            content.append("<li>Mã giao dịch: ").append(orderInfo).append("</li>");
+            content.append("<li>Số tiền: ").append(formattedAmount).append("</li>");
+            content.append("<li>Thời gian thanh toán: ").append(formattedDateTime).append("</li>");
+            content.append("<li>Phương thức thanh toán: VNPAY</li>");
+            content.append("</ul>");
+            
+            content.append("<p>Thanh toán của bạn đã được xác nhận. Đơn hàng của bạn sẽ được xử lý và giao trong thời gian sớm nhất.</p>");
+            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
+            content.append("<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            helper.setText(content.toString(), true);
+            mailSender.send(message);
+            logger.info("VNPay success email sent to: {}", email);
+        } catch (Exception e) {
+            logger.error("Error sending VNPay success email to {}: {}", email, e.getMessage());
+            throw new MessagingException("Failed to send VNPay success email", e);
         }
     }
 } 

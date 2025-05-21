@@ -1,10 +1,14 @@
 package com.example.BackEndSpring.controller;
 
-import com.example.BackEndSpring.config.VNPayConfig;
 import com.example.BackEndSpring.model.Order;
+import com.example.BackEndSpring.model.OrderItem;
 import com.example.BackEndSpring.service.OrderService;
 import com.example.BackEndSpring.service.PaymentSettingsService;
+import com.example.BackEndSpring.service.ProductService;
+import com.example.BackEndSpring.service.EmailService;
+import com.example.BackEndSpring.config.VNPayConfig;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +17,12 @@ import org.springframework.web.bind.annotation.*;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/vnpay")
@@ -23,11 +31,15 @@ public class VNPayController {
 
     private final PaymentSettingsService paymentSettingsService;
     private final OrderService orderService;
+    private final ProductService productService;
+    private final EmailService emailService;
 
     @Autowired
-    public VNPayController(PaymentSettingsService paymentSettingsService, OrderService orderService) {
+    public VNPayController(PaymentSettingsService paymentSettingsService, OrderService orderService, ProductService productService, EmailService emailService) {
         this.paymentSettingsService = paymentSettingsService;
         this.orderService = orderService;
+        this.productService = productService;
+        this.emailService = emailService;
     }
 
     @PostMapping("/create-payment")
@@ -50,7 +62,7 @@ public class VNPayController {
                     vnpConfig = paymentSettingsService.getVNPayConfig();
                     System.out.println("Cấu hình VNPAY: " + vnpConfig);
                 } catch (Exception configEx) {
-                    System.err.println("Lỗi cấu hình VNPAY: " + configEx.getMessage());
+                    System.err.println("Lỗi cấu hình thanh toán: " + configEx.getMessage());
                     configEx.printStackTrace();
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", "Lỗi cấu hình thanh toán", "message", configEx.getMessage()));
@@ -277,6 +289,9 @@ public class VNPayController {
         Map<String, String> vnpConfig = paymentSettingsService.getVNPayConfig();
         
         // Log full URL and query string for debugging
+        System.out.println("==================================================");
+        System.out.println("VNPAY PAYMENT RETURN PROCESSING");
+        System.out.println("Thời gian: " + new Date());
         System.out.println("Payment Return - Full URL: " + request.getRequestURL().toString() + 
                           (request.getQueryString() != null ? "?" + request.getQueryString() : ""));
         
@@ -299,6 +314,7 @@ public class VNPayController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Không nhận được dữ liệu từ VNPAY, vui lòng thử lại");
+            System.out.println("ERROR: VNPay fields empty");
             return ResponseEntity.badRequest().body(response);
         }
         
@@ -323,61 +339,163 @@ public class VNPayController {
             }
         }
         
-        // Tính toán lại mã bảo mật
         String signValue = VNPayConfig.hmacSHA512(vnpConfig.get("vnp_HashSecret"), hashData.toString());
         
-        // Debug log for signature verification
-        System.out.println("VERIFY SIGNATURE - Return from VNPAY");
+        System.out.println("VERIFY SIGNATURE - From VNPAY");
         System.out.println("VNPAY Secure Hash: " + vnp_SecureHash);
         System.out.println("Calculated Hash:   " + signValue);
-        System.out.println("Hash Data: " + hashData.toString());
-        System.out.println("Hash Secret: " + vnpConfig.get("vnp_HashSecret"));
+        
+        Map<String, Object> response = new HashMap<>();
         
         // Kiểm tra mã bảo mật
-        Map<String, Object> response = new HashMap<>();
-        response.put("vnp_ResponseCode", fields.get("vnp_ResponseCode"));
-        response.put("vnp_TxnRef", fields.get("vnp_TxnRef"));
-        response.put("vnp_Amount", fields.get("vnp_Amount") != null ? Integer.parseInt(fields.get("vnp_Amount")) / 100 : 0);
-        response.put("vnp_OrderInfo", fields.get("vnp_OrderInfo"));
-        response.put("vnp_TransactionNo", fields.get("vnp_TransactionNo"));
-        
         if (signValue.equals(vnp_SecureHash)) {
-            // Mã bảo mật hợp lệ, tiếp tục xử lý
-            if ("00".equals(fields.get("vnp_ResponseCode"))) {
-                // Giao dịch thành công
-                response.put("success", true);
-                response.put("message", "Giao dịch thành công");
+            System.out.println("Signature verification: SUCCESS");
+            // Mã bảo mật hợp lệ, kiểm tra kết quả giao dịch
+            String vnp_ResponseCode = fields.get("vnp_ResponseCode");
+            String vnp_TransactionStatus = fields.get("vnp_TransactionStatus");
+            String vnp_TxnRef = fields.get("vnp_TxnRef");
+            String vnp_Amount = fields.get("vnp_Amount");
+            String vnp_OrderInfo = fields.get("vnp_OrderInfo");
+            
+            System.out.println("Response Code: " + vnp_ResponseCode);
+            System.out.println("Transaction Status: " + vnp_TransactionStatus);
+            System.out.println("Transaction Reference: " + vnp_TxnRef);
+            System.out.println("Amount: " + vnp_Amount);
+            System.out.println("Order Info: " + vnp_OrderInfo);
+            
+            // Kiểm tra mã đơn hàng
+            if (vnp_TxnRef != null && vnp_TxnRef.contains("_")) {
+                String orderId = vnp_TxnRef.split("_")[0];
+                System.out.println("Order ID: " + orderId);
                 
-                // Cập nhật trạng thái đơn hàng
-                String orderIdWithTimestamp = fields.get("vnp_TxnRef");
-                if (orderIdWithTimestamp != null && orderIdWithTimestamp.contains("_")) {
-                    String orderId = orderIdWithTimestamp.split("_")[0];
-                    // Cập nhật trạng thái đơn hàng
-                    try {
-                        Optional<Order> optionalOrder = orderService.getOrderById(Long.parseLong(orderId));
-                        if (optionalOrder.isPresent()) {
-                            // Cập nhật trạng thái thanh toán và đơn hàng
-                            orderService.updateOrderStatus(Long.parseLong(orderId), Order.Status.PROCESSING);
+                try {
+                    Long orderIdLong = Long.parseLong(orderId);
+                    Optional<Order> orderOpt = orderService.getOrderById(orderIdLong);
+                    
+                    if (orderOpt.isPresent()) {
+                        Order order = orderOpt.get();
+                        System.out.println("Found order: " + order.getId() + " with status: " + order.getStatus());
+                        
+                        // Nếu giao dịch thành công
+                        if ("00".equals(vnp_ResponseCode) && "00".equals(vnp_TransactionStatus)) {
+                            System.out.println("Transaction successful (code 00)");
+                            // Cập nhật trạng thái đơn hàng
+                            if (order.getStatus() == Order.Status.PENDING) {
+                                // Cập nhật trạng thái đơn hàng và giảm số lượng sản phẩm
+                                System.out.println("Updating order status to PROCESSING and decreasing product stock");
+                                
+                                // Giảm số lượng sản phẩm trong kho
+                                if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+                                    for (OrderItem item : order.getOrderItems()) {
+                                        if (item.getProduct() != null) {
+                                            productService.decreaseStock(item.getProduct().getId(), item.getQuantity(), item.getSize());
+                                        }
+                                    }
+                                }
+                                
+                                // First, send the order confirmation email if it wasn't sent during order creation
+                                try {
+                                    if (order.getUser() != null && order.getUser().getEmail() != null) {
+                                        System.out.println("Sending order confirmation email to: " + order.getUser().getEmail());
+                                        orderService.sendOrderConfirmationEmail(order);
+                                        System.out.println("Order confirmation email sent to: " + order.getUser().getEmail());
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Error sending order confirmation email: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
+                                
+                                // Cập nhật trạng thái đơn hàng nhưng không gửi email thông báo trạng thái
+                                orderService.updateOrderStatusAndNotify(orderIdLong, Order.Status.PROCESSING, false);
+                                
+                                // Gửi email xác nhận thanh toán thành công riêng
+                                try {
+                                    if (order.getUser() != null && order.getUser().getEmail() != null) {
+                                        System.out.println("Sending VNPay success email to: " + order.getUser().getEmail());
+                                        sendVNPaySuccessEmail(order, vnp_Amount, vnp_OrderInfo);
+                                        System.out.println("VNPay success email sent to: " + order.getUser().getEmail());
+                                    } else {
+                                        System.out.println("Cannot send email: User or user email is null");
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Error sending VNPay success email: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
+                                
+                                response.put("success", true);
+                                response.put("message", "Thanh toán thành công");
+                                response.put("orderId", orderId);
+                            } else {
+                                System.out.println("Order not in PENDING status, current status: " + order.getStatus());
+                                response.put("success", true);
+                                response.put("message", "Đơn hàng đã được xử lý trước đó");
+                                response.put("orderId", orderId);
+                            }
+                        } else {
+                            // Giao dịch thất bại
+                            System.out.println("Transaction failed with code: " + vnp_ResponseCode);
+                            response.put("success", false);
+                            response.put("message", getVNPayResponseMessage(vnp_ResponseCode));
                             response.put("orderId", orderId);
+                            
+                            // Nếu đơn hàng vẫn ở trạng thái PENDING, cập nhật thành CANCELLED
+                            // Đối với đơn hàng VNPAY thất bại, không cần tăng số lượng trong kho vì chưa giảm
+                            if (order.getStatus() == Order.Status.PENDING) {
+                                System.out.println("Updating order status to CANCELLED without stock adjustment");
+                                // Cập nhật trạng thái đơn hàng trực tiếp mà không điều chỉnh kho
+                                order.setStatus(Order.Status.CANCELLED);
+                                orderService.saveOrder(order);
+                            }
                         }
-                    } catch (Exception e) {
-                        response.put("orderUpdateError", e.getMessage());
+                    } else {
+                        System.out.println("Order not found: " + orderId);
+                        response.put("success", false);
+                        response.put("message", "Không tìm thấy đơn hàng");
                     }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid order ID format: " + orderId);
+                    response.put("success", false);
+                    response.put("message", "Mã đơn hàng không hợp lệ");
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    System.err.println("Error processing order: " + e.getMessage());
+                    response.put("success", false);
+                    response.put("message", "Lỗi xử lý đơn hàng: " + e.getMessage());
+                    e.printStackTrace();
                 }
             } else {
-                // Giao dịch thất bại
+                System.out.println("Invalid transaction reference: " + vnp_TxnRef);
                 response.put("success", false);
-                response.put("message", "Giao dịch thất bại: " + getVnPayResponseMessage(fields.get("vnp_ResponseCode")));
+                response.put("message", "Mã tham chiếu giao dịch không hợp lệ");
             }
         } else {
             // Mã bảo mật không hợp lệ
+            System.out.println("Signature verification: FAILED");
             response.put("success", false);
-            response.put("message", "Sai chữ ký điện tử, giao dịch không hợp lệ");
+            response.put("message", "Chữ ký không hợp lệ");
         }
         
+        System.out.println("Response to client: " + response);
+        System.out.println("==================================================");
         return ResponseEntity.ok(response);
     }
     
+    /**
+     * Gửi email xác nhận thanh toán VNPay thành công
+     * Lưu ý: Email này chỉ xác nhận việc thanh toán, không phải xác nhận đơn hàng
+     */
+    private void sendVNPaySuccessEmail(Order order, String amount, String orderInfo) throws MessagingException {
+        if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+            throw new RuntimeException("Không đủ thông tin để gửi email");
+        }
+        
+        String email = order.getUser().getEmail();
+        String orderId = order.getId().toString();
+        
+        // Gọi phương thức trong EmailService để gửi email xác nhận thanh toán
+        emailService.sendVNPaySuccessEmail(email, orderId, amount, orderInfo);
+    }
+
     @GetMapping("/payment-ipn")
     public ResponseEntity<?> paymentIPN(HttpServletRequest request) {
         Map<String, String> vnpConfig = paymentSettingsService.getVNPayConfig();
@@ -467,7 +585,7 @@ public class VNPayController {
     }
     
     // Hàm phụ trợ để hiển thị thông báo lỗi VNPAY
-    private String getVnPayResponseMessage(String responseCode) {
+    private String getVNPayResponseMessage(String responseCode) {
         switch (responseCode) {
             case "00":
                 return "Giao dịch thành công";
@@ -517,5 +635,42 @@ public class VNPayController {
         }
         
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/send-email")
+    public ResponseEntity<?> sendVNPaySuccessEmail(@RequestBody Map<String, String> emailInfo) throws MessagingException {
+        String email = emailInfo.get("email");
+        String orderId = emailInfo.get("orderId");
+        String amount = emailInfo.get("amount");
+        String orderInfo = emailInfo.get("orderInfo");
+
+        if (email == null || email.isEmpty() || orderId == null || orderId.isEmpty() || amount == null || amount.isEmpty() || orderInfo == null || orderInfo.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Thông tin email không đầy đủ"));
+        }
+
+        try {
+            // Kiểm tra xem đơn hàng có tồn tại không
+            Optional<Order> orderOpt = orderService.getOrderById(Long.parseLong(orderId));
+            if (orderOpt.isPresent()) {
+                Order order = orderOpt.get();
+                System.out.println("Found order: " + order.getId() + " with status: " + order.getStatus());
+
+                // Kiểm tra xem đơn hàng có trạng thái là PROCESSING không
+                if (order.getStatus() == Order.Status.PROCESSING) {
+                    // Gửi email xác nhận thanh toán
+                    emailService.sendVNPaySuccessEmail(email, orderId, amount, orderInfo);
+                    return ResponseEntity.ok(Map.of("message", "Email xác nhận thanh toán đã được gửi thành công"));
+                } else {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Đơn hàng không ở trạng thái PROCESSING"));
+                }
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("error", "Không tìm thấy đơn hàng"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending email: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Lỗi gửi email", "message", e.getMessage()));
+        }
     }
 } 

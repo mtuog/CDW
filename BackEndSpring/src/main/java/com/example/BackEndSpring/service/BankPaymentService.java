@@ -3,11 +3,13 @@ package com.example.BackEndSpring.service;
 import com.example.BackEndSpring.model.BankAccount;
 import com.example.BackEndSpring.model.BankPayment;
 import com.example.BackEndSpring.model.Order;
+import com.example.BackEndSpring.model.OrderItem;
 import com.example.BackEndSpring.model.PaymentLog;
 import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.repository.BankAccountRepository;
 import com.example.BackEndSpring.repository.BankPaymentRepository;
 import com.example.BackEndSpring.repository.PaymentLogRepository;
+import com.example.BackEndSpring.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,9 @@ public class BankPaymentService {
     private PaymentLogRepository paymentLogRepository;
     
     @Autowired
+    private OrderRepository orderRepository;
+    
+    @Autowired
     private OrderService orderService;
     
     @Autowired
@@ -39,6 +44,9 @@ public class BankPaymentService {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private ProductService productService;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     
@@ -70,13 +78,16 @@ public class BankPaymentService {
             throw new RuntimeException("Phương thức thanh toán không hợp lệ, không thể thanh toán qua ngân hàng");
         }
         
-        // Cập nhật thông tin đơn hàng
+        // Cập nhật thông tin đơn hàng - chỉ thay đổi phương thức thanh toán, không thay đổi trạng thái
         order.setPaymentMethod("Bank Transfer");
-        orderService.updateOrderStatus(orderId, Order.Status.PROCESSING);
+        
+        // Lưu thông tin đơn hàng trực tiếp vào repository, không thay đổi trạng thái
+        Order savedOrder = orderRepository.save(order);
+        System.out.println("Đơn hàng #" + orderId + " đã được cập nhật phương thức thanh toán sang Bank Transfer");
         
         // Thiết lập thông tin giao dịch
-        bankPayment.setOrder(order);
-        bankPayment.setAmount(order.getTotalAmount());
+        bankPayment.setOrder(savedOrder);
+        bankPayment.setAmount(savedOrder.getTotalAmount());
         bankPayment.setStatus(BankPayment.PaymentStatus.PENDING);
         
         // Tạo mã giao dịch nếu chưa có
@@ -117,6 +128,17 @@ public class BankPaymentService {
         // Cập nhật trạng thái đơn hàng nếu cần
         Order order = payment.getOrder();
         if (order.getStatus() == Order.Status.PENDING) {
+            // Giảm số lượng sản phẩm trong kho khi xác nhận thanh toán thành công
+            if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+                for (OrderItem item : order.getOrderItems()) {
+                    if (item.getProduct() != null) {
+                        productService.decreaseStock(item.getProduct().getId(), item.getQuantity(), item.getSize());
+                    }
+                }
+                System.out.println("Đã giảm số lượng sản phẩm trong kho sau khi xác nhận thanh toán thành công cho đơn hàng #" + order.getId());
+            }
+            
+            // Cập nhật trạng thái đơn hàng
             orderService.updateOrderStatus(order.getId(), Order.Status.PROCESSING);
         }
         
@@ -150,6 +172,16 @@ public class BankPaymentService {
         payment.setStatus(BankPayment.PaymentStatus.FAILED);
         payment.setVerifiedAt(LocalDateTime.now());
         payment.setVerificationNote(note);
+        
+        // Cập nhật trạng thái đơn hàng nếu cần
+        Order order = payment.getOrder();
+        if (order.getStatus() == Order.Status.PENDING) {
+            // Chuyển trạng thái đơn hàng sang CANCELLED nếu thanh toán bị từ chối
+            // Cập nhật trạng thái đơn hàng trực tiếp mà không điều chỉnh kho
+            order.setStatus(Order.Status.CANCELLED);
+            orderService.saveOrder(order);
+            System.out.println("Đơn hàng #" + order.getId() + " đã được chuyển sang trạng thái CANCELLED do thanh toán bị từ chối (không điều chỉnh kho)");
+        }
         
         // Lưu thông tin giao dịch
         BankPayment rejectedPayment = bankPaymentRepository.save(payment);
@@ -272,27 +304,31 @@ public class BankPaymentService {
             if (order != null && order.getUser() != null) {
                 User user = order.getUser();
                 String email = user.getEmail();
+                String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
                 
-                String subject = "Xác nhận thanh toán đơn hàng #" + order.getId();
+                String subject = "Xác nhận thanh toán thành công cho đơn hàng #" + order.getId();
                 
-                String content = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
-                    + "<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>"
-                    + "<p>Xin chào " + user.getFullName() + ",</p>"
-                    + "<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#" + order.getId() + "</strong>.</p>"
-                    + "<p><strong>Thông tin thanh toán:</strong></p>"
-                    + "<ul>"
-                    + "<li>Mã giao dịch: " + payment.getTransactionCode() + "</li>"
-                    + "<li>Số tiền: " + formatCurrency(payment.getAmount()) + " VNĐ</li>"
-                    + "<li>Thời gian xác nhận: " + formatDateTime(payment.getVerifiedAt()) + "</li>"
-                    + "<li>Phương thức thanh toán: Chuyển khoản ngân hàng</li>"
-                    + "</ul>"
-                    + "<p>Đơn hàng của bạn đang được xử lý và sẽ được giao trong thời gian sớm nhất.</p>"
-                    + "<p>Bạn có thể kiểm tra trạng thái đơn hàng tại <a href=\"http://localhost:3000/account\">đây</a>.</p>"
-                    + "<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>"
-                    + "<p>Trân trọng,<br>CD Web Shop</p>"
-                    + "</div>";
+                StringBuilder content = new StringBuilder();
+                content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+                content.append("<h2 style=\"color: #4CAF50;\">Thanh toán thành công</h2>");
+                content.append("<p>Xin chào ").append(customerName).append(",</p>");
+                content.append("<p>Chúng tôi xác nhận đã nhận được thanh toán của bạn cho đơn hàng <strong>#").append(order.getId()).append("</strong>.</p>");
+                content.append("<p><strong>Thông tin thanh toán:</strong></p>");
+                content.append("<ul>");
+                content.append("<li>Mã đơn hàng: ").append(order.getId()).append("</li>");
+                content.append("<li>Mã giao dịch: ").append(payment.getTransactionCode()).append("</li>");
+                content.append("<li>Số tiền: ").append(formatCurrency(payment.getAmount())).append(" VNĐ</li>");
+                content.append("<li>Thời gian xác nhận: ").append(formatDateTime(payment.getVerifiedAt())).append("</li>");
+                content.append("<li>Phương thức thanh toán: Chuyển khoản ngân hàng</li>");
+                content.append("</ul>");
                 
-                emailService.sendEmail(email, subject, content);
+                content.append("<p>Đơn hàng của bạn sẽ được giao trong thời gian sớm nhất.</p>");
+                content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
+                content.append("<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>");
+                content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+                content.append("</div>");
+                
+                emailService.sendEmail(email, subject, content.toString());
             }
         } catch (MessagingException e) {
             // Log the error but don't throw exception to avoid disrupting the transaction

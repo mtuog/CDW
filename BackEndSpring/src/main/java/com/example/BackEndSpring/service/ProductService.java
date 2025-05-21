@@ -183,39 +183,53 @@ public class ProductService {
     @Transactional
     public boolean decreaseStock(Long productId, int quantity, String size) {
         try {
+            System.out.println("====== DECREASE STOCK ======");
+            System.out.println("Product ID: " + productId);
+            System.out.println("Quantity: " + quantity);
+            System.out.println("Size: " + size);
+            
             if (size != null && !size.isEmpty()) {
                 // Nếu có size cụ thể, giảm số lượng của size đó
                 Optional<ProductSize> productSizeOpt = productSizeRepository.findByProductIdAndSize(productId, size);
                 if (productSizeOpt.isPresent()) {
                     ProductSize productSize = productSizeOpt.get();
+                    System.out.println("Found product size. Current quantity: " + productSize.getQuantity());
                     int newQuantity = Math.max(0, productSize.getQuantity() - quantity);
                     productSize.setQuantity(newQuantity);
                     productSizeRepository.save(productSize);
+                    System.out.println("Updated size quantity to: " + newQuantity);
                     
                     // Cập nhật tổng số lượng của sản phẩm
                     Product product = productSize.getProduct();
                     product.updateTotalQuantity();
                     productRepository.save(product);
+                    System.out.println("Updated total product quantity: " + product.getQuantity());
                     return true;
                 }
+                System.out.println("Product size not found for productId: " + productId + " and size: " + size);
                 return false;
             } else {
                 // Nếu không có size, giảm trực tiếp số lượng sản phẩm
                 Optional<Product> productOpt = productRepository.findById(productId);
                 if (productOpt.isPresent()) {
                     Product product = productOpt.get();
+                    System.out.println("Found product. Current quantity: " + product.getQuantity());
                     int newQuantity = Math.max(0, product.getQuantity() - quantity);
                     product.setQuantity(newQuantity);
                     product.setInStock(newQuantity > 0);
                     productRepository.save(product);
+                    System.out.println("Updated product quantity to: " + newQuantity);
                     return true;
                 }
+                System.out.println("Product not found with ID: " + productId);
                 return false;
             }
         } catch (Exception e) {
             System.err.println("Error decreasing stock: " + e.getMessage());
             e.printStackTrace();
             return false;
+        } finally {
+            System.out.println("====== END DECREASE STOCK ======");
         }
     }
     

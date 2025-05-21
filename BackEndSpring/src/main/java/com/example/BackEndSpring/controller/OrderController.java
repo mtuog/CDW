@@ -263,7 +263,8 @@ public class OrderController {
     @PutMapping("/{id}/status")
     public ResponseEntity<Order> updateOrderStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
+            @RequestParam String status,
+            @RequestParam(required = false, defaultValue = "true") boolean sendEmail) {
         try {
             Order.Status orderStatus = Order.Status.valueOf(status.toUpperCase());
             System.out.println("Controller - Updating order " + id + " to status: " + orderStatus);
@@ -274,11 +275,15 @@ public class OrderController {
                 System.out.println("Order " + id + " current status: " + orderBeforeUpdate.get().getStatus());
             }
             
-            // Gọi service để cập nhật trạng thái
-            Order updatedOrder = orderService.updateOrderStatus(id, orderStatus);
+            // Gọi service để cập nhật trạng thái và gửi email thông báo
+            System.out.println("Cập nhật trạng thái đơn hàng trước, sau đó mới gửi email...");
+            Order updatedOrder = orderService.updateOrderStatusAndNotify(id, orderStatus, sendEmail);
             
             // Log sau khi cập nhật
             System.out.println("Order " + id + " updated status: " + updatedOrder.getStatus());
+            if (sendEmail) {
+                System.out.println("Email notification sent based on the updated status: " + updatedOrder.getStatus());
+            }
             
             // Cập nhật xong trả về kết quả
             return ResponseEntity.ok(updatedOrder);

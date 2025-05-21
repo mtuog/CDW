@@ -131,13 +131,19 @@ public class OrderService {
         // Lưu đơn hàng trước
         Order savedOrder = orderRepository.save(order);
         
-        // Cập nhật số lượng sản phẩm trong kho nếu cần
-        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
-            for (OrderItem item : order.getOrderItems()) {
-                if (item.getProduct() != null) {
-                    productService.decreaseStock(item.getProduct().getId(), item.getQuantity(), item.getSize());
+        // Chỉ cập nhật số lượng sản phẩm trong kho ngay lập tức nếu là thanh toán COD
+        // Các phương thức khác sẽ chờ xác nhận thanh toán thành công
+        if (order.getPaymentMethod() != null && order.getPaymentMethod().equalsIgnoreCase("COD")) {
+            if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+                for (OrderItem item : order.getOrderItems()) {
+                    if (item.getProduct() != null) {
+                        productService.decreaseStock(item.getProduct().getId(), item.getQuantity(), item.getSize());
+                    }
                 }
             }
+            System.out.println("Đơn hàng COD #" + savedOrder.getId() + ": Đã giảm số lượng sản phẩm trong kho");
+        } else {
+            System.out.println("Đơn hàng #" + savedOrder.getId() + " với phương thức " + order.getPaymentMethod() + ": Chờ xác nhận thanh toán trước khi giảm số lượng");
         }
         
         // Gửi email xác nhận đơn hàng
@@ -239,7 +245,7 @@ public class OrderService {
                 content.append("<p>Đơn hàng của bạn sẽ được xử lý sau khi chúng tôi nhận được thanh toán.</p>");
             }
             
-            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account\">đây</a>.</p>");
+            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
             content.append("<p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua email hoặc hotline.</p>");
             content.append("<p>Trân trọng,<br>CD Web Shop</p>");
             content.append("</div>");
@@ -259,6 +265,267 @@ public class OrderService {
     public void sendOrderConfirmationEmail(Order order) {
         // Delegate to the private implementation
         sendSimpleOrderConfirmationEmail(order);
+    }
+    
+    /**
+     * Gửi email theo trạng thái của đơn hàng
+     * @param order Đơn hàng cần gửi email
+     * @return true nếu gửi email thành công
+     */
+    public boolean sendOrderStatusEmail(Order order) {
+        try {
+            if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+                return false;
+            }
+            
+            switch (order.getStatus()) {
+                case PENDING:
+                    sendSimpleOrderConfirmationEmail(order);
+                    break;
+                case PROCESSING:
+                    sendOrderProcessingEmail(order);
+                    break;
+                case SHIPPED:
+                    sendOrderShippedEmail(order);
+                    break;
+                case DELIVERED:
+                    sendOrderDeliveredEmail(order);
+                    break;
+                case CANCELLED:
+                    sendOrderCancelledEmail(order);
+                    break;
+                default:
+                    sendSimpleOrderConfirmationEmail(order);
+                    break;
+            }
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to send order status email: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Gửi email thông báo đơn hàng đang được xử lý
+     */
+    private void sendOrderProcessingEmail(Order order) {
+        try {
+            User user = order.getUser();
+            String email = user.getEmail();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            
+            String subject = "Đơn hàng #" + order.getId() + " đang được xử lý - " + order.getOrderCode();
+            
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #e65540;\">Đơn hàng của bạn đang được xử lý</h2>");
+            content.append("<p>Xin chào ").append(customerName).append(",</p>");
+            
+            // Thông báo khác nhau tùy theo phương thức thanh toán
+            if ("VNPAY".equals(order.getPaymentMethod())) {
+                content.append("<p>Cảm ơn bạn đã thanh toán qua VNPAY. Chúng tôi đã nhận được thanh toán của bạn và đang xử lý đơn hàng.</p>");
+            } else if ("Bank Transfer".equals(order.getPaymentMethod())) {
+                content.append("<p>Cảm ơn bạn đã thanh toán qua chuyển khoản ngân hàng. Chúng tôi đã xác nhận thanh toán của bạn và đang xử lý đơn hàng.</p>");
+            } else {
+                content.append("<p>Chúng tôi đang xử lý đơn hàng của bạn và sẽ sớm giao hàng đến bạn.</p>");
+            }
+            
+            content.append("<p><strong>Thông tin đơn hàng:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
+            content.append("<li>Ngày đặt hàng: ").append(formatDateTime(order.getCreatedAt())).append("</li>");
+            content.append("<li>Phương thức thanh toán: ").append(getPaymentMethodName(order.getPaymentMethod())).append("</li>");
+            content.append("<li>Địa chỉ giao hàng: ").append(order.getShippingAddress()).append("</li>");
+            content.append("<li>Số điện thoại: ").append(order.getPhone()).append("</li>");
+            content.append("</ul>");
+            
+            // Thêm thông tin sản phẩm
+            addOrderItemsToEmail(content, order);
+            
+            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
+            content.append("<p>Cảm ơn bạn đã mua sắm cùng chúng tôi!</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            emailService.sendEmail(email, subject, content.toString());
+        } catch (Exception e) {
+            System.err.println("Failed to send order processing email: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Gửi email thông báo đơn hàng đang được giao
+     */
+    private void sendOrderShippedEmail(Order order) {
+        try {
+            User user = order.getUser();
+            String email = user.getEmail();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            
+            String subject = "Đơn hàng #" + order.getId() + " đang được giao - " + order.getOrderCode();
+            
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #e65540;\">Đơn hàng của bạn đang được giao</h2>");
+            content.append("<p>Xin chào ").append(customerName).append(",</p>");
+            content.append("<p>Đơn hàng của bạn hiện đang được giao đến địa chỉ bạn đã cung cấp. Vui lòng đảm bảo có người nhận hàng.</p>");
+            content.append("<p><strong>Thông tin đơn hàng:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
+            content.append("<li>Ngày đặt hàng: ").append(formatDateTime(order.getCreatedAt())).append("</li>");
+            content.append("<li>Phương thức thanh toán: ").append(getPaymentMethodName(order.getPaymentMethod())).append("</li>");
+            content.append("<li>Địa chỉ giao hàng: ").append(order.getShippingAddress()).append("</li>");
+            content.append("<li>Số điện thoại: ").append(order.getPhone()).append("</li>");
+            content.append("</ul>");
+            
+            // Thêm thông tin sản phẩm
+            addOrderItemsToEmail(content, order);
+            
+            content.append("<p>Bạn có thể theo dõi trạng thái đơn hàng tại <a href=\"http://localhost:3000/account?tab=orders\">đây</a>.</p>");
+            content.append("<p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua email hoặc hotline.</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            emailService.sendEmail(email, subject, content.toString());
+        } catch (Exception e) {
+            System.err.println("Failed to send order shipped email: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Gửi email thông báo đơn hàng đã giao thành công
+     */
+    private void sendOrderDeliveredEmail(Order order) {
+        try {
+            User user = order.getUser();
+            String email = user.getEmail();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            
+            String subject = "Đơn hàng #" + order.getId() + " đã giao thành công - " + order.getOrderCode();
+            
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #e65540;\">Đơn hàng của bạn đã được giao thành công</h2>");
+            content.append("<p>Xin chào ").append(customerName).append(",</p>");
+            content.append("<p>Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua sắm tại CD Web Shop!</p>");
+            content.append("<p><strong>Thông tin đơn hàng:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
+            content.append("<li>Ngày đặt hàng: ").append(formatDateTime(order.getCreatedAt())).append("</li>");
+            content.append("<li>Ngày giao hàng: ").append(formatDateTime(LocalDateTime.now())).append("</li>");
+            content.append("<li>Phương thức thanh toán: ").append(getPaymentMethodName(order.getPaymentMethod())).append("</li>");
+            content.append("</ul>");
+            
+            // Thêm thông tin sản phẩm
+            addOrderItemsToEmail(content, order);
+            
+            // Thêm phần đánh giá sản phẩm
+            content.append("<p>Bạn có thể đánh giá sản phẩm tại <a href=\"http://localhost:3000/account?tab=reviews\">đây</a>.</p>");
+            
+            content.append("<p>Chúng tôi rất mong nhận được phản hồi của bạn về trải nghiệm mua sắm và sản phẩm.</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            emailService.sendEmail(email, subject, content.toString());
+        } catch (Exception e) {
+            System.err.println("Failed to send order delivered email: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Gửi email thông báo đơn hàng đã bị hủy
+     */
+    private void sendOrderCancelledEmail(Order order) {
+        try {
+            User user = order.getUser();
+            String email = user.getEmail();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            
+            String subject = "Đơn hàng #" + order.getId() + " đã bị hủy - " + order.getOrderCode();
+            
+            StringBuilder content = new StringBuilder();
+            content.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">");
+            content.append("<h2 style=\"color: #e65540;\">Đơn hàng của bạn đã bị hủy</h2>");
+            content.append("<p>Xin chào ").append(customerName).append(",</p>");
+            content.append("<p>Đơn hàng của bạn đã bị hủy. Nếu bạn không yêu cầu hủy đơn hàng này, vui lòng liên hệ với chúng tôi ngay.</p>");
+            content.append("<p><strong>Thông tin đơn hàng:</strong></p>");
+            content.append("<ul>");
+            content.append("<li>Mã đơn hàng: ").append(order.getOrderCode()).append("</li>");
+            content.append("<li>Ngày đặt hàng: ").append(formatDateTime(order.getCreatedAt())).append("</li>");
+            content.append("<li>Ngày hủy: ").append(formatDateTime(LocalDateTime.now())).append("</li>");
+            content.append("</ul>");
+            
+            // Thêm thông tin sản phẩm
+            addOrderItemsToEmail(content, order);
+            
+            content.append("<p>Nếu bạn đã thanh toán cho đơn hàng này, chúng tôi sẽ hoàn tiền trong vòng 3-5 ngày làm việc.</p>");
+            content.append("<p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua email hoặc hotline.</p>");
+            content.append("<p>Trân trọng,<br>CD Web Shop</p>");
+            content.append("</div>");
+            
+            emailService.sendEmail(email, subject, content.toString());
+        } catch (Exception e) {
+            System.err.println("Failed to send order cancelled email: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Helper method để thêm thông tin sản phẩm vào email
+     */
+    private void addOrderItemsToEmail(StringBuilder content, Order order) {
+        content.append("<h3>Chi tiết đơn hàng</h3>");
+        content.append("<table style=\"width:100%; border-collapse: collapse; margin-bottom: 20px;\">");
+        content.append("<tr style=\"background-color: #f2f2f2;\">");
+        content.append("<th style=\"padding: 10px; text-align: left; border: 1px solid #ddd;\">Sản phẩm</th>");
+        content.append("<th style=\"padding: 10px; text-align: center; border: 1px solid #ddd;\">Số lượng</th>");
+        content.append("<th style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\">Thành tiền</th>");
+        content.append("</tr>");
+        
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+            for (OrderItem item : order.getOrderItems()) {
+                String productName = item.getProduct() != null ? item.getProduct().getName() : "Sản phẩm";
+                int quantity = item.getQuantity();
+                double price = item.getPrice();
+                double total = price * quantity;
+                
+                content.append("<tr>");
+                content.append("<td style=\"padding: 10px; text-align: left; border: 1px solid #ddd;\">").append(productName).append("</td>");
+                content.append("<td style=\"padding: 10px; text-align: center; border: 1px solid #ddd;\">").append(quantity).append("</td>");
+                content.append("<td style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\">").append(formatCurrency(total)).append("</td>");
+                content.append("</tr>");
+            }
+        }
+        
+        content.append("<tr>");
+        content.append("<td colspan=\"2\" style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\"><strong>Tổng cộng:</strong></td>");
+        content.append("<td style=\"padding: 10px; text-align: right; border: 1px solid #ddd;\"><strong>").append(formatCurrency(order.getTotalAmount())).append("</strong></td>");
+        content.append("</tr>");
+        content.append("</table>");
+    }
+    
+    /**
+     * Cập nhật trạng thái đơn hàng và gửi email thông báo
+     * @param id ID của đơn hàng
+     * @param status Trạng thái mới
+     * @param sendEmail Có gửi email thông báo không
+     * @return Đơn hàng đã được cập nhật
+     */
+    @Transactional
+    public Order updateOrderStatusAndNotify(Long id, Order.Status status, boolean sendEmail) {
+        // Cập nhật trạng thái đơn hàng trước
+        Order updatedOrder = updateOrderStatus(id, status);
+        
+        // Sau khi đã cập nhật thành công, mới gửi email thông báo trạng thái mới
+        if (sendEmail) {
+            sendOrderStatusEmail(updatedOrder);
+        }
+        
+        return updatedOrder;
     }
     
     /**
@@ -469,12 +736,12 @@ public class OrderService {
     private String getPaymentMethodName(String paymentMethod) {
         if (paymentMethod == null) return "Không xác định";
         
-        switch (paymentMethod) {
+        switch (paymentMethod.toUpperCase()) {
             case "COD":
                 return "Thanh toán khi nhận hàng (COD)";
-            case "Bank Transfer":
+            case "BANK TRANSFER":
                 return "Chuyển khoản ngân hàng";
-            case "vnpay":
+            case "VNPAY":
                 return "Thanh toán qua VNPAY";
             default:
                 return paymentMethod;
@@ -501,5 +768,15 @@ public class OrderService {
             default:
                 return status.toString();
         }
+    }
+
+    /**
+     * Lưu đơn hàng trực tiếp mà không thay đổi trạng thái kho
+     * @param order Đơn hàng cần lưu
+     * @return Đơn hàng đã được lưu
+     */
+    @Transactional
+    public Order saveOrder(Order order) {
+        return orderRepository.save(order);
     }
 }

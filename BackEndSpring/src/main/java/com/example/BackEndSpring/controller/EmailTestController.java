@@ -262,4 +262,55 @@ public class EmailTestController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
+    
+    @PostMapping("/order-status-email")
+    public ResponseEntity<Map<String, Object>> sendOrderStatusEmail(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Get order ID from request
+            Long orderId = request.get("orderId") != null ? Long.valueOf(request.get("orderId").toString()) : null;
+            
+            if (orderId == null) {
+                response.put("success", false);
+                response.put("message", "Order ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Get order from database
+            Optional<Order> orderOpt = orderService.getOrderById(orderId);
+            if (orderOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Order not found with ID: " + orderId);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Order order = orderOpt.get();
+            
+            // Check if order has a user with email
+            if (order.getUser() == null || order.getUser().getEmail() == null || order.getUser().getEmail().trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Order #" + orderId + " has no user or user email");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Send order status email based on current status
+            boolean sent = orderService.sendOrderStatusEmail(order);
+            
+            if (sent) {
+                response.put("success", true);
+                response.put("message", "Order " + order.getStatus() + " email sent successfully to " + order.getUser().getEmail());
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "Failed to send order status email");
+                return ResponseEntity.internalServerError().body(response);
+            }
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to send order status email: " + e.getMessage());
+            response.put("error", e.toString());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
 } 
