@@ -10,15 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.FetchType;
 
 @Entity
 @Table(name = "users")
 public class User {
-    
-    public enum Role {
-        ADMIN,
-        USER
-    }
     
     public enum MembershipRank {
         BRONZE,
@@ -48,8 +49,13 @@ public class User {
     
     private String address;
     
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.USER;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
     
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints = 0;
@@ -170,12 +176,12 @@ public class User {
         this.address = address;
     }
     
-    public Role getRole() {
-        return role;
+    public Set<Role> getRoles() {
+        return roles;
     }
     
-    public void setRole(Role role) {
-        this.role = role;
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
     }
     
     public LocalDateTime getCreatedAt() {
@@ -289,5 +295,14 @@ public class User {
     
     public void setMembershipRank(MembershipRank membershipRank) {
         this.membershipRank = membershipRank;
+    }
+
+    // Thêm getter và setter cho trường isEnabled
+    public boolean isEnabled() {
+        return isEnabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.isEnabled = enabled;
     }
 } 

@@ -1,6 +1,7 @@
 package com.example.BackEndSpring.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.Set;
 
 @Schema(description = "Dữ liệu phản hồi sau khi xác thực thành công")
 public class AuthResponse {
@@ -18,18 +19,18 @@ public class AuthResponse {
     private String userName;
     
     @Schema(description = "Vai trò của người dùng", example = "USER")
-    private String userRole;
+    private Set<String> userRoles;
     
     // Constructors
     public AuthResponse() {
     }
     
-    public AuthResponse(String token, String refreshToken, Long userId, String userName, String userRole) {
+    public AuthResponse(String token, String refreshToken, Long userId, String userName, Set<String> userRoles) {
         this.token = token;
         this.refreshToken = refreshToken;
         this.userId = userId;
         this.userName = userName;
-        this.userRole = userRole;
+        this.userRoles = userRoles;
     }
     
     // Getters and Setters
@@ -65,11 +66,11 @@ public class AuthResponse {
         this.userName = userName;
     }
     
-    public String getUserRole() {
-        return userRole;
+    public Set<String> getUserRoles() {
+        return userRoles;
     }
     
-    public void setUserRole(String userRole) {
-        this.userRole = userRole;
+    public void setUserRoles(Set<String> userRoles) {
+        this.userRoles = userRoles;
     }
 } 

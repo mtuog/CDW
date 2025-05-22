@@ -29,7 +29,7 @@ public class DiscountCodeController {
     private final DiscountCodeRepository discountCodeRepository;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<DiscountCodeDTO>> getAllDiscountCodes() {
         return ResponseEntity.ok(discountCodeService.getAllDiscountCodes());
     }

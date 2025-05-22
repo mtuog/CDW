@@ -2,6 +2,7 @@ package com.example.BackEndSpring.service;
 
 import com.example.BackEndSpring.model.BankAccount;
 import com.example.BackEndSpring.model.BankPayment;
+import com.example.BackEndSpring.model.BankPaymentDTO;
 import com.example.BackEndSpring.model.Order;
 import com.example.BackEndSpring.model.OrderItem;
 import com.example.BackEndSpring.model.PaymentLog;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class BankPaymentService {
@@ -433,5 +435,33 @@ public class BankPaymentService {
             
             System.out.println("Đã khởi tạo các tài khoản ngân hàng mặc định");
         }
+    }
+
+    public static BankPaymentDTO toDTO(BankPayment payment) {
+        if (payment == null) return null;
+        BankPaymentDTO dto = new BankPaymentDTO();
+        dto.setId(payment.getId());
+        dto.setOrderId(payment.getOrder() != null ? payment.getOrder().getId() : null);
+        dto.setBankName(payment.getBankName());
+        dto.setAccountNumber(payment.getAccountNumber());
+        dto.setAccountName(payment.getAccountName());
+        dto.setAmount(payment.getAmount());
+        dto.setTransactionCode(payment.getTransactionCode());
+        dto.setStatus(payment.getStatus() != null ? payment.getStatus().name() : null);
+        dto.setCreatedAt(payment.getCreatedAt());
+        dto.setPaymentDate(payment.getPaymentDate());
+        dto.setVerifiedAt(payment.getVerifiedAt());
+        dto.setVerificationNote(payment.getVerificationNote());
+        return dto;
+    }
+
+    public List<BankPaymentDTO> getPaymentsDTOByOrderId(Long orderId) {
+        List<BankPayment> payments = getPaymentsByOrderId(orderId);
+        return payments.stream().map(BankPaymentService::toDTO).toList();
+    }
+
+    public List<BankPaymentDTO> getPaymentsDTOByStatus(BankPayment.PaymentStatus status) {
+        List<BankPayment> payments = getPaymentsByStatus(status);
+        return payments.stream().map(BankPaymentService::toDTO).toList();
     }
 } 

@@ -4,6 +4,8 @@ import com.example.BackEndSpring.model.Order;
 import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.model.OrderItem;
 import com.example.BackEndSpring.model.Product;
+import com.example.BackEndSpring.model.OrderDTO;
+import com.example.BackEndSpring.model.UserShortDTO;
 import com.example.BackEndSpring.service.OrderService;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.service.ProductService;
@@ -141,8 +143,23 @@ public class OrderController {
             ordersPage = orderService.getOrdersWithFilters(
                 search, statusEnum, fromDate, toDate, pageable);
             
+            // Map sang DTO
+            List<OrderDTO> orderDTOs = ordersPage.getContent().stream().map(order -> {
+                OrderDTO dto = new OrderDTO();
+                dto.setId(order.getId());
+                dto.setOrderCode(order.getOrderCode());
+                dto.setTotalAmount(order.getTotalAmount());
+                dto.setStatus(order.getStatus().name());
+                dto.setCreatedAt(order.getCreatedAt());
+                if (order.getUser() != null) {
+                    User user = order.getUser();
+                    dto.setUser(new UserShortDTO(user.getId(), user.getUsername(), user.getFullName(), user.getPhone()));
+                }
+                return dto;
+            }).collect(Collectors.toList());
+
             Map<String, Object> response = new HashMap<>();
-            response.put("orders", ordersPage.getContent());
+            response.put("orders", orderDTOs);
             response.put("currentPage", ordersPage.getNumber());
             response.put("totalItems", ordersPage.getTotalElements());
             response.put("totalPages", ordersPage.getTotalPages());

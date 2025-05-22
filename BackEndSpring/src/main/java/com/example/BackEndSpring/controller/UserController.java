@@ -10,6 +10,7 @@ import com.example.BackEndSpring.model.ResendVerificationRequest;
 import com.example.BackEndSpring.model.PasswordResetRequest;
 import com.example.BackEndSpring.model.ChangePasswordRequest;
 import com.example.BackEndSpring.model.Order;
+import com.example.BackEndSpring.model.Role;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.service.OrderService;
 import com.example.BackEndSpring.util.JwtUtil;
@@ -48,6 +49,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api")
@@ -98,7 +100,7 @@ public class UserController {
             userMap.put("phone", user.getPhone());
             userMap.put("address", user.getAddress());
             userMap.put("createdAt", user.getCreatedAt());
-            userMap.put("roles", user.getRole().toString());
+            userMap.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             userMap.put("enabled", user.isVerified());
             userMap.put("loyaltyPoints", user.getLoyaltyPoints());
             
@@ -147,7 +149,7 @@ public class UserController {
             userMap.put("phone", user.getPhone());
             userMap.put("address", user.getAddress());
             userMap.put("createdAt", user.getCreatedAt());
-            userMap.put("roles", user.getRole().toString());
+            userMap.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             userMap.put("enabled", user.isVerified());
             userMap.put("loyaltyPoints", user.getLoyaltyPoints());
             
@@ -270,6 +272,8 @@ public class UserController {
             String email = loginRequest.getEmail();
             String password = loginRequest.getPassword();
             
+            System.out.println("Đang xử lý đăng nhập cho: " + email);
+            
             Optional<User> userOptional = userService.getUserByEmail(email);
             
             if (userOptional.isEmpty()) {
@@ -279,6 +283,7 @@ public class UserController {
             }
             
             User user = userOptional.get();
+            System.out.println("Tìm thấy user: " + user.getUsername() + ", role: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 Map<String, String> error = new HashMap<>();
@@ -302,11 +307,14 @@ public class UserController {
                 refreshToken,
                 user.getId(),
                 user.getUsername(),
-                user.getRole().toString()
+                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
             );
             
+            System.out.println("Đăng nhập thành công cho user: " + user.getUsername() + " với role: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Lỗi đăng nhập: " + e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("message", "Đăng nhập thất bại: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
@@ -481,7 +489,7 @@ public class UserController {
                 refreshToken,
                 user.getId(),
                 user.getUsername(),
-                user.getRole().toString()
+                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
             );
             
             return ResponseEntity.ok(response);
@@ -845,7 +853,7 @@ public class UserController {
         
         // Tìm top khách hàng
         List<Map<String, Object>> topCustomers = users.stream()
-            .filter(u -> !u.getRole().toString().contains("ADMIN"))
+            .filter(u -> !u.getRoles().stream().map(Role::getName).collect(Collectors.toSet()).contains("ADMIN"))
             .map(u -> {
                 Map<String, Object> customerMap = new HashMap<>();
                 customerMap.put("id", u.getId());
@@ -892,5 +900,21 @@ public class UserController {
         statistics.put("topCustomers", topCustomers);
         
         return ResponseEntity.ok(statistics);
+    }
+
+    @PutMapping("/admin/me")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateCurrentAdminInfo(Authentication authentication, @RequestBody Map<String, Object> updates) {
+        String email = authentication.getName();
+        Optional<User> userOpt = userService.getUserByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (updates.containsKey("fullName")) user.setFullName((String) updates.get("fullName"));
+            if (updates.containsKey("phone")) user.setPhone((String) updates.get("phone"));
+            if (updates.containsKey("address")) user.setAddress((String) updates.get("address"));
+            userService.updateUser(user.getId(), user);
+            return ResponseEntity.ok("Cập nhật thành công");
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Admin not found");
     }
 } 

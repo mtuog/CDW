@@ -3,6 +3,7 @@ package com.example.BackEndSpring.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,6 +23,7 @@ import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -42,13 +44,16 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/api/products/**", "/api/categories/**", "/api/public/**", "/api/files/qr-codes/**").permitAll()
                 .requestMatchers("/api/vnpay/**").permitAll()
                 .requestMatchers("/api/test-email/**").permitAll()
+                .requestMatchers("/api/payment-settings").permitAll() // Cho phép truy cập API settings công khai
                 .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                // Admin endpoints - yêu cầu vai trò ADMIN
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Protected endpoints - yêu cầu xác thực
                 .requestMatchers("/api/wishlist/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/orders/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/orders/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/orders/**").authenticated()
-                .requestMatchers("/api/users/**", "/api/admin/**").authenticated()
+                .requestMatchers("/api/users/**").authenticated()
                 // File upload endpoint - yêu cầu xác thực
                 .requestMatchers("/api/files/upload/**").authenticated()
                 // Tất cả các request khác

@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Service
 public class PaymentSettingsService {
@@ -60,64 +63,94 @@ public class PaymentSettingsService {
         return creditCardSettings;
     }
     
-    // Lấy cấu hình VNPAY
-    public Map<String, String> getVNPayConfig() {
-        Map<String, String> vnpayConfig = new HashMap<>();
+    // Lấy cấu hình VNPAY đầy đủ (chỉ dành cho admin)
+    public Map<String, Object> getVNPaySettings() {
+        PaymentSettings settings = getSettings();
+        Map<String, Object> vnpayConfig = new HashMap<>();
         
-        // Lấy cấu hình từ DB
-        PaymentSettings settings = paymentSettingsRepository.findById(1L)
-            .orElse(new PaymentSettings());
-        
-        boolean isProduction = settings.isVnpProduction(); // Thêm trường isVnpProduction vào DB
-        
-        // Terminal ID
-        String tmnCode = settings.getVnpTmnCode();
-        if (tmnCode == null || tmnCode.isEmpty()) {
-            // Sử dụng TMN mặc định tùy theo môi trường
-            tmnCode = isProduction ? "YOUR_PRODUCTION_TMN_CODE" : "TX30V45K";
-            System.out.println("Using default TMN Code: " + tmnCode);
-        }
-        vnpayConfig.put("vnp_TmnCode", tmnCode);
-        
-        // Hash Secret 
-        String hashSecret = settings.getVnpHashSecret();
-        if (hashSecret == null || hashSecret.isEmpty()) {
-            // Sử dụng Secret mặc định tùy theo môi trường
-            hashSecret = isProduction ? "YOUR_PRODUCTION_HASH_SECRET" : "Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN";
-            System.out.println("Using default Hash Secret: " + hashSecret);
-        }
-        vnpayConfig.put("vnp_HashSecret", hashSecret);
-        
-        // Payment URL
-        String payUrl = settings.getVnpPayUrl();
-        if (payUrl == null || payUrl.isEmpty()) {
-            // Sử dụng URL mặc định tùy theo môi trường
-            payUrl = isProduction ? "https://pay.vnpay.vn/vpcpay.html" : "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-            System.out.println("Using default Pay URL: " + payUrl);
-        }
-        vnpayConfig.put("vnp_PayUrl", payUrl);
-        
-        // Return URL
-        String returnUrl = settings.getVnpReturnUrl();
-        if (returnUrl == null || returnUrl.isEmpty()) {
-            // URL trả về chính xác (phải truy cập được từ internet nếu là production)
-            returnUrl = isProduction ? "https://your-domain.com/payment/vnpay-return" : "http://localhost:3000/payment/vnpay-return";
-            System.out.println("Using default Return URL: " + returnUrl);
-        } else if (!returnUrl.contains("://")) {
-            returnUrl = (isProduction ? "https://your-domain.com" : "http://localhost:3000") + (returnUrl.startsWith("/") ? "" : "/") + returnUrl;
-            System.out.println("Fixed Return URL: " + returnUrl);
-        }
-        vnpayConfig.put("vnp_ReturnUrl", returnUrl);
-        
-        // API URL
-        String apiUrl = settings.getVnpApiUrl();
-        if (apiUrl == null || apiUrl.isEmpty()) {
-            // API URL cho các chức năng query giao dịch
-            apiUrl = isProduction ? "https://merchant.vnpay.vn/merchant_webapi/api/transaction" : "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction";
-            System.out.println("Using default API URL: " + apiUrl);
-        }
-        vnpayConfig.put("vnp_ApiUrl", apiUrl);
+        vnpayConfig.put("vnpTmnCode", settings.getVnpTmnCode());
+        // Che giấu vnpHashSecret - chỉ hiển thị thông tin có hash secret hay không
+        vnpayConfig.put("hasSecretKey", settings.getVnpHashSecret() != null && !settings.getVnpHashSecret().isEmpty());
+        vnpayConfig.put("vnpHashSecret", settings.getVnpHashSecret());
+        vnpayConfig.put("vnpPayUrl", settings.getVnpPayUrl());
+        vnpayConfig.put("vnpReturnUrl", settings.getVnpReturnUrl());
+        vnpayConfig.put("vnpApiUrl", settings.getVnpApiUrl());
+        vnpayConfig.put("testMode", settings.isTestMode());
+        vnpayConfig.put("vnpProduction", settings.isVnpProduction());
         
         return vnpayConfig;
+    }
+    
+    // Lấy cấu hình VNPAY dưới dạng Map<String, String> cho tương thích với code cũ
+    public Map<String, String> getVNPayConfig() {
+        PaymentSettings settings = getSettings();
+        Map<String, String> vnpayConfig = new HashMap<>();
+        
+        vnpayConfig.put("vnp_TmnCode", settings.getVnpTmnCode());
+        vnpayConfig.put("vnp_HashSecret", settings.getVnpHashSecret());
+        vnpayConfig.put("vnp_PayUrl", settings.getVnpPayUrl());
+        vnpayConfig.put("vnp_ReturnUrl", settings.getVnpReturnUrl());
+        vnpayConfig.put("vnp_ApiUrl", settings.getVnpApiUrl());
+        
+        return vnpayConfig;
+    }
+    
+    // Lấy danh sách phương thức thanh toán khả dụng cho người dùng
+    public List<Map<String, Object>> getAvailablePaymentMethods() {
+        PaymentSettings settings = getSettings();
+        
+        if (settings.getPaymentMethods() == null || settings.getPaymentMethods().isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        return settings.getPaymentMethods().stream()
+            .filter(method -> method.isEnabled())
+            .map(method -> {
+                Map<String, Object> methodInfo = new HashMap<>();
+                methodInfo.put("id", method.getId());
+                methodInfo.put("name", method.getName());
+                methodInfo.put("description", method.getDescription());
+                methodInfo.put("fee", method.getFee());
+                methodInfo.put("icon", method.getIcon());
+                return methodInfo;
+            })
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy cài đặt chuyển khoản ngân hàng
+     * @return Map chứa cài đặt chuyển khoản
+     */
+    public Map<String, Object> getBankTransferSettings() {
+        PaymentSettings settings = getSettings();
+        Map<String, Object> bankTransferConfig = new HashMap<>();
+        
+        // Đặt các giá trị mặc định nếu chưa có trong settings
+        bankTransferConfig.put("accountName", "FASHION STORE JSC");
+        bankTransferConfig.put("accountNumber", "1234567890");
+        bankTransferConfig.put("bankName", "Vietcombank");
+        bankTransferConfig.put("bankBranch", "Hồ Chí Minh");
+        bankTransferConfig.put("instructions", settings.getBankTransferInstructions() != null ? 
+                settings.getBankTransferInstructions() : 
+                "Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]");
+        
+        return bankTransferConfig;
+    }
+    
+    /**
+     * Lấy cài đặt chung về thanh toán
+     * @return Map chứa cài đặt chung
+     */
+    public Map<String, Object> getGeneralSettings() {
+        PaymentSettings settings = getSettings();
+        Map<String, Object> generalConfig = new HashMap<>();
+        
+        generalConfig.put("defaultPaymentMethod", settings.getDefaultPaymentMethod());
+        generalConfig.put("showPaymentIcons", settings.isShowPaymentIcons());
+        generalConfig.put("enablePaymentFees", settings.isEnablePaymentFees());
+        generalConfig.put("orderConfirmationRequired", settings.isOrderConfirmationRequired());
+        generalConfig.put("pendingOrderTimeout", settings.getPendingOrderTimeout());
+        
+        return generalConfig;
     }
 } 

@@ -2,6 +2,7 @@ package com.example.BackEndSpring.controller;
 
 import com.example.BackEndSpring.model.BankAccount;
 import com.example.BackEndSpring.model.BankPayment;
+import com.example.BackEndSpring.model.BankPaymentDTO;
 import com.example.BackEndSpring.model.Order;
 import com.example.BackEndSpring.model.PaymentLog;
 import com.example.BackEndSpring.service.BankPaymentService;
@@ -72,8 +73,7 @@ public class BankPaymentController {
             response.put("error", "Không tìm thấy đơn hàng với ID: " + orderId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
-        
-        List<BankPayment> payments = bankPaymentService.getPaymentsByOrderId(orderId);
+        List<BankPaymentDTO> payments = bankPaymentService.getPaymentsDTOByOrderId(orderId);
         return ResponseEntity.ok(payments);
     }
     
@@ -127,19 +127,10 @@ public class BankPaymentController {
     @Operation(summary = "Lấy danh sách giao dịch thanh toán theo trạng thái")
     @ApiResponse(responseCode = "200", description = "Thành công")
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<BankPayment>> getPaymentsByStatus(@PathVariable String status) {
+    public ResponseEntity<List<BankPaymentDTO>> getPaymentsByStatus(@PathVariable String status) {
         try {
             BankPayment.PaymentStatus paymentStatus = BankPayment.PaymentStatus.valueOf(status.toUpperCase());
-            List<BankPayment> payments = bankPaymentService.getPaymentsByStatus(paymentStatus);
-            
-            // Force lazy loading of order to avoid serialization issues
-            payments.forEach(payment -> {
-                if (payment.getOrder() != null) {
-                    // Access order properties to force loading
-                    payment.getOrder().getId();
-                }
-            });
-            
+            List<BankPaymentDTO> payments = bankPaymentService.getPaymentsDTOByStatus(paymentStatus);
             return ResponseEntity.ok(payments);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

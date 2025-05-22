@@ -40,13 +40,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     : "null"));
 
         String username = null;
+        java.util.List<String> roles = null;
         String jwt = null;
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {
                 username = jwtUtil.extractUsername(jwt);
-                logger.info("JWT token is valid, extracted username: " + username);
+                Object rolesObj = jwtUtil.extractAllClaims(jwt).get("roles");
+                if (rolesObj instanceof java.util.List) {
+                    roles = (java.util.List<String>) rolesObj;
+                } else if (rolesObj instanceof String) {
+                    roles = java.util.Arrays.asList((String) rolesObj);
+                }
+                logger.info("JWT token is valid, extracted username: " + username + ", roles: " + roles);
             } catch (Exception e) {
                 logger.error("JWT token validation failed", e);
             }
@@ -69,6 +76,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     logger.info("Authentication successful, set security context for: " + username);
                     logger.info("Authorities: " + userDetails.getAuthorities());
+                    
+                    // Check if it's an admin endpoint and the user has admin role
+                    if (request.getRequestURI().contains("/api/admin/") && roles != null) {
+                        if (!roles.contains("ADMIN")) {
+                            logger.warn("User " + username + " attempted to access admin endpoint without admin role");
+                        } else {
+                            logger.info("Admin access granted for: " + username);
+                        }
+                    }
                 } else {
                     logger.warn("Token is not valid for user: " + username);
                 }
