@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/common/Sidebar';
 import Header from '../components/common/Header';
+import AdminRoutes from '../routes/AdminRoutes';
+import authApi from '../api/authApi';
 
 // Sidebar links
 const sidebarLinks = [
@@ -28,15 +30,89 @@ const sidebarLinks = [
     submenu: [
       { to: '/admin/settings/store', text: 'Cửa hàng' }
     ]
-  }
+  },
+  { to: '/admin/account', icon: 'fas fa-user', text: 'Tài khoản' },
+  { to: '/admin/admins', icon: 'fas fa-user-shield', text: 'Quản lý Admin' },
 ];
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Nếu đang ở trang login, không cần kiểm tra xác thực
+      if (location.pathname === '/admin/login') {
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const { authenticated } = await authApi.checkAuth();
+        setIsAuthenticated(authenticated);
+        
+        // Nếu không xác thực và không phải trang login, chuyển về trang login
+        if (!authenticated && location.pathname !== '/admin/login') {
+          navigate('/admin/login');
+        }
+      } catch (error) {
+        console.error('Lỗi kiểm tra xác thực:', error);
+        setIsAuthenticated(false);
+        navigate('/admin/login');
+      }
+    };
+
+    checkAuth();
+  }, [location.pathname, navigate]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Hiển thị loading trong khi kiểm tra xác thực
+  if (isAuthenticated === null && location.pathname !== '/admin/login') {
+    return (
+      <div className="admin-loading">
+        <div className="loading-spinner"></div>
+        <p>Đang tải...</p>
+        
+        <style jsx>{`
+          .admin-loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+          }
+          
+          .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+          }
+          
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Không hiển thị sidebar và header trên trang login
+  const isLoginPage = location.pathname === '/admin/login';
+
+  if (isLoginPage) {
+    return <AdminRoutes />;
+  }
 
   return (
     <div className="admin-layout">
@@ -46,7 +122,7 @@ const AdminLayout = () => {
         <Header toggleSidebar={toggleSidebar} />
         
         <main className="admin-content">
-          <Outlet />
+          <AdminRoutes />
         </main>
       </div>
       

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { Tabs, Tab, Badge, Table, Button, Modal, Form, Row, Col } from 'react-bootstrap';
+import paymentSettingsApi from '../../api/paymentSettingsApi';
+import authApi from '../../api/authApi';
 
 const PaymentSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -72,18 +74,18 @@ const PaymentSettings = () => {
   // State for credit card settings
   const [creditCardSettings, setCreditCardSettings] = useState({
     providerName: 'VNPAY',
-    publicKey: 'TX30V45K',
-    secretKey: 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
+    publicKey: '',
+    secretKey: '',
     testMode: true,
     supportedCards: ['visa', 'mastercard'],
     currency: 'VND',
     autoCapture: true,
-    vnpTmnCode: 'TX30V45K',
-    vnpHashSecret: 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-    vnpPayUrl: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-    vnpReturnUrl: 'http://localhost:3000/payment/vnpay-return',
-    vnpApiUrl: 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
-    vnpProduction: true
+    vnpTmnCode: '',
+    vnpHashSecret: '',
+    vnpPayUrl: '',
+    vnpReturnUrl: '',
+    vnpApiUrl: '',
+    vnpProduction: false
   });
 
   // State for general payment settings
@@ -104,129 +106,148 @@ const PaymentSettings = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('adminToken');
         
         // Gọi API để lấy cài đặt thanh toán
-        const response = await axios.get('http://localhost:8080/api/payment-settings', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        const settings = response.data;
-        console.log('Đã tải cài đặt thanh toán:', settings);
-        
-        // Cập nhật state từ dữ liệu API
-        if (settings.paymentMethods) {
-          setPaymentMethods(settings.paymentMethods);
-        }
-        
-        // Cập nhật cài đặt chung
-        setGeneralSettings({
-          defaultPaymentMethod: settings.defaultPaymentMethod || 'vnpay',
-          showPaymentIcons: settings.showPaymentIcons,
-          enablePaymentFees: settings.enablePaymentFees,
-          orderConfirmationRequired: settings.orderConfirmationRequired,
-          pendingOrderTimeout: settings.pendingOrderTimeout || 24
-        });
-        
-        // Cập nhật cài đặt thẻ tín dụng
-        const supportedCards = settings.supportedCards || ['visa', 'mastercard'];
-        
-        setCreditCardSettings({
-          providerName: settings.creditCardProvider || 'VNPAY',
-          publicKey: settings.publicKey || 'TX30V45K',
-          secretKey: settings.secretKey || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-          testMode: settings.testMode,
-          supportedCards: supportedCards,
-          currency: settings.currency || 'VND',
-          autoCapture: settings.autoCapture,
-          vnpTmnCode: settings.vnpTmnCode || 'TX30V45K',
-          vnpHashSecret: settings.vnpHashSecret || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-          vnpPayUrl: settings.vnpPayUrl || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-          vnpReturnUrl: settings.vnpReturnUrl || 'http://localhost:3000/payment/vnpay-return',
-          vnpApiUrl: settings.vnpApiUrl || 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
-          vnpProduction: settings.vnpProduction || true
-        });
-        
-        // Xử lý additionalConfig nếu có
-        if (settings.additionalConfig) {
-          try {
-            const additionalConfig = JSON.parse(settings.additionalConfig);
-            
-            // Cập nhật state với cấu hình bổ sung theo nhà cung cấp
-            if (settings.creditCardProvider === 'VNPAY' && additionalConfig.vnpayEndpoint) {
-              setCreditCardSettings(prev => ({
-                ...prev,
-                vnpayEndpoint: additionalConfig.vnpayEndpoint
-              }));
-            }
-            
-            if (settings.creditCardProvider === 'PayPal' && additionalConfig.paypalMode) {
-              setCreditCardSettings(prev => ({
-                ...prev,
-                paypalMode: additionalConfig.paypalMode
-              }));
-            }
-            
-            if (settings.creditCardProvider === 'Stripe' && additionalConfig.stripeWebhookSecret) {
-              setCreditCardSettings(prev => ({
-                ...prev,
-                stripeWebhookSecret: additionalConfig.stripeWebhookSecret
-              }));
-            }
-          } catch (e) {
-            console.error('Lỗi phân tích additionalConfig:', e);
+        try {
+          // Check for admin authentication
+          const token = authApi.getToken();
+          
+          if (!token) {
+            console.warn('Chưa đăng nhập với tài khoản admin, không thể lấy cài đặt thanh toán');
+            loadMockData();
+            return;
           }
+          
+          const response = await axios.get('http://localhost:8080/api/payment-settings', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const settings = response.data;
+          console.log('Đã tải cài đặt thanh toán từ API:', settings);
+          
+          // Cập nhật state từ dữ liệu API
+          if (settings.paymentMethods) {
+            setPaymentMethods(settings.paymentMethods);
+          }
+          
+          // Cập nhật cài đặt chung
+          setGeneralSettings({
+            defaultPaymentMethod: settings.defaultPaymentMethod || 'vnpay',
+            showPaymentIcons: settings.showPaymentIcons,
+            enablePaymentFees: settings.enablePaymentFees,
+            orderConfirmationRequired: settings.orderConfirmationRequired,
+            pendingOrderTimeout: settings.pendingOrderTimeout || 24
+          });
+          
+          // Cập nhật cài đặt thẻ tín dụng
+          const supportedCards = settings.supportedCards || ['visa', 'mastercard'];
+          
+          setCreditCardSettings({
+            providerName: settings.creditCardProvider || 'VNPAY',
+            publicKey: settings.publicKey || '',
+            secretKey: settings.secretKey || '',
+            testMode: settings.testMode,
+            supportedCards: supportedCards,
+            currency: settings.currency || 'VND',
+            autoCapture: settings.autoCapture,
+            vnpTmnCode: settings.vnpTmnCode || '',
+            vnpHashSecret: settings.vnpHashSecret || '',
+            vnpPayUrl: settings.vnpPayUrl || '',
+            vnpReturnUrl: settings.vnpReturnUrl || '',
+            vnpApiUrl: settings.vnpApiUrl || '',
+            vnpProduction: settings.vnpProduction || false
+          });
+          
+          // Xử lý additionalConfig nếu có
+          if (settings.additionalConfig) {
+            try {
+              const additionalConfig = JSON.parse(settings.additionalConfig);
+              
+              // Cập nhật state với cấu hình bổ sung theo nhà cung cấp
+              if (settings.creditCardProvider === 'VNPAY' && additionalConfig.vnpayEndpoint) {
+                setCreditCardSettings(prev => ({
+                  ...prev,
+                  vnpayEndpoint: additionalConfig.vnpayEndpoint
+                }));
+              }
+              
+              if (settings.creditCardProvider === 'PayPal' && additionalConfig.paypalMode) {
+                setCreditCardSettings(prev => ({
+                  ...prev,
+                  paypalMode: additionalConfig.paypalMode
+                }));
+              }
+              
+              if (settings.creditCardProvider === 'Stripe' && additionalConfig.stripeWebhookSecret) {
+                setCreditCardSettings(prev => ({
+                  ...prev,
+                  stripeWebhookSecret: additionalConfig.stripeWebhookSecret
+                }));
+              }
+            } catch (e) {
+              console.error('Lỗi phân tích additionalConfig:', e);
+            }
+          }
+          
+          // Cập nhật cài đặt bank transfer
+          setBankDetails({
+            accountName: settings.bankName || 'FASHION STORE JSC',
+            accountNumber: settings.accountNumber || '1234567890',
+            bankName: settings.bankName || 'Vietcombank',
+            bankBranch: settings.bankBranch || 'Hồ Chí Minh',
+            instructions: settings.bankTransferInstructions || 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
+          });
+          
+          setLoading(false);
+        } catch (apiError) {
+          console.error('Lỗi khi tải cài đặt từ API:', apiError);
+          // Tải dữ liệu mẫu nếu API đều lỗi
+          loadMockData();
         }
-        
-        // Cập nhật cài đặt bank transfer
-        setBankDetails({
-          accountName: settings.bankName || 'FASHION STORE JSC',
-          accountNumber: settings.accountNumber || '1234567890',
-          bankName: settings.bankName || 'Vietcombank',
-          bankBranch: settings.bankBranch || 'Hồ Chí Minh',
-          instructions: settings.bankTransferInstructions || 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
-        });
-        
-        setLoading(false);
       } catch (error) {
         console.error('Lỗi khi tải cài đặt thanh toán:', error);
         
-        // Nếu API lỗi, tải dữ liệu mẫu
-        setTimeout(() => {
-          // Mock data for bank details
-          setBankDetails({
-            accountName: 'FASHION STORE JSC',
-            accountNumber: '1234567890',
-            bankName: 'Vietcombank',
-            bankBranch: 'Hồ Chí Minh',
-            instructions: 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
-          });
-
-          // Mock data for credit card settings
-          setCreditCardSettings({
-            providerName: 'VNPAY',
-            publicKey: 'TX30V45K',
-            secretKey: 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-            testMode: true,
-            supportedCards: ['visa', 'mastercard'],
-            currency: 'VND',
-            autoCapture: true,
-            vnpTmnCode: 'TX30V45K',
-            vnpHashSecret: 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-            vnpPayUrl: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-            vnpReturnUrl: 'http://localhost:3000/payment/vnpay-return',
-            vnpApiUrl: 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
-            vnpProduction: true
-          });
-
-          // Fetch actual bank accounts from API
-          fetchBankAccounts();
-          setLoading(false);
-        }, 800);
+        // Tải dữ liệu mẫu nếu có lỗi
+        loadMockData();
       } finally {
         // Load the payments data after settings are loaded
         fetchPayments();
       }
+    };
+    
+    // Hàm tải dữ liệu mẫu
+    const loadMockData = () => {
+      // Mock data for bank details
+      setBankDetails({
+        accountName: 'FASHION STORE JSC',
+        accountNumber: '1234567890',
+        bankName: 'Vietcombank',
+        bankBranch: 'Hồ Chí Minh',
+        instructions: 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
+      });
+
+      // Mock data for credit card settings
+      setCreditCardSettings({
+        providerName: 'VNPAY',
+        publicKey: '',
+        secretKey: '',
+        testMode: true,
+        supportedCards: ['visa', 'mastercard'],
+        currency: 'VND',
+        autoCapture: true,
+        vnpTmnCode: '',
+        vnpHashSecret: '',
+        vnpPayUrl: '',
+        vnpReturnUrl: '',
+        vnpApiUrl: '',
+        vnpProduction: false
+      });
+
+      // Fetch actual bank accounts from API
+      fetchBankAccounts();
+      setLoading(false);
     };
 
     fetchData();
@@ -241,10 +262,8 @@ const PaymentSettings = () => {
 
   const fetchBankAccounts = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:8080/api/bank-payments/accounts', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // DEV MODE: Skip token in development
+      const response = await axios.get('http://localhost:8080/api/bank-payments/accounts');
       setBankAccounts(response.data);
       setLoading(false);
     } catch (error) {
@@ -257,17 +276,15 @@ const PaymentSettings = () => {
   const fetchPayments = async () => {
     try {
       setPaymentsLoading(true);
-      const token = localStorage.getItem('adminToken');
       
       console.log(`Đang tải danh sách thanh toán với trạng thái: ${paymentsFilter}`);
       console.log(`API endpoint: http://localhost:8080/api/bank-payments/status/${paymentsFilter}`);
       
-      const response = await axios.get(`http://localhost:8080/api/bank-payments/status/${paymentsFilter}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // DEV MODE: Skip token in development
+      const response = await axios.get(`http://localhost:8080/api/bank-payments/status/${paymentsFilter}`);
       
       console.log('Danh sách thanh toán:', response.data);
-      setPayments(response.data);
+      setPayments(Array.isArray(response.data) ? response.data : []);
       
       if (response.data.length === 0) {
         console.log(`Không có thanh toán nào với trạng thái: ${paymentsFilter}`);
@@ -354,22 +371,15 @@ const PaymentSettings = () => {
         const formData = new FormData();
         formData.append('file', file);
         
-        const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+        // DEV MODE: Skip token validation for development
         
-        if (!token) {
-          console.error("Không tìm thấy token xác thực");
-          toast.error("Vui lòng đăng nhập lại để tiếp tục");
-          return;
-        }
-        
-        console.log("Đang gửi request đến API với token:", token.substring(0, 15) + "...");
+        console.log("Đang gửi request đến API để upload QR");
         
         const response = await axios.post(
           'http://localhost:8080/api/files/upload/qr-code',
           formData,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'multipart/form-data'
             }
           }
@@ -408,11 +418,7 @@ const PaymentSettings = () => {
         return;
       }
 
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      if (!token) {
-        toast.error("Vui lòng đăng nhập lại để tiếp tục");
-        return;
-      }
+      // DEV MODE: Skip token validation for development
 
       console.log("Đang gửi dữ liệu tài khoản:", newAccount);
 
@@ -425,8 +431,7 @@ const PaymentSettings = () => {
       // Tạo tài khoản mới
       const response = await axios.post(
         'http://localhost:8080/api/bank-payments/accounts',
-        newAccount,
-        { headers: { Authorization: `Bearer ${token}` } }
+        newAccount
       );
 
       console.log("Kết quả tạo tài khoản:", response.data);
@@ -457,18 +462,13 @@ const PaymentSettings = () => {
         return;
       }
 
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      if (!token) {
-        toast.error("Vui lòng đăng nhập lại để tiếp tục");
-        return;
-      }
+      // DEV MODE: Skip token validation for development
 
       console.log("Đang cập nhật tài khoản:", newAccount);
 
       const response = await axios.put(
         `http://localhost:8080/api/bank-payments/accounts/${selectedAccount.id}`,
-        newAccount,
-        { headers: { Authorization: `Bearer ${token}` } }
+        newAccount
       );
 
       console.log("Kết quả cập nhật tài khoản:", response.data);
@@ -499,10 +499,9 @@ const PaymentSettings = () => {
     }
 
     try {
-      const token = localStorage.getItem('adminToken');
+      // DEV MODE: Skip token validation for development
       await axios.delete(
-        `http://localhost:8080/api/bank-payments/accounts/${accountId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `http://localhost:8080/api/bank-payments/accounts/${accountId}`
       );
       toast.success('Vô hiệu hóa tài khoản thành công');
       fetchBankAccounts();
@@ -512,14 +511,41 @@ const PaymentSettings = () => {
     }
   };
 
+  // Thêm hàm kiểm tra token
+  const checkToken = async () => {
+    try {
+      const { authenticated } = await authApi.checkAuth();
+      
+      if (!authenticated) {
+        toast.error('Chưa đăng nhập. Vui lòng đăng nhập với tài khoản admin.');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Lỗi kiểm tra token:', error);
+      toast.error('Lỗi xác thực. Vui lòng đăng nhập lại.');
+      return false;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     
     try {
-      const token = localStorage.getItem('adminToken');
+      // Kiểm tra token
+      const isTokenValid = await checkToken();
+      if (!isTokenValid) {
+        toast.error('Vui lòng đăng nhập lại để tiếp tục.');
+        setSaving(false);
+        return;
+      }
       
-      // Chuẩn bị dữ liệu để gửi đến API
+      // Lấy token từ localStorage
+      const token = authApi.getToken();
+      
+      // Chuẩn bị dữ liệu để gửi lên server
       const settingsData = {
         paymentMethods,
         defaultPaymentMethod: generalSettings.defaultPaymentMethod,
@@ -532,34 +558,40 @@ const PaymentSettings = () => {
         creditCardProvider: 'VNPAY',
         publicKey: creditCardSettings.publicKey || 'TX30V45K',
         secretKey: creditCardSettings.secretKey || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-        testMode: creditCardSettings.testMode,
-        supportedCards: creditCardSettings.supportedCards,
-        currency: creditCardSettings.currency,
-        autoCapture: creditCardSettings.autoCapture,
-        
-        // Cài đặt VNPAY
-        vnpTmnCode: creditCardSettings.publicKey || 'TX30V45K',
-        vnpHashSecret: creditCardSettings.secretKey || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
+        vnpTmnCode: creditCardSettings.vnpTmnCode || 'TX30V45K',
+        vnpHashSecret: creditCardSettings.vnpHashSecret || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
         vnpPayUrl: creditCardSettings.vnpPayUrl || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
         vnpReturnUrl: creditCardSettings.vnpReturnUrl || 'http://localhost:3000/payment/vnpay-return',
         vnpApiUrl: creditCardSettings.vnpApiUrl || 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
+        testMode: creditCardSettings.testMode,
+        supportedCards: creditCardSettings.supportedCards || ['visa', 'mastercard'],
+        currency: creditCardSettings.currency || 'VND',
         
-        // Cài đặt bank transfer
-        bankTransferInstructions: bankDetails.instructions
+        // Cài đặt chuyển khoản
+        bankTransferInstructions: bankDetails.instructions || 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
       };
       
-      // Gửi request đến API
-      const response = await axios.post(
-        'http://localhost:8080/api/payment-settings',
-        settingsData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      console.log('Gửi cài đặt thanh toán lên server:', settingsData);
       
-      console.log('Cài đặt đã được lưu:', response.data);
+      // Gửi dữ liệu lên server
+      const response = await axios.post('http://localhost:8080/api/payment-settings', settingsData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Kết quả lưu cài đặt từ server:', response.data);
       toast.success('Lưu cài đặt thanh toán thành công!');
     } catch (error) {
       console.error('Lỗi khi lưu cài đặt:', error);
-      toast.error('Không thể lưu cài đặt. Vui lòng thử lại sau.');
+      
+      if (error.response) {
+        console.error('Phản hồi từ server:', error.response.data);
+        toast.error(`Không thể lưu cài đặt: ${error.response.data?.message || error.response.statusText}`);
+      } else {
+        toast.error('Không thể lưu cài đặt. Vui lòng thử lại sau.');
+      }
     } finally {
       setSaving(false);
     }
@@ -577,15 +609,14 @@ const PaymentSettings = () => {
     
     try {
       setSaving(true);
-      const token = localStorage.getItem('adminToken');
       
       console.log(`Đang xác nhận thanh toán ID: ${selectedPayment.id}, Ghi chú: ${verificationNote}`);
       
+      // DEV MODE: Skip token in development
       const response = await axios.put(
         `http://localhost:8080/api/bank-payments/${selectedPayment.id}/verify`,
         null,
         {
-          headers: { Authorization: `Bearer ${token}` },
           params: { 
             transactionCode: selectedPayment.transactionCode,
             note: verificationNote 
@@ -613,15 +644,14 @@ const PaymentSettings = () => {
     
     try {
       setSaving(true);
-      const token = localStorage.getItem('adminToken');
       
       console.log(`Đang từ chối thanh toán ID: ${selectedPayment.id}, Ghi chú: ${verificationNote}`);
       
+      // DEV MODE: Skip token in development
       const response = await axios.put(
         `http://localhost:8080/api/bank-payments/${selectedPayment.id}/reject`,
         null,
         {
-          headers: { Authorization: `Bearer ${token}` },
           params: { note: verificationNote }
         }
       );
@@ -694,11 +724,9 @@ const PaymentSettings = () => {
   const fetchBankCodes = async () => {
     try {
       setLoadingBankCodes(true);
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      // DEV MODE: Skip token validation for development
       
-      const response = await axios.get('http://localhost:8080/api/bank-payments/bank-codes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get('http://localhost:8080/api/bank-payments/bank-codes');
       
       console.log('Mã ngân hàng:', response.data);
       setBankCodes(response.data);
@@ -718,7 +746,7 @@ const PaymentSettings = () => {
     
     try {
       setUploadingQR(true);
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      // DEV MODE: Skip token validation for development
       
       const response = await axios.post(
         'http://localhost:8080/api/bank-payments/generate-qr',
@@ -727,8 +755,7 @@ const PaymentSettings = () => {
           accountNo: newAccount.accountNumber,
           accountName: newAccount.accountName,
           description: `Chuyen khoan cho ${newAccount.accountName}`
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        }
       );
       
       if (response.data && response.data.qrUrl) {
@@ -898,278 +925,34 @@ const PaymentSettings = () => {
                             name="description"
                             value={method.description}
                             onChange={(e) => handleMethodInputChange(e, method.id)}
-                            rows="2"
-                          ></textarea>
+                          />
                         </div>
                         
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label htmlFor={`fee-${method.id}`}>Phí giao dịch (%)</label>
-                            <input
-                              type="number"
-                              id={`fee-${method.id}`}
-                              name="fee"
-                              value={method.fee}
-                              onChange={(e) => handleMethodInputChange(e, method.id)}
-                              step="0.1"
-                              min="0"
-                            />
-                          </div>
-                          
-                          <div className="form-group">
-                            <label htmlFor={`icon-${method.id}`}>Biểu tượng</label>
-                            <input
-                              type="text"
-                              id={`icon-${method.id}`}
-                              name="icon"
-                              value={method.icon}
-                              onChange={(e) => handleMethodInputChange(e, method.id)}
-                            />
-                          </div>
+                        <div className="form-group">
+                          <label htmlFor={`icon-${method.id}`}>Biểu tượng (Font Awesome)</label>
+                          <input
+                            type="text"
+                            id={`icon-${method.id}`}
+                            name="icon"
+                            value={method.icon}
+                            onChange={(e) => handleMethodInputChange(e, method.id)}
+                          />
+                          <small className="form-text text-muted">
+                            Ví dụ: fa-credit-card, fa-money-bill, fa-university
+                          </small>
                         </div>
-
-                        {/* Method-specific configuration */}
-                        {method.id === 'bank_transfer' && (
-                          <div className="method-specific-config">
-                            <h4>Cấu hình chuyển khoản ngân hàng</h4>
-                            
-                            <div className="form-row">
-                              <div className="form-group">
-                                <label htmlFor="bankName">Tên ngân hàng</label>
-                                <input
-                                  type="text"
-                                  id="bankName"
-                                  name="bankName"
-                                  value={bankDetails.bankName}
-                                  onChange={(e) => handleInputChange(e, setBankDetails)}
-                                  required
-                                />
-                              </div>
-                              
-                              <div className="form-group">
-                                <label htmlFor="bankBranch">Chi nhánh</label>
-                                <input
-                                  type="text"
-                                  id="bankBranch"
-                                  name="bankBranch"
-                                  value={bankDetails.bankBranch}
-                                  onChange={(e) => handleInputChange(e, setBankDetails)}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="form-row">
-                              <div className="form-group">
-                                <label htmlFor="accountName">Tên chủ tài khoản</label>
-                                <input
-                                  type="text"
-                                  id="accountName"
-                                  name="accountName"
-                                  value={bankDetails.accountName}
-                                  onChange={(e) => handleInputChange(e, setBankDetails)}
-                                  required
-                                />
-                              </div>
-                              
-                              <div className="form-group">
-                                <label htmlFor="accountNumber">Số tài khoản</label>
-                                <input
-                                  type="text"
-                                  id="accountNumber"
-                                  name="accountNumber"
-                                  value={bankDetails.accountNumber}
-                                  onChange={(e) => handleInputChange(e, setBankDetails)}
-                                  required
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="form-group">
-                              <label htmlFor="instructions">Hướng dẫn thanh toán</label>
-                              <textarea
-                                id="instructions"
-                                name="instructions"
-                                value={bankDetails.instructions}
-                                onChange={(e) => handleInputChange(e, setBankDetails)}
-                                rows="3"
-                              ></textarea>
-                            </div>
-                          </div>
-                        )}
-
-                        {method.id === 'vnpay' && (
-                          <div className="method-specific-config">
-                            <h4>Cấu hình thanh toán thẻ tín dụng / thẻ ghi nợ</h4>
-                            
-                            <div className="form-row">
-                              <div className="form-group">
-                                <label htmlFor="providerName">Nhà cung cấp dịch vụ</label>
-                                <select
-                                  id="providerName"
-                                  name="providerName"
-                                  value={creditCardSettings.providerName}
-                                  onChange={(e) => {
-                                    // Reset cấu hình hiện tại và cập nhật tên nhà cung cấp
-                                    setCreditCardSettings({
-                                      ...creditCardSettings,
-                                      providerName: e.target.value,
-                                      // Giữ lại một số cài đặt chung
-                                      currency: creditCardSettings.currency,
-                                      testMode: creditCardSettings.testMode,
-                                      autoCapture: creditCardSettings.autoCapture
-                                    });
-                                  }}
-                                  required
-                                >
-                                  <option value="VNPAY">VNPAY (Vietnam)</option>
-                                </select>
-                              </div>
-                              
-                              <div className="form-group">
-                                <label htmlFor="currency">Tiền tệ mặc định</label>
-                                <select
-                                  id="currency"
-                                  name="currency"
-                                  value={creditCardSettings.currency}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                >
-                                  <option value="VND">VND - Việt Nam Đồng</option>
-                                  <option value="USD">USD - Đô la Mỹ</option>
-                                  <option value="EUR">EUR - Euro</option>
-                                </select>
-                              </div>
-                            </div>
-                            
-                            <div className="form-row">
-                              <div className="form-group">
-                                <label htmlFor="publicKey">
-                                  Terminal ID / Merchant ID
-                                  <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  id="publicKey"
-                                  name="publicKey"
-                                  value={creditCardSettings.publicKey}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                  placeholder="Terminal ID / Merchant ID từ VNPAY"
-                                  required
-                                />
-                                <small className="form-text text-muted">VNPAY Terminal ID: TX30V45K</small>
-                              </div>
-                              
-                              <div className="form-group">
-                                <label htmlFor="secretKey">
-                                  Secret Key / Chuỗi bí mật tạo checksum
-                                  <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                  type="password"
-                                  id="secretKey"
-                                  name="secretKey"
-                                  value={creditCardSettings.secretKey}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                  placeholder="Secret Key / Chuỗi bí mật tạo checksum"
-                                  required
-                                />
-                                <small className="form-text text-muted">VNPAY Secret Key: Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN</small>
-                              </div>
-                            </div>
-
-                            <div className="form-group">
-                              <label htmlFor="vnpPayUrl">URL Thanh toán VNPAY</label>
-                              <input
-                                type="text"
-                                id="vnpPayUrl"
-                                name="vnpPayUrl"
-                                value={creditCardSettings.vnpPayUrl}
-                                onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                placeholder="https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-                                className="form-control"
-                              />
-                              <small className="form-text text-muted">VNPAY Payment URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html</small>
-                            </div>
-
-                            <div className="form-group">
-                              <label htmlFor="vnpReturnUrl">URL Return (Quay về)</label>
-                              <input
-                                type="text"
-                                id="vnpReturnUrl"
-                                name="vnpReturnUrl"
-                                value={creditCardSettings.vnpReturnUrl}
-                                onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                placeholder="http://localhost:3000/payment/vnpay-return"
-                                className="form-control"
-                              />
-                              <small className="form-text text-muted">URL quay về sau khi thanh toán</small>
-                            </div>
-
-                            <div className="form-group">
-                              <label htmlFor="vnpApiUrl">API URL</label>
-                              <input
-                                type="text"
-                                id="vnpApiUrl"
-                                name="vnpApiUrl"
-                                value={creditCardSettings.vnpApiUrl}
-                                onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                placeholder="https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
-                                className="form-control"
-                              />
-                              <small className="form-text text-muted">URL API cho gọi thông tin giao dịch VNPAY</small>
-                            </div>
-
-                            <div className="form-group mb-4">
-                              <div className="custom-control custom-switch">
-                                <input
-                                  type="checkbox"
-                                  className="custom-control-input"
-                                  id="vnpProduction"
-                                  name="vnpProduction"
-                                  checked={creditCardSettings.vnpProduction}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                />
-                                <label className="custom-control-label" htmlFor="vnpProduction">
-                                  Môi trường thực tế (Production)
-                                </label>
-                                <small className="form-text text-muted d-block">
-                                  Bật khi bạn muốn sử dụng môi trường thực tế của VNPAY. Tắt để sử dụng môi trường Sandbox (test).
-                                </small>
-                              </div>
-                            </div>
-
-                            <div className="form-group checkbox-group">
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  name="testMode"
-                                  checked={creditCardSettings.testMode}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                />
-                                Sử dụng môi trường thử nghiệm (Sandbox)
-                              </label>
-                            </div>
-                            
-                            <div className="form-group checkbox-group">
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  name="autoCapture"
-                                  checked={creditCardSettings.autoCapture}
-                                  onChange={(e) => handleInputChange(e, setCreditCardSettings)}
-                                />
-                                Tự động thu tiền (nếu không chọn, cần xác nhận thủ công)
-                              </label>
-                            </div>
-                            
-                            <div className="alert alert-info mt-3">
-                              <strong>Lưu ý:</strong> Để tích hợp cổng thanh toán thẻ, bạn cần đăng ký tài khoản với nhà cung cấp dịch vụ 
-                              (Stripe, OnePay, ...) và lấy các khóa API.
-                              <a href="https://stripe.com/docs" target="_blank" rel="noopener noreferrer" className="ms-1">
-                                Xem hướng dẫn
-                              </a>
-                            </div>
-                          </div>
-                        )}
+                        
+                        <div className="form-group">
+                          <label htmlFor={`fee-${method.id}`}>Phí thanh toán (VNĐ)</label>
+                          <input
+                            type="number"
+                            id={`fee-${method.id}`}
+                            name="fee"
+                            value={method.fee}
+                            onChange={(e) => handleMethodInputChange(e, method.id)}
+                            min="0"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

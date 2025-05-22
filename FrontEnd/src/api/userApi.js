@@ -6,7 +6,7 @@ const API_URL = `${BACKEND_URL_HTTP}/api`;
 // Hàm lấy tất cả người dùng
 export const getAllUsers = async () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/users/with-stats`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -22,7 +22,7 @@ export const getAllUsers = async () => {
 // Hàm lấy thông tin người dùng theo ID
 export const getUserById = async (id) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/users/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -60,7 +60,7 @@ export const getUserByEmail = async (email) => {
 // Hàm lấy thống kê khách hàng
 export const getUsersStatistics = async () => {
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/users/statistics`, {
       headers: {
         'Authorization': `Bearer ${token}`

@@ -14,7 +14,7 @@ const discountCodeApi = {
         ...CORS_CONFIG,
         headers: {
           ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       return response.data;
@@ -35,7 +35,7 @@ const discountCodeApi = {
         ...CORS_CONFIG,
         headers: {
           ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       return response.data;
@@ -97,7 +97,7 @@ const discountCodeApi = {
         ...CORS_CONFIG,
         headers: {
           ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       return response.data;
@@ -139,7 +139,7 @@ const discountCodeApi = {
         ...CORS_CONFIG,
         headers: {
           ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       return response.data;
@@ -160,7 +160,7 @@ const discountCodeApi = {
         ...CORS_CONFIG,
         headers: {
           ...CORS_CONFIG.headers,
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
     } catch (error) {
@@ -183,7 +183,7 @@ const discountCodeApi = {
         `${API_URL}/${id}/toggle-status`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           }
         }
       );

@@ -1,11 +1,43 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import authApi from '../../api/authApi';
+import { toast } from 'react-toastify';
 
 const Header = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [adminName, setAdminName] = useState('Admin');
+  const [adminAvatar, setAdminAvatar] = useState('');
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Lấy thông tin admin từ localStorage nếu có
+    const adminInfo = localStorage.getItem('adminInfo');
+    let displayName = 'Admin';
+    let avatarUrl = '';
+    if (adminInfo) {
+      try {
+        const info = JSON.parse(adminInfo);
+        displayName = info.fullName || info.username || 'Admin';
+        avatarUrl = info.avatar || '';
+      } catch {}
+    } else {
+      // fallback cũ
+      const username = localStorage.getItem('adminUsername');
+      if (username) displayName = username;
+    }
+    setAdminName(displayName);
+    setAdminAvatar(avatarUrl);
+  }, []);
   
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
+  };
+  
+  const handleLogout = () => {
+    // Đăng xuất admin
+    authApi.logout();
+    toast.success('Đăng xuất thành công');
+    navigate('/admin/login');
   };
 
   return (
@@ -34,27 +66,22 @@ const Header = ({ toggleSidebar }) => {
         
         <div className="user-dropdown">
           <button className="dropdown-toggle" onClick={toggleDropdown}>
-            <img 
-              src="https://via.placeholder.com/40" 
-              alt="User Avatar" 
-              className="user-avatar" 
-            />
-            <span className="user-name">Admin</span>
+            <span className="user-name">{adminName}</span>
             <i className={`fa fa-chevron-${dropdownOpen ? 'up' : 'down'}`}></i>
           </button>
           
           {dropdownOpen && (
             <div className="dropdown-menu">
-              <Link to="/admin/profile" className="dropdown-item">
-                <i className="fa fa-user"></i> Hồ sơ
+              <Link to="/admin/account" className="dropdown-item">
+                <i className="fa fa-user"></i> Tài khoản
               </Link>
-              <Link to="/admin/settings" className="dropdown-item">
+              <Link to="/admin/settings/store" className="dropdown-item">
                 <i className="fa fa-cog"></i> Cài đặt
               </Link>
               <div className="dropdown-divider"></div>
-              <Link to="/logout" className="dropdown-item">
-                <i className="fa fa-sign-out"></i> Đăng xuất
-              </Link>
+              <button onClick={handleLogout} className="dropdown-item">
+                <i className="fa fa-sign-out-alt"></i> Đăng xuất
+              </button>
             </div>
           )}
         </div>
@@ -151,13 +178,6 @@ const Header = ({ toggleSidebar }) => {
           cursor: pointer;
         }
         
-        .user-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          margin-right: 10px;
-        }
-        
         .user-name {
           margin-right: 5px;
           color: #495057;
@@ -180,6 +200,11 @@ const Header = ({ toggleSidebar }) => {
           padding: 8px 20px;
           color: #495057;
           text-decoration: none;
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
         }
         
         .dropdown-item:hover {

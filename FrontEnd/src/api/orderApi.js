@@ -28,7 +28,7 @@ export const getAllOrders = async (params = {}) => {
     
     console.log("Fetching orders from URL:", url);
     
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -62,7 +62,7 @@ export const getAllOrders = async (params = {}) => {
 // Hàm lấy đơn hàng theo ID
 export const getOrderById = async (id) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/orders/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -78,7 +78,7 @@ export const getOrderById = async (id) => {
 // Hàm lấy đơn hàng theo trạng thái
 export const getOrdersByStatus = async (status) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/orders/status/${status}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -94,7 +94,7 @@ export const getOrdersByStatus = async (status) => {
 // Hàm lấy đơn hàng của một người dùng
 export const getOrdersByUser = async (userId) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/orders/user/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -110,7 +110,7 @@ export const getOrdersByUser = async (userId) => {
 // Hàm tạo đơn hàng mới
 export const createOrder = async (orderData) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.post(`${API_URL}/orders`, orderData, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -127,7 +127,7 @@ export const createOrder = async (orderData) => {
 export const updateOrderStatus = async (id, status, sendEmail = true) => {
   try {
     console.log(`API call: Updating order ${id} status to ${status}`);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.put(
       `${API_URL}/orders/${id}/status?status=${status}&sendEmail=${sendEmail}`, 
       {}, // Empty request body since we're using query params
@@ -149,7 +149,7 @@ export const updateOrderStatus = async (id, status, sendEmail = true) => {
 // Hàm cập nhật toàn bộ thông tin đơn hàng
 export const updateOrder = async (id, orderData) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.put(`${API_URL}/orders/${id}`, orderData, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -165,7 +165,7 @@ export const updateOrder = async (id, orderData) => {
 // Hàm hủy đơn hàng
 export const cancelOrder = async (id, reason) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.put(
       `${API_URL}/orders/${id}/cancel`, 
       { reason }, 
@@ -185,7 +185,7 @@ export const cancelOrder = async (id, reason) => {
 // Hàm lấy thống kê đơn hàng
 export const getOrdersStatistics = async () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.get(`${API_URL}/orders/statistics`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -201,7 +201,7 @@ export const getOrdersStatistics = async () => {
 // Hàm gửi email xác nhận đơn hàng
 export const sendConfirmOrderEmail = async (orderId) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.post(
       `${API_URL}/test-email/confirm-order-email`,
       { orderId },
@@ -222,7 +222,7 @@ export const sendConfirmOrderEmail = async (orderId) => {
 // Hàm gửi email theo trạng thái đơn hàng
 export const sendOrderStatusEmail = async (orderId) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('adminToken');
     const response = await axios.post(
       `${API_URL}/test-email/order-status-email`,
       { orderId },
