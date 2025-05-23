@@ -8,6 +8,7 @@ import discountCodeApi from '../../api/discountCodeApi';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../config';
 import Swal from 'sweetalert2';
+import { getAvailablePaymentMethods, getVNPaySettings, getBankTransferSettings, getGeneralPaymentSettings } from '../../utils/paymentUtils';
 
 export async function loadcart() {
     const cart = JSON.parse(localStorage.getItem('cart')) ?? [];
@@ -36,18 +37,77 @@ const Payment = () => {
         address: '',
         city: '',
         zipCode: '',
-        paymentMethod: 'vnpay'
+        paymentMethod: ''
     });
 
-    // Payment methods
-    const paymentMethods = [
-        { id: 'COD', name: 'Thanh toán khi nhận hàng (COD)', icon: 'fa-money-bill-wave', description: 'Thanh toán bằng tiền mặt khi nhận hàng' },
-        { id: 'Bank Transfer', name: 'Chuyển khoản ngân hàng', icon: 'fa-university', description: 'Chuyển khoản trực tiếp đến tài khoản ngân hàng của chúng tôi' },
-        { id: 'vnpay', name: 'Thanh toán qua VNPAY', icon: 'fa-wallet', description: 'Thanh toán qua VNPay - Hỗ trợ nhiều ngân hàng và ví điện tử' },
-    ];
+    // Payment methods from API
+    const [paymentMethods, setPaymentMethods] = useState([]);
 
     // Phí vận chuyển cố định
     const shippingFee = 30000;
+
+    // Fetch payment methods
+    useEffect(() => {
+        const fetchPaymentMethods = async () => {
+            try {
+                // Thử đọc từ API và localStorage (sử dụng utility mới)
+                const methods = await getAvailablePaymentMethods();
+                
+                if (methods && methods.length > 0) {
+                    setPaymentMethods(methods);
+                    console.log('Đã tải phương thức thanh toán:', methods);
+                    
+                    // Lấy phương thức mặc định từ cài đặt
+                    const generalSettings = await getGeneralPaymentSettings();
+                    const defaultMethod = generalSettings.defaultPaymentMethod;
+                    
+                    // Set default payment method if available
+                    if (methods.find(m => m.id === defaultMethod)) {
+                        setFormData(prev => ({
+                            ...prev,
+                            paymentMethod: defaultMethod
+                        }));
+                    } else if (methods.length > 0) {
+                        setFormData(prev => ({
+                            ...prev,
+                            paymentMethod: methods[0].id
+                        }));
+                    }
+                    return;
+                }
+                
+                // Fallback nếu không có phương thức thanh toán
+                const defaultMethods = [
+                    { id: 'cod', name: 'Thanh toán khi nhận hàng (COD)', enabled: true, icon: 'fa-money-bill-wave', description: 'Thanh toán bằng tiền mặt khi nhận hàng' },
+                    { id: 'bank_transfer', name: 'Chuyển khoản ngân hàng', enabled: true, icon: 'fa-university', description: 'Chuyển khoản trực tiếp đến tài khoản ngân hàng của chúng tôi' },
+                    { id: 'vnpay', name: 'Thanh toán qua VNPAY', enabled: true, icon: 'fa-wallet', description: 'Thanh toán qua VNPay - Hỗ trợ nhiều ngân hàng và ví điện tử' }
+                ];
+                
+                setPaymentMethods(defaultMethods);
+                setFormData(prev => ({
+                    ...prev,
+                    paymentMethod: 'cod'
+                }));
+            } catch (error) {
+                console.error("Error fetching payment methods:", error);
+                // Fallback to default payment methods if API fails
+                const defaultMethods = [
+                    { id: 'cod', name: 'Thanh toán khi nhận hàng (COD)', enabled: true, icon: 'fa-money-bill-wave', description: 'Thanh toán bằng tiền mặt khi nhận hàng' },
+                    { id: 'bank_transfer', name: 'Chuyển khoản ngân hàng', enabled: true, icon: 'fa-university', description: 'Chuyển khoản trực tiếp đến tài khoản ngân hàng của chúng tôi' },
+                    { id: 'vnpay', name: 'Thanh toán qua VNPAY', enabled: true, icon: 'fa-wallet', description: 'Thanh toán qua VNPay - Hỗ trợ nhiều ngân hàng và ví điện tử' }
+                ];
+                
+                setPaymentMethods(defaultMethods);
+                
+                setFormData(prev => ({
+                    ...prev,
+                    paymentMethod: 'cod'
+                }));
+            }
+        };
+        
+        fetchPaymentMethods();
+    }, []);
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -195,7 +255,7 @@ const Payment = () => {
                 dispatch(clearCart());
                 
                 // Điều hướng dựa trên phương thức thanh toán
-                if (formData.paymentMethod === 'Bank Transfer') {
+                if (formData.paymentMethod === 'bank_transfer') {
                     navigate(`/bank-transfer/${response.data.id}`);
                     return;
                 }
@@ -209,27 +269,24 @@ const Payment = () => {
                         const formattedAmount = Math.round(totalAmount).toString().replace(/[,.]/g, '');
                         console.log("Số tiền định dạng:", formattedAmount);
                         
+                        // Lấy cài đặt VNPAY từ API/localStorage
+                        const vnpaySettings = await getVNPaySettings();
+                        console.log("Sử dụng cài đặt VNPAY:", vnpaySettings);
+                        
+                        // Kiểm tra xem có returnUrl không
+                        if (!vnpaySettings.vnpReturnUrl) {
+                            console.warn("Không tìm thấy vnpReturnUrl trong cài đặt, sử dụng giá trị mặc định");
+                        }
+                        
                         // Đơn giản hóa dữ liệu thanh toán (chỉ giữ các trường bắt buộc)
                         const vnpayData = {
                             orderId: response.data.id.toString(),
                             orderInfo: `Thanh toan don hang #${response.data.id}`,
                             amount: formattedAmount,
-                            locale: 'vn'
+                            locale: 'vn',
+                            // Thêm các tham số từ cài đặt lưu trong localStorage
+                            returnUrl: vnpaySettings.vnpReturnUrl || 'http://localhost:3000/payment/vnpay-return'
                         };
-                        
-                        console.log("Dữ liệu thanh toán VNPAY (đơn giản hóa):", vnpayData);
-                        console.log("URL API VNPAY:", `${BACKEND_URL_HTTP}/api/vnpay/create-payment`);
-                        
-                        // Debug API call - kiểm tra xem URL, method, và headers có đúng không
-                        console.log("API Call Config:", {
-                            url: `${BACKEND_URL_HTTP}/api/vnpay/create-payment`,
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': token ? `Bearer ${token}` : ''
-                            },
-                            data: vnpayData
-                        });
                         
                         // Gọi API tạo URL thanh toán VNPAY với phương thức POST
                         const vnpayResponse = await axios({
@@ -255,12 +312,6 @@ const Payment = () => {
                         }
                     } catch (vnpayError) {
                         console.error('VNPAY payment error:', vnpayError);
-                        console.error('VNPAY error details:', {
-                            message: vnpayError.message,
-                            stack: vnpayError.stack,
-                            response: vnpayError.response?.data,
-                            status: vnpayError.response?.status
-                        });
                         
                         let errorMessage = 'Đã xảy ra lỗi khi xử lý thanh toán VNPAY';
                         

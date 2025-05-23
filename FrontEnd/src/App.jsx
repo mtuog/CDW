@@ -23,26 +23,11 @@ import VerifyRegisterAccount from './components/VerifyRegisterAccount/VerifyRegi
 import ForgotPassword from './components/ForgotPassword/ForgotPassword';
 import ResetPassword from './components/ResetPassword/ResetPassword';
 import AdminLayout from './admin/layouts/AdminLayout';
-import Dashboard from './admin/pages/dashboard/Dashboard';
-import ProductList from './admin/pages/products/ProductList';
-import ProductForm from './admin/pages/products/ProductForm';
-import ProductStockManager from './admin/pages/products/ProductStockManager';
-import ProductBulkUpload from './admin/pages/products/ProductBulkUpload';
-import OrderList from './admin/pages/orders/OrderList';
-import OrderDetail from './admin/pages/orders/OrderDetail';
-import CategoryList from './admin/pages/categories/CategoryList';
-import CustomerAnalytics from './admin/pages/customers/CustomerAnalytics';
-import StoreSettings from './admin/pages/settings/StoreSettings';
-import PaymentSettings from './admin/pages/settings/PaymentSettings';
 import BankTransfer from './components/Payment/BankTransfer';
 import CreditCardPayment from './components/Payment/CreditCardPayment';
 import PaymentResult from './components/Payment/PaymentResult';
 import OrderSuccess from './components/Payment/OrderSuccess';
-import DiscountList from './admin/pages/discount';
-import AddDiscount from './admin/pages/discount/add';
-import EditDiscount from './admin/pages/discount/edit';
 import UserOrderDetail from './components/Profile/tabs/OrderDetail';
-import LoyaltyManagement from './admin/pages/loyalty/LoyaltyManagement';
 
 const Layout = () => {
     return (
@@ -52,11 +37,6 @@ const Layout = () => {
             <Footer />
         </div>
     );
-}
-
-// Admin không cần header và footer của FrontEnd
-const AdminRoute = () => {
-    return <AdminLayout />;
 }
 
 const router = createBrowserRouter([
@@ -92,41 +72,8 @@ const router = createBrowserRouter([
         ],
     },
     {
-        path: '/admin',
-        element: <AdminRoute />,
-        children: [
-            { index: true, element: <Dashboard /> },
-            { path: 'dashboard', element: <Dashboard /> },
-            
-            // Product Management
-            { path: 'products', element: <ProductList /> },
-            { path: 'products/add', element: <ProductForm /> },
-            { path: 'products/:id/edit', element: <ProductForm /> },
-            { path: 'products/stock', element: <ProductStockManager /> },
-            { path: 'products/bulk-upload', element: <ProductBulkUpload /> },
-            
-            // Category Management
-            { path: 'categories', element: <CategoryList /> },
-            
-            // Order Management
-            { path: 'orders', element: <OrderList /> },
-            { path: 'orders/:id', element: <OrderDetail /> },
-            
-            // Customer Analytics
-            { path: 'customers', element: <CustomerAnalytics /> },
-            
-            // Discount Codes
-            { path: 'discount', element: <DiscountList /> },
-            { path: 'discount/add', element: <AddDiscount /> },
-            { path: 'discount/edit/:id', element: <EditDiscount /> },
-            
-            // Settings
-            { path: 'settings/store', element: <StoreSettings /> },
-            { path: 'settings/payment', element: <PaymentSettings /> },
-
-            // Loyalty Management
-            { path: 'loyalty', element: <LoyaltyManagement /> },
-        ],
+        path: '/admin/*',
+        element: <AdminLayout />
     },
 ]);
 

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './PaymentResult.css';
 import { BACKEND_URL_HTTP } from '../../config';
+import { getVNPaySettings } from '../../utils/paymentUtils';
 
 const PaymentResult = () => {
     const [loading, setLoading] = useState(true);
@@ -18,6 +19,10 @@ const PaymentResult = () => {
                 
                 console.log("URL params:", Object.fromEntries(queryParams.entries()));
                 console.log("Raw URL search string:", location.search);
+                
+                // Tải cài đặt VNPAY nếu cần
+                const vnpaySettings = await getVNPaySettings();
+                console.log("Cài đặt VNPAY:", vnpaySettings);
                 
                 // Kiểm tra loại thanh toán và xử lý tương ứng
                 if (location.pathname.includes('vnpay-return')) {
