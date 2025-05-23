@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getAllProducts, updateProductStock, updateProductQuantity } from '../../../api/productApi';
-import { getProductSizes, updateSizeQuantity, addProductSize, deleteSize } from '../../../api/productSizeApi';
-import { getAllCategories } from '../../../api/categoryApi';
+import { getAllProducts, updateProductStock, updateProductQuantity } from '../../../admin/api/productApi';
+import { getProductSizes, updateSizeQuantity, addProductSize, deleteSize } from '../../../admin/api/productSizeApi';
+import { getAllCategories } from '../../../admin/api/categoryApi';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 

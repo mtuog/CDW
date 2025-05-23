@@ -4,10 +4,10 @@ import { BACKEND_URL_HTTP } from '../../../config';
 import {
   PieChart, Pie, Cell, ResponsiveContainer
 } from 'recharts';
-import { getAllOrders, getOrdersStatistics } from '../../../api/orderApi';
-import { getUsersStatistics } from '../../../api/userApi';
-import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../api/productApi';
-import { getAllCategories } from '../../../api/categoryApi';
+import { getAllOrders, getOrdersStatistics } from '../../../admin/api/orderApi';
+import { getUsersStatistics } from '../../../admin/api/userApi';
+import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../admin/api/productApi';
+import { getAllCategories } from '../../../admin/api/categoryApi';
 import SalesChart from '../../components/sections/dashboard/SalesChart';
 import TopProductsTable from '../../components/sections/dashboard/TopProductsTable';
 import RecentOrdersTable from '../../components/sections/dashboard/RecentOrdersTable';

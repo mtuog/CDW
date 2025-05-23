@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getAllUsers } from '../../../api/userApi';
+import { getAllUsers } from '../../../admin/api/userApi';
 
 const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
@@ -156,8 +156,7 @@ const CustomerList = () => {
   }, [customers, statusFilter, searchTerm, sortConfig]);
   
   useEffect(() => {
-    // Filter and sort top customers when filter changes
-    updateTopCustomers();
+    updateTopCustomers(customers);
   }, [topCustomerFilter, customers]);
 
   // Function to update top customers based on filter

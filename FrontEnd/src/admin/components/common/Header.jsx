@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authApi from '../../api/authApi';
 import { toast } from 'react-toastify';
+import { FaUserCircle } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
 
 const Header = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
   const [adminAvatar, setAdminAvatar] = useState('');
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+  const avatarBtnRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   
   useEffect(() => {
     // Lấy thông tin admin từ localStorage nếu có
@@ -29,6 +34,23 @@ const Header = ({ toggleSidebar }) => {
     setAdminAvatar(avatarUrl);
   }, []);
   
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+  
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
@@ -39,6 +61,17 @@ const Header = ({ toggleSidebar }) => {
     toast.success('Đăng xuất thành công');
     navigate('/admin/login');
   };
+
+  // Tính toán vị trí dropdown khi mở
+  useEffect(() => {
+    if (dropdownOpen && avatarBtnRef.current) {
+      const rect = avatarBtnRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.right - 200 + window.scrollX // 200 là width dropdown
+      });
+    }
+  }, [dropdownOpen]);
 
   return (
     <header className="admin-header">
@@ -63,28 +96,6 @@ const Header = ({ toggleSidebar }) => {
             <span className="badge">5</span>
           </button>
         </div>
-        
-        <div className="user-dropdown">
-          <button className="dropdown-toggle" onClick={toggleDropdown}>
-            <span className="user-name">{adminName}</span>
-            <i className={`fa fa-chevron-${dropdownOpen ? 'up' : 'down'}`}></i>
-          </button>
-          
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              <Link to="/admin/account" className="dropdown-item">
-                <i className="fa fa-user"></i> Tài khoản
-              </Link>
-              <Link to="/admin/settings/store" className="dropdown-item">
-                <i className="fa fa-cog"></i> Cài đặt
-              </Link>
-              <div className="dropdown-divider"></div>
-              <button onClick={handleLogout} className="dropdown-item">
-                <i className="fa fa-sign-out-alt"></i> Đăng xuất
-              </button>
-            </div>
-          )}
-        </div>
       </div>
       
       <style jsx>{`
@@ -99,6 +110,7 @@ const Header = ({ toggleSidebar }) => {
           position: sticky;
           top: 0;
           z-index: 100;
+          overflow: visible !important;
         }
         
         .header-left, .header-right {
@@ -168,6 +180,7 @@ const Header = ({ toggleSidebar }) => {
         
         .user-dropdown {
           position: relative;
+          overflow: visible !important;
         }
         
         .dropdown-toggle {
@@ -176,6 +189,7 @@ const Header = ({ toggleSidebar }) => {
           background: none;
           border: none;
           cursor: pointer;
+          padding: 0;
         }
         
         .user-name {
@@ -185,19 +199,22 @@ const Header = ({ toggleSidebar }) => {
         
         .dropdown-menu {
           position: absolute;
-          top: 55px;
+          top: 100%;
           right: 0;
           width: 200px;
-          background-color: white;
-          border-radius: 4px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          background-color: #fff;
+          border-radius: 6px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+          border: 1px solid #e9ecef;
           padding: 10px 0;
+          z-index: 9999 !important;
+          animation: fadeInDropdown 0.2s;
         }
         
         .dropdown-item {
           display: flex;
           align-items: center;
-          padding: 8px 20px;
+          padding: 10px 24px;
           color: #495057;
           text-decoration: none;
           background: none;
@@ -205,10 +222,12 @@ const Header = ({ toggleSidebar }) => {
           width: 100%;
           text-align: left;
           cursor: pointer;
+          font-size: 15px;
+          transition: background 0.15s;
         }
         
         .dropdown-item:hover {
-          background-color: #f8f9fa;
+          background-color: #f1f3f5;
         }
         
         .dropdown-item i {
@@ -221,6 +240,14 @@ const Header = ({ toggleSidebar }) => {
           height: 1px;
           background-color: #e9ecef;
           margin: 8px 0;
+        }
+        
+        .dropdown-menu.dropdown-animate {
+          animation: fadeInDropdown 0.2s;
+        }
+        @keyframes fadeInDropdown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </header>

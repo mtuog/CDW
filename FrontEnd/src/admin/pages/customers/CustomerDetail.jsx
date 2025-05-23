@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getUserById } from '../../../api/userApi';
-import { getOrdersByUser } from '../../../api/orderApi';
+import { getUserById } from '../../../admin/api/userApi';
+import { getOrdersByUser } from '../../../admin/api/orderApi';
 
 const CustomerDetail = () => {
   const { id } = useParams();

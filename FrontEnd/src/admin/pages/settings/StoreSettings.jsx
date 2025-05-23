@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { getSettingsByGroup, bulkUpdateSettings, getAllSettings, getSettingByKey, updateSettingByKey, createSetting } from '../../../api/settingApi';
-import { uploadFile } from '../../../api/uploadApi';
+import { getSettingsByGroup, bulkUpdateSettings, getAllSettings, getSettingByKey, updateSettingByKey, createSetting } from '../../../admin/api/settingApi';
+import { uploadFile } from '../../../admin/api/uploadApi';
 
 const StoreSettings = () => {
   const [loading, setLoading] = useState(true);

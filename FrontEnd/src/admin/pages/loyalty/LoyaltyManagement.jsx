@@ -4,7 +4,7 @@ import { faSync, faSearch, faPlus, faMinus, faUserTag, faInfoCircle } from '@for
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 import Swal from 'sweetalert2';
-import loyaltyApi from '../../../api/loyaltyApi';
+import loyaltyApi from '../../../admin/api/loyaltyApi';
 import LoyaltyUsersList from './LoyaltyUsersList';
 import LoyaltyTransactionsList from './LoyaltyTransactionsList';
 import LoyaltySettings from './LoyaltySettings';

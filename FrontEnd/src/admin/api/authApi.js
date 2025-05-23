@@ -149,6 +149,20 @@ const authApi = {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
+    },
+
+    // Change admin password
+    changePassword: async (currentPassword, newPassword, confirmPassword) => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('Chưa đăng nhập');
+        const response = await apiClient.post('/admin/change-password', {
+            currentPassword,
+            newPassword,
+            confirmPassword
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
     }
 };
 

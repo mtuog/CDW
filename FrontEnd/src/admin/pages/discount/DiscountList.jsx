@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faToggleOn, faToggleOff, faSearch } from '@fortawesome/free-solid-svg-icons';
-import discountCodeApi from '../../../api/discountCodeApi';
+import discountCodeApi from '../../../admin/api/discountCodeApi';
 import Swal from 'sweetalert2';
 
 const DiscountList = () => {
