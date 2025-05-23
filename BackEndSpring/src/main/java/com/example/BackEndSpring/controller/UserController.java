@@ -283,7 +283,7 @@ public class UserController {
             }
             
             User user = userOptional.get();
-            System.out.println("Tìm thấy user: " + user.getUsername() + ", role: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+            System.out.println("Tìm thấy user: " + user.getUsername() + ", roles: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 Map<String, String> error = new HashMap<>();
@@ -310,7 +310,7 @@ public class UserController {
                 user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
             );
             
-            System.out.println("Đăng nhập thành công cho user: " + user.getUsername() + " với role: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+            System.out.println("Đăng nhập thành công cho user: " + user.getUsername() + " với roles: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
@@ -853,30 +853,25 @@ public class UserController {
         
         // Tìm top khách hàng
         List<Map<String, Object>> topCustomers = users.stream()
-            .filter(u -> !u.getRoles().stream().map(Role::getName).collect(Collectors.toSet()).contains("ADMIN"))
+            .filter(u -> u.getRoles().stream().map(Role::getName).collect(Collectors.toSet()).contains("USER"))
             .map(u -> {
                 Map<String, Object> customerMap = new HashMap<>();
                 customerMap.put("id", u.getId());
                 customerMap.put("name", u.getFullName() != null ? u.getFullName() : u.getUsername());
                 customerMap.put("email", u.getEmail());
                 customerMap.put("phone", u.getPhone() != null ? u.getPhone() : "Chưa cập nhật");
-                
                 List<Order> userOrders = orderService.getOrdersByUser(u);
                 int orderCount = userOrders.size();
                 customerMap.put("orders", orderCount);
-                
                 double userTotalSpent = userOrders.stream()
                     .filter(order -> order.getStatus() != Order.Status.CANCELLED)
                     .mapToDouble(Order::getTotalAmount)
                     .sum();
                 customerMap.put("totalSpent", userTotalSpent);
-                
                 Optional<LocalDateTime> lastOrderDate = userOrders.stream()
                     .map(Order::getCreatedAt)
                     .max(LocalDateTime::compareTo);
                 customerMap.put("lastOrder", lastOrderDate.orElse(null));
-                
-                // Xác định trạng thái khách hàng
                 String status;
                 if (!u.isVerified()) {
                     status = "inactive";
@@ -886,7 +881,6 @@ public class UserController {
                     status = "active";
                 }
                 customerMap.put("status", status);
-                
                 return customerMap;
             })
             .sorted((a, b) -> {
@@ -905,8 +899,8 @@ public class UserController {
     @PutMapping("/admin/me")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateCurrentAdminInfo(Authentication authentication, @RequestBody Map<String, Object> updates) {
-        String email = authentication.getName();
-        Optional<User> userOpt = userService.getUserByEmail(email);
+        String username = authentication.getName();
+        Optional<User> userOpt = userService.getUserByUsername(username);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (updates.containsKey("fullName")) user.setFullName((String) updates.get("fullName"));

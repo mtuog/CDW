@@ -93,33 +93,33 @@ public class UserService {
             if (userRepository.existsByEmail(user.getEmail())) {
                 throw new RuntimeException("Email already exists");
             }
-            
             // Set up user data
             user.setCreatedAt(LocalDateTime.now());
-            
-            // Tạo mã OTP 6 chữ số
-            String otp = generateOTP();
-            user.setOtp(otp);
-            user.setVerified(false);
-            user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(30)); // OTP có hiệu lực 30 phút
-            
-            // Lưu user vào database
-            User savedUser = userRepository.save(user);
-            
-            // Gửi email xác thực
-            try {
-                emailService.sendVerificationEmail(
-                    user.getEmail(), 
-                    user.getUsername(), 
-                    otp
-                );
-            } catch (MessagingException | UnsupportedEncodingException e) {
-                // Log lỗi nhưng không ảnh hưởng đến việc tạo tài khoản
-                // Người dùng có thể yêu cầu gửi lại mã sau này
-                throw new RuntimeException("Failed to send verification email: " + e.getMessage(), e);
+            // Nếu user chưa xác thực (tức là đăng ký thường), tạo OTP và gửi mail xác thực
+            if (!user.isVerified()) {
+                String otp = generateOTP();
+                user.setOtp(otp);
+                user.setVerified(false);
+                user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(30)); // OTP có hiệu lực 30 phút
+                // Lưu user vào database
+                User savedUser = userRepository.save(user);
+                // Gửi email xác thực
+                try {
+                    emailService.sendVerificationEmail(
+                        user.getEmail(), 
+                        user.getUsername(), 
+                        otp
+                    );
+                } catch (MessagingException | UnsupportedEncodingException e) {
+                    throw new RuntimeException("Failed to send verification email: " + e.getMessage(), e);
+                }
+                return savedUser;
+            } else {
+                // Nếu là user Google/Facebook đã xác thực, không gửi mail xác thực
+                user.setOtp(null);
+                user.setOtpExpiryTime(null);
+                return userRepository.save(user);
             }
-            
-            return savedUser;
         } catch (Exception e) {
             throw new RuntimeException("Error creating user: " + e.getMessage(), e);
         }
@@ -312,26 +312,23 @@ public class UserService {
     public User updateUser(Long id, User userDetails) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        
         // Check if username is being changed and if it already exists
         if (!user.getUsername().equals(userDetails.getUsername()) 
                 && userRepository.existsByUsername(userDetails.getUsername())) {
             throw new RuntimeException("Username already exists");
         }
-        
         // Check if email is being changed and if it already exists
         if (!user.getEmail().equals(userDetails.getEmail()) 
                 && userRepository.existsByEmail(userDetails.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
- 
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
         user.setFullName(userDetails.getFullName());
         user.setPhone(userDetails.getPhone());
         user.setAddress(userDetails.getAddress());
+        user.setVerified(userDetails.isVerified()); // Cập nhật trạng thái xác thực
         // Don't update password here, should be done in a separate method with proper validation
-        
         return userRepository.save(user);
     }
 

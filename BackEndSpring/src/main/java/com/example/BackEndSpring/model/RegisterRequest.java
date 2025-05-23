@@ -16,6 +16,12 @@ public class RegisterRequest {
     @Schema(description = "Mật khẩu", example = "Password123", required = true)
     private String password;
     
+    @Schema(description = "Họ và tên", example = "John Doe", required = true)
+    private String fullName;
+    
+    @Schema(description = "Số điện thoại", example = "+1-541-754-3010", required = true)
+    private String phone;
+    
     // Default constructor
     public RegisterRequest() {
     }
@@ -50,5 +56,21 @@ public class RegisterRequest {
     
     public void setPassword(String password) {
         this.password = password;
+    }
+    
+    public String getFullName() {
+        return fullName;
+    }
+    
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+    
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 } 
