@@ -6,7 +6,7 @@ import {
   createCategory, 
   updateCategory, 
   deleteCategory 
-} from '../../../api/categoryApi';
+} from '../../../user/api/categoryApi';
 
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);

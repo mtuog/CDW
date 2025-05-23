@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
-import { updateOrderStatus as apiUpdateOrderStatus, getAllOrders } from '../../../api/orderApi';
-import Pagination from '../../../components/Pagination/Pagination';
+import { updateOrderStatus as apiUpdateOrderStatus, getAllOrders } from '../../../admin/api/orderApi';
+import Pagination from '../../../user/components/Pagination/Pagination';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
@@ -76,7 +76,7 @@ const OrderList = () => {
             orderCode: order.orderCode || `ORD-${order.id}`,
             customer: order.user ? order.user.username : 'Khách vãng lai',
             email: order.user ? order.user.email : 'N/A',
-            phone: order.phone,
+            phone: order.user ? order.user.phone : 'N/A',
             date: new Date(order.createdAt).toISOString().split('T')[0],
             amount: order.totalAmount,
             subtotalAmount: order.subtotalAmount,
@@ -479,8 +479,8 @@ const OrderList = () => {
                   <td>{order.orderCode}</td>
                   <td>{order.customer}</td>
                   <td>
-                    <div>{order.email}</div>
-                    <div>{order.phone}</div>
+                    <div><b>Email:</b> {order.email}</div>
+                    <div><b>ĐT:</b> {order.phone}</div>
                   </td>
                   <td>{formatDate(order.date)}</td>
                   <td>{formatPrice(order.amount)}</td>

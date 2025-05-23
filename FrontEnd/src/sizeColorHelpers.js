@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from './components/config.js';
+import { BACKEND_URL_HTTP } from './config';
 
 // Các size có sẵn
 const sizes = ['S', 'M', 'L', 'XL', 'XXL'];

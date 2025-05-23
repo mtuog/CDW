@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductById, createProduct, updateProduct } from '../../../api/productApi';
-import { getAllCategories } from '../../../api/categoryApi';
-import { getProductSizes, addProductSize, updateProductSize } from '../../../api/productSizeApi';
+import { getProductById, createProduct, updateProduct } from '../../../admin/api/productApi';
+import { getAllCategories } from '../../../admin/api/categoryApi';
+import { getProductSizes, addProductSize, updateProductSize } from '../../../admin/api/productSizeApi';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { toast } from 'react-toastify';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import paymentSettingsApi from '../../api/paymentSettingsApi';
+import paymentSettingsApi from '../api/paymentSettingsApi';
 
 const VNPaySettings = () => {
   const [loading, setLoading] = useState(true);

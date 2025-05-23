@@ -5,7 +5,13 @@ import { useNavigate } from 'react-router-dom';
 const AdminAccount = () => {
   const [admin, setAdmin] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [form, setForm] = useState({ fullName: '', phone: '', address: '' });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -60,6 +66,35 @@ const AdminAccount = () => {
     navigate('/admin/login');
   };
 
+  const handlePasswordChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setMessage('');
+      setError('');
+      await authApi.changePassword(
+        passwordForm.currentPassword,
+        passwordForm.newPassword,
+        passwordForm.confirmPassword
+      );
+      setMessage('Đổi mật khẩu thành công!');
+      setShowChangePassword(false);
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (err) {
+      setError(err?.message || 'Đổi mật khẩu thất bại!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && !admin) return <div style={{textAlign:'center',marginTop:40}}>Đang tải thông tin tài khoản...</div>;
 
   if (error && !admin) {
@@ -82,7 +117,7 @@ const AdminAccount = () => {
       <h2 style={{marginBottom:24}}>Thông tin tài khoản quản trị</h2>
       {message && <div style={{ color: 'green', marginBottom: 12 }}>{message}</div>}
       {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-      {admin && !editMode && (
+      {admin && !editMode && !showChangePassword && (
         <div style={{fontSize:16}}>
           <div><b>Tên đăng nhập:</b> {admin.username}</div>
           <div><b>Email:</b> {admin.email}</div>
@@ -92,11 +127,12 @@ const AdminAccount = () => {
           <div><b>Quyền:</b> {Array.isArray(admin.roles) ? admin.roles.join(', ') : (admin.roles || 'ADMIN')}</div>
           <div style={{ margin: '20px 0' }}>
             <button onClick={() => setEditMode(true)} style={{ marginRight: 8, padding: '8px 20px', borderRadius: 4 }}>Chỉnh sửa</button>
+            <button onClick={() => setShowChangePassword(true)} style={{ marginRight: 8, padding: '8px 20px', borderRadius: 4 }}>Đổi mật khẩu</button>
             <button onClick={handleLogout} style={{ background: '#f44336', color: '#fff', padding: '8px 20px', border: 'none', borderRadius: 4 }}>Đăng xuất</button>
           </div>
         </div>
       )}
-      {admin && editMode && (
+      {admin && editMode && !showChangePassword && (
         <form onSubmit={handleSave} style={{fontSize:16}}>
           <div style={{ marginBottom: 12 }}>
             <label>Họ tên:</label>
@@ -112,6 +148,49 @@ const AdminAccount = () => {
           </div>
           <button type="submit" style={{ marginRight: 8, padding: '8px 20px', borderRadius: 4 }}>Lưu</button>
           <button type="button" onClick={() => setEditMode(false)} style={{padding: '8px 20px', borderRadius: 4}}>Hủy</button>
+        </form>
+      )}
+      {admin && showChangePassword && (
+        <form onSubmit={handlePasswordSubmit} style={{fontSize:16}}>
+          <div style={{ marginBottom: 12 }}>
+            <label>Mật khẩu hiện tại:</label>
+            <input 
+              type="password"
+              name="currentPassword"
+              value={passwordForm.currentPassword}
+              onChange={handlePasswordChange}
+              className="form-control"
+              required
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label>Mật khẩu mới:</label>
+            <input 
+              type="password"
+              name="newPassword"
+              value={passwordForm.newPassword}
+              onChange={handlePasswordChange}
+              className="form-control"
+              required
+              minLength={8}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label>Xác nhận mật khẩu mới:</label>
+            <input 
+              type="password"
+              name="confirmPassword"
+              value={passwordForm.confirmPassword}
+              onChange={handlePasswordChange}
+              className="form-control"
+              required
+              minLength={8}
+            />
+          </div>
+          <button type="submit" style={{ marginRight: 8, padding: '8px 20px', borderRadius: 4 }} disabled={loading}>
+            {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+          </button>
+          <button type="button" onClick={() => setShowChangePassword(false)} style={{padding: '8px 20px', borderRadius: 4}}>Hủy</button>
         </form>
       )}
     </div>
