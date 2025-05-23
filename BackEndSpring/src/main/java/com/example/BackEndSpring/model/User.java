@@ -109,6 +109,9 @@ public class User {
     @Column(name = "provider_id")
     private String providerId;
     
+    @Column(name = "is_super_admin", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean isSuperAdmin = false;
+    
     // Constructors
     public User() {
     }
@@ -304,5 +307,13 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.isEnabled = enabled;
+    }
+
+    public boolean isSuperAdmin() {
+        return isSuperAdmin;
+    }
+
+    public void setSuperAdmin(boolean isSuperAdmin) {
+        this.isSuperAdmin = isSuperAdmin;
     }
 } 

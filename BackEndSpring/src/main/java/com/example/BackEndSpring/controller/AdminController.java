@@ -3,6 +3,7 @@ package com.example.BackEndSpring.controller;
 import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.model.LoginRequest;
 import com.example.BackEndSpring.model.AuthResponse;
+import com.example.BackEndSpring.model.ChangePasswordRequest;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ import java.util.List;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, 
     allowCredentials = "true", 
     allowedHeaders = "*",
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS, RequestMethod.PATCH})
 public class AdminController {
 
     private final UserService userService;
@@ -36,6 +37,7 @@ public class AdminController {
     private final BCryptPasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
 
+    @Autowired
     public AdminController(UserService userService, JwtUtil jwtUtil, BCryptPasswordEncoder passwordEncoder, RoleRepository roleRepository) {
         this.userService = userService;
         this.jwtUtil = jwtUtil;
@@ -68,7 +70,7 @@ public class AdminController {
             }
             
             User user = userOptional.get();
-            System.out.println("Tìm thấy user: " + user.getUsername() + ", roles: " + user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet()));
+            System.out.println("Tìm thấy user: " + user.getUsername() + ", roles: " + user.getRoles().stream().map(Role::getName).collect(java.util.stream.Collectors.toSet()));
             
             // Kiểm tra xem user có phải là admin không
             if (user.getRoles().stream().noneMatch(r -> r.getName().equals("ADMIN"))) {
@@ -114,7 +116,7 @@ public class AdminController {
         // Nếu đến được đây, nghĩa là người dùng đã xác thực thành công và có vai trò ADMIN
         Map<String, Object> response = new HashMap<>();
         response.put("status", "authenticated");
-        response.put("role", "ADMIN");
+        response.put("roles", "ADMIN");
         return ResponseEntity.ok(response);
     }
     
@@ -150,7 +152,7 @@ public class AdminController {
     }
 
     // Lấy danh sách admin (có phân trang đơn giản)
-    @GetMapping("/users")
+    @GetMapping("/admins")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllAdmins() {
         List<User> admins = userService.getAllUsers().stream()
@@ -163,16 +165,17 @@ public class AdminController {
             m.put("email", u.getEmail());
             m.put("fullName", u.getFullName());
             m.put("phone", u.getPhone());
-            m.put("active", u.isEnabled());
+            m.put("enabled", u.isEnabled());
             m.put("roles", u.getRoles().stream().map(Role::getName).toList());
             m.put("createdAt", u.getCreatedAt());
+            m.put("isSuperAdmin", u.isSuperAdmin());
             return m;
         }).toList();
         return ResponseEntity.ok(result);
     }
 
     // Xem chi tiết admin
-    @GetMapping("/users/{id}")
+    @GetMapping("/admins/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAdminById(@PathVariable Long id) {
         Optional<User> userOpt = userService.getUserById(id);
@@ -184,39 +187,52 @@ public class AdminController {
             m.put("email", u.getEmail());
             m.put("fullName", u.getFullName());
             m.put("phone", u.getPhone());
-            m.put("active", u.isEnabled());
+            m.put("enabled", u.isEnabled());
             m.put("roles", u.getRoles().stream().map(Role::getName).toList());
             m.put("createdAt", u.getCreatedAt());
+            m.put("isSuperAdmin", u.isSuperAdmin());
             return ResponseEntity.ok(m);
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Admin not found");
     }
 
-    // Tạo mới admin
-    @PostMapping("/users")
+    // Tạo mới admin hoặc nâng cấp user có sẵn thành admin
+    @PostMapping("/admins")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createAdmin(@RequestBody RegisterRequest req) {
-        if (userService.getUserByUsername(req.getUserName()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username already exists");
+    public ResponseEntity<?> createOrUpgradeAdmin(@RequestBody RegisterRequest req) {
+        Optional<User> userOpt = userService.getUserByUsername(req.getUserName());
+        if (userOpt.isEmpty()) {
+            userOpt = userService.getUserByEmail(req.getEmail());
         }
-        if (userService.getUserByEmail(req.getEmail()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email already exists");
-        }
-        User user = new User();
-        user.setUsername(req.getUserName());
-        user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setEnabled(true);
-        // Gán role ADMIN
         Role adminRole = roleRepository.findByName("ADMIN").orElse(null);
         if (adminRole == null) return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Role ADMIN not found");
-        user.getRoles().add(adminRole);
-        User created = userService.createUser(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", created.getId()));
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            boolean isAlreadyAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN"));
+            if (isAlreadyAdmin) {
+                return ResponseEntity.badRequest().body("Tài khoản đã là admin của cửa hàng");
+            }
+            user.getRoles().add(adminRole);
+            user.setFullName(req.getFullName());
+            user.setPhone(req.getPhone());
+            userService.updateUser(user.getId(), user);
+            return ResponseEntity.ok(Map.of("id", user.getId(), "message", "Đã nâng cấp user thành admin"));
+        } else {
+            User user = new User();
+            user.setUsername(req.getUserName());
+            user.setEmail(req.getEmail());
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+            user.setEnabled(true);
+            user.getRoles().add(adminRole);
+            user.setFullName(req.getFullName());
+            user.setPhone(req.getPhone());
+            User created = userService.createUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", created.getId(), "message", "Đã tạo mới admin"));
+        }
     }
 
     // Cập nhật thông tin admin
-    @PutMapping("/users/{id}")
+    @PutMapping("/admins/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateAdmin(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
         Optional<User> userOpt = userService.getUserById(id);
@@ -225,27 +241,39 @@ public class AdminController {
             if (updates.containsKey("fullName")) user.setFullName((String) updates.get("fullName"));
             if (updates.containsKey("phone")) user.setPhone((String) updates.get("phone"));
             if (updates.containsKey("email")) user.setEmail((String) updates.get("email"));
-            if (updates.containsKey("active")) user.setEnabled((Boolean) updates.get("active"));
+            if (updates.containsKey("enabled")) user.setEnabled((Boolean) updates.get("enabled"));
             userService.updateUser(user.getId(), user);
             return ResponseEntity.ok("Cập nhật thành công");
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Admin not found");
     }
 
-    // Xoá admin
-    @DeleteMapping("/users/{id}")
+    // Xoá admin: chỉ xoá quyền ADMIN khỏi user, không xoá user nếu còn role khác
+    @DeleteMapping("/admins/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
         Optional<User> userOpt = userService.getUserById(id);
         if (userOpt.isPresent() && userOpt.get().getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN"))) {
-            userService.deleteUser(id);
-            return ResponseEntity.ok("Đã xoá admin");
+            User user = userOpt.get();
+            if (user.isSuperAdmin()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Không thể xoá Super Admin!"));
+            }
+            // Nếu user có nhiều role, chỉ xoá quyền ADMIN
+            if (user.getRoles().size() > 1) {
+                user.getRoles().removeIf(r -> r.getName().equals("ADMIN"));
+                userService.updateUser(user.getId(), user);
+                return ResponseEntity.ok("Đã xoá quyền admin khỏi user, user vẫn còn các quyền khác");
+            } else {
+                // Nếu chỉ có mỗi quyền ADMIN thì xoá user như cũ
+                userService.deleteUser(id);
+                return ResponseEntity.ok("Đã xoá admin");
+            }
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Admin not found");
     }
 
     // Khoá/mở khoá admin
-    @PatchMapping("/users/{id}/toggle-active")
+    @PatchMapping("/admins/{id}/toggle-active")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> toggleActive(@PathVariable Long id) {
         Optional<User> userOpt = userService.getUserById(id);
@@ -253,8 +281,69 @@ public class AdminController {
             User user = userOpt.get();
             user.setEnabled(!user.isEnabled());
             userService.updateUser(user.getId(), user);
-            return ResponseEntity.ok(Map.of("active", user.isEnabled()));
+            return ResponseEntity.ok(Map.of("enabled", user.isEnabled()));
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Admin not found");
     }
+
+    // Nâng cấp user thường thành admin
+    @PatchMapping("/admins/{id}/upgrade")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> upgradeUserToAdmin(@PathVariable Long id) {
+        Optional<User> userOpt = userService.getUserById(id);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+        }
+        User user = userOpt.get();
+        boolean isAlreadyAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN"));
+        if (isAlreadyAdmin) {
+            return ResponseEntity.badRequest().body(Map.of("message", "User is already an admin"));
+        }
+        Role adminRole = roleRepository.findByName("ADMIN").orElse(null);
+        if (adminRole == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Role ADMIN not found"));
+        }
+        user.getRoles().add(adminRole);
+        userService.updateUser(user.getId(), user);
+        return ResponseEntity.ok(Map.of("message", "User upgraded to admin successfully"));
+    }
+
+    @PostMapping("/change-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            // Lấy thông tin admin hiện tại
+            String username = authentication.getName();
+            Optional<User> adminOpt = userService.getUserByUsername(username);
+            if (adminOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy tài khoản admin"));
+            }
+            User admin = adminOpt.get();
+
+            // Kiểm tra mật khẩu hiện tại
+            if (!passwordEncoder.matches(request.getCurrentPassword(), admin.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Mật khẩu hiện tại không đúng"));
+            }
+
+            // Kiểm tra mật khẩu mới và xác nhận mật khẩu
+            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Mật khẩu mới và xác nhận mật khẩu không khớp"));
+            }
+
+            // Cập nhật mật khẩu mới
+            admin.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userService.updateUser(admin.getId(), admin);
+
+            return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Đã xảy ra lỗi khi đổi mật khẩu: " + e.getMessage()));
+        }
+    }
+
 } 

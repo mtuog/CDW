@@ -44,6 +44,7 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\W
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\PaymentSettingsService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ReviewRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\FacebookAuthController.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\GlobalCorsConfig.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Setting.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\UserRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\AddressBookRepository.java
