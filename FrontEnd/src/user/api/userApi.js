@@ -1,1 +1,0 @@
-import { BACKEND_URL_HTTP } from '../../config'; 

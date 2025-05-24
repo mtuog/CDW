@@ -2,7 +2,7 @@
  * Utility functions cho việc quản lý phương thức thanh toán
  */
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config';
+import { BACKEND_URL_HTTP } from '../config';
 
 const API_URL = `${BACKEND_URL_HTTP}/api`;
 

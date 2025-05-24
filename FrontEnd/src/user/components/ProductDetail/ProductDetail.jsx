@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../store/Actions';
 import { findProductSizesById } from '../../../sizeColorHelpers';
 import { getProductById } from '../../../admin/api/productApi';
-import { BACKEND_URL_HTTP } from '../config.js';
+import { BACKEND_URL_HTTP } from '../../../config';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import ProductReviews from './ProductReviews';

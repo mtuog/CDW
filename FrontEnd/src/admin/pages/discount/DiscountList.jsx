@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faToggleOn, faToggleOff, faSearch } from '@fortawesome/free-solid-svg-icons';
-import discountCodeApi from '../../../admin/api/discountCodeApi';
+import discountCodeApi from '../../../api/discountCodeApi';
 import Swal from 'sweetalert2';
 
 const DiscountList = () => {
@@ -78,43 +78,25 @@ const DiscountList = () => {
       });
       
       // Call the API to toggle status
-      const response = await discountCodeApi.toggleDiscountCodeStatus(id);
+      const updatedDiscount = await discountCodeApi.toggleDiscountCodeStatus(id);
       
       // Close loading indicator
       loadingToast.close();
       
-      // Find the discount code that was toggled
-      const discountToUpdate = discountCodes.find(c => c.id === id);
-      
-      if (discountToUpdate) {
-        // Calculate new validity based on the updated active status
-        const newActive = !discountToUpdate.active;
-        const now = new Date();
-        const startDate = discountToUpdate.startDate;
-        const endDate = discountToUpdate.endDate;
-        
-        // Recalculate validity
-        const newIsDateValid = now >= startDate && now <= endDate;
-        const newIsUsageValid = discountToUpdate.maxUsage === 0 || discountToUpdate.usageCount < discountToUpdate.maxUsage;
-        
-        // Mã giảm giá có hiệu lực khi đang kích hoạt VÀ còn trong thời hạn VÀ chưa vượt quá giới hạn sử dụng
-        const newIsValid = newActive && newIsDateValid && newIsUsageValid;
-        
-        // Update the state with new values
-        setDiscountCodes(prevCodes => 
-          prevCodes.map(code => 
-            code.id === id 
-              ? { 
-                  ...code, 
-                  active: newActive, 
-                  isValid: newIsValid,
-                  isDateValid: newIsDateValid,
-                  isUsageValid: newIsUsageValid
-                } 
-              : code
-          )
-        );
-      }
+      // Update the state with the updated discount code
+      setDiscountCodes(prevCodes => 
+        prevCodes.map(code => 
+          code.id === id 
+            ? { 
+                ...code, 
+                active: updatedDiscount.active,
+                isValid: updatedDiscount.active && code.isDateValid && code.isUsageValid,
+                isDateValid: code.isDateValid,
+                isUsageValid: code.isUsageValid
+              } 
+            : code
+        )
+      );
       
       Swal.fire({
         icon: 'success',

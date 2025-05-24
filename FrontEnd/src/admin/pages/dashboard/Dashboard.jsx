@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer
 } from 'recharts';
 import { getAllOrders, getOrdersStatistics } from '../../../admin/api/orderApi';
-import { getUsersStatistics } from '../../../admin/api/userApi';
+import { getAllUsers, getUsersStatistics } from '../../../api/userApi';
 import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../admin/api/productApi';
 import { getAllCategories } from '../../../admin/api/categoryApi';
 import SalesChart from '../../components/sections/dashboard/SalesChart';

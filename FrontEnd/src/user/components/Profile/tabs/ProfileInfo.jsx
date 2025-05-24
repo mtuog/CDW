@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config.js';
+import { BACKEND_URL_HTTP } from '../../../../config';
 import Swal from 'sweetalert2';
-import { getUserById } from '../../../../admin/api/userApi';
+import { getUserById, updateUser } from '../../../../api/userApi';
 
 const ProfileInfo = ({ user, setUser }) => {
     const [isEditing, setIsEditing] = useState(false);

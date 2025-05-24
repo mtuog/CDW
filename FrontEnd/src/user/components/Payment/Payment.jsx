@@ -4,11 +4,12 @@ import {loadCart, removeFromCart, updateQuantity, clearCart} from "../../store/A
 import {useDispatch, useSelector} from "react-redux";
 import {Link, useNavigate} from "react-router-dom";
 import {getProductById} from '../../../admin/api/productApi';
-import discountCodeApi from '../../../admin/api/discountCodeApi';
+import discountCodeApi from '../../../api/discountCodeApi';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
 import Swal from 'sweetalert2';
-import { getAvailablePaymentMethods, getVNPaySettings, getBankTransferSettings, getGeneralPaymentSettings } from '../../utils/paymentUtils';
+import { getAvailablePaymentMethods, getVNPaySettings, getBankTransferSettings, getGeneralPaymentSettings } from '../../../utils/paymentUtils';
+import { calculateOrderTotal, formatCurrency, validatePaymentData } from '../../../utils/paymentUtils';
 
 export async function loadcart() {
     const cart = JSON.parse(localStorage.getItem('cart')) ?? [];

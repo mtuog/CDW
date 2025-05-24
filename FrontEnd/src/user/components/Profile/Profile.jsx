@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../config.js';
+import { BACKEND_URL_HTTP } from '../../../config';
 import './Profile.css';
 
 // Import các tab components

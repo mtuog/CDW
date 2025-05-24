@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { updateQuantity, removeFromCart, loadCart } from '../../store/Actions';
 import { getProductById } from '../../../admin/api/productApi';
 import { findProductSizesById } from '../../../sizeColorHelpers';
-import discountCodeApi from '../../../admin/api/discountCodeApi';
+import discountCodeApi from '../../../api/discountCodeApi';
 import Swal from 'sweetalert2';
 
 export async function loadcart() {
@@ -135,7 +135,7 @@ const ShoppingCart = () => {
 			
 			// First, check if the discount code is valid
 			console.log(`Checking validity of discount code: ${couponCode}`);
-			const validityCheck = await discountCodeApi.checkDiscountCode(
+			const validityCheck = await discountCodeApi.validateDiscountCode(
 				couponCode,
 				localStorage.getItem('userId')
 			);

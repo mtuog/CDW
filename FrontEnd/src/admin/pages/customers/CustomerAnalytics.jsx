@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { getUsersStatistics } from '../../../user/api/userApi';
+import { getUsersStatistics } from '../../../api/userApi';
 import { toast } from 'react-toastify';
 
 const CustomerAnalytics = () => {

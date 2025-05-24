@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import discountCodeApi from '../../../admin/api/discountCodeApi';
+import discountCodeApi from '../../../api/discountCodeApi';
 import Swal from 'sweetalert2';
 
 const DiscountForm = () => {

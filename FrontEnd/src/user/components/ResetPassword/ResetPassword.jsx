@@ -3,7 +3,7 @@ import { FaLock } from 'react-icons/fa';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import '../css/login.css';
 import '../css/Loading.css';
-import { BACKEND_URL_HTTP } from '../config.js';
+import { BACKEND_URL_HTTP } from '../../../config';
 import imgHolder from '../img/login-holder.jpg';
 import Swal from 'sweetalert2';
 import axios from 'axios';

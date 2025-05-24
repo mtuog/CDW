@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaStar, FaRegStar } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-import { BACKEND_URL_HTTP } from '../config.js';
+import { BACKEND_URL_HTTP } from '../../../config';
 
 const ProductReviews = ({ productId }) => {
   const [reviews, setReviews] = useState([]);

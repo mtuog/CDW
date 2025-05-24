@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearCartLocalStorage } from "../../../store/Actions.js";
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../config.js';
+import { BACKEND_URL_HTTP } from '../../../config.js';
 
 const Header = () => {
 	const [loggedIn, setLoggedIn] = useState(false);

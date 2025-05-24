@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BACKEND_URL_HTTP, CORS_CONFIG } from '../../config';
+import { BACKEND_URL_HTTP } from '../config';
 
 const API_URL = `${BACKEND_URL_HTTP}/api/discount-codes`;
 
@@ -11,9 +11,7 @@ const discountCodeApi = {
   getAllDiscountCodes: async () => {
     try {
       const response = await axios.get(API_URL, {
-        ...CORS_CONFIG,
         headers: {
-          ...CORS_CONFIG.headers,
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
@@ -32,9 +30,7 @@ const discountCodeApi = {
   getDiscountCodeById: async (id) => {
     try {
       const response = await axios.get(`${API_URL}/${id}`, {
-        ...CORS_CONFIG,
         headers: {
-          ...CORS_CONFIG.headers,
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
@@ -52,7 +48,7 @@ const discountCodeApi = {
    */
   getDiscountCodeByCode: async (code) => {
     try {
-      const response = await axios.get(`${API_URL}/code/${code}`, CORS_CONFIG);
+      const response = await axios.get(`${API_URL}/code/${code}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching discount code with code ${code}:`, error);
@@ -66,7 +62,7 @@ const discountCodeApi = {
    */
   getAllActiveDiscountCodes: async () => {
     try {
-      const response = await axios.get(`${API_URL}/active`, CORS_CONFIG);
+      const response = await axios.get(`${API_URL}/active`);
       return response.data;
     } catch (error) {
       console.error('Error fetching active discount codes:', error);
@@ -94,9 +90,7 @@ const discountCodeApi = {
       console.log("Sanitized data for discount code creation:", JSON.stringify(sanitizedData));
       
       const response = await axios.post(API_URL, sanitizedData, {
-        ...CORS_CONFIG,
         headers: {
-          ...CORS_CONFIG.headers,
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
@@ -136,9 +130,7 @@ const discountCodeApi = {
   updateDiscountCode: async (id, discountCodeData) => {
     try {
       const response = await axios.put(`${API_URL}/${id}`, discountCodeData, {
-        ...CORS_CONFIG,
         headers: {
-          ...CORS_CONFIG.headers,
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
@@ -157,9 +149,7 @@ const discountCodeApi = {
   deleteDiscountCode: async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`, {
-        ...CORS_CONFIG,
         headers: {
-          ...CORS_CONFIG.headers,
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
@@ -178,7 +168,6 @@ const discountCodeApi = {
     try {
       console.log(`Sending status toggle request for discount code ID: ${id}`);
       
-      // Use GET request instead of PATCH to avoid CORS preflight issues
       const response = await axios.get(
         `${API_URL}/${id}/toggle-status`,
         {
@@ -231,9 +220,7 @@ const discountCodeApi = {
       const url = `${API_URL}/validate?${params.toString()}`;
       console.log(`Sending request to: ${url}`);
       
-      const response = await axios.get(url, {
-        ...CORS_CONFIG
-      });
+      const response = await axios.get(url);
       
       console.log('Discount validation response:', response.data);
       return response.data;
@@ -262,9 +249,7 @@ const discountCodeApi = {
       const url = `${API_URL}/apply?${params.toString()}`;
       console.log(`Sending request to: ${url}`);
       
-      await axios.get(url, {
-        ...CORS_CONFIG
-      });
+      await axios.get(url);
       
       console.log('Discount code applied successfully');
     } catch (error) {
@@ -292,9 +277,7 @@ const discountCodeApi = {
       const url = `${API_URL}/check?${params.toString()}`;
       console.log(`Sending request to: ${url}`);
       
-      const response = await axios.get(url, {
-        ...CORS_CONFIG
-      });
+      const response = await axios.get(url);
       
       console.log('Discount code validity check response:', response.data);
       return response.data;

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './PaymentResult.css';
 import { BACKEND_URL_HTTP } from '../../../config';
-import { getVNPaySettings } from '../../utils/paymentUtils';
+import { verifyPayment, getPaymentStatus, getVNPaySettings } from '../../../utils/paymentUtils';
 
 const PaymentResult = () => {
     const [loading, setLoading] = useState(true);

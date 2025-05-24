@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  getAllCategories, 
-  createCategory, 
-  updateCategory, 
-  deleteCategory 
-} from '../../../user/api/categoryApi';
+import { getAllCategories, createCategory, updateCategory, deleteCategory } from '../../../api/categoryApi';
 
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);

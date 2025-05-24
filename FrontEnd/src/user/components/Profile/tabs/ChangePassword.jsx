@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config.js';
+import { BACKEND_URL_HTTP } from '../../../../config';
 import Swal from 'sweetalert2';
 
 const ChangePassword = ({ user }) => {
