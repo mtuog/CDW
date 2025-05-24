@@ -79,69 +79,83 @@ const StoreSettings = () => {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        // Use getSettingsByGroup instead of getStoreSettings
-        const settings = await getSettingsByGroup('store');
-        
-        // Transform settings into the expected format
-        const storeSettings = settings.reduce((acc, setting) => {
-          acc[setting.key] = setting.value;
-          return acc;
-        }, {});
-        
-        // Update state with the settings
+        // Fetch all settings groups
+        const [generalSettingsData, addressSettingsData, shippingSettingsData, emailSettingsData, socialSettingsData] = await Promise.all([
+          getSettingsByGroup('general'),
+          getSettingsByGroup('address'),
+          getSettingsByGroup('shipping'),
+          getSettingsByGroup('email'),
+          getSettingsByGroup('social')
+        ]);
+
+        // Transform settings into objects
+        const transformSettings = (settings) => {
+          return settings.reduce((acc, setting) => {
+            acc[setting.settingKey] = setting.settingValue;
+            return acc;
+          }, {});
+        };
+
+        const general = transformSettings(generalSettingsData);
+        const address = transformSettings(addressSettingsData);
+        const shipping = transformSettings(shippingSettingsData);
+        const email = transformSettings(emailSettingsData);
+        const social = transformSettings(socialSettingsData);
+
+        // Update general settings
         setGeneralSettings(prev => ({
           ...prev,
-          storeName: storeSettings.storeName || prev.storeName,
-          storeDescription: storeSettings.storeDescription || prev.storeDescription,
-          storeEmail: storeSettings.storeEmail || prev.storeEmail,
-          storePhone: storeSettings.storePhone || prev.storePhone,
-          storeLogo: storeSettings.storeLogo || prev.storeLogo,
-          storeFavicon: storeSettings.storeFavicon || prev.storeFavicon,
-          storeAddress: storeSettings.storeAddress || prev.storeAddress,
-          storeCity: storeSettings.city || prev.storeCity,
-          storeZipCode: storeSettings.zipCode || prev.storeZipCode,
-          currencyCode: storeSettings.currencyCode || prev.currencyCode,
-          currencySymbol: storeSettings.currencySymbol || prev.currencySymbol,
-          orderPrefix: storeSettings.orderPrefix || prev.orderPrefix
+          storeName: general.store_name || prev.storeName,
+          storeDescription: general.store_description || prev.storeDescription,
+          storeEmail: general.store_email || prev.storeEmail,
+          storePhone: general.store_phone || prev.storePhone,
+          storeLogo: general.logo_url || prev.storeLogo,
+          storeFavicon: general.favicon_url || prev.storeFavicon,
+          storeAddress: general.store_address || prev.storeAddress,
+          storeCity: general.city || prev.storeCity,
+          storeZipCode: general.zip_code || prev.storeZipCode,
+          currencyCode: general.currency_code || prev.currencyCode,
+          currencySymbol: general.currency_symbol || prev.currencySymbol,
+          orderPrefix: general.order_prefix || prev.orderPrefix
         }));
         
         setAddressSettings(prev => ({
           ...prev,
-          address: storeSettings.storeAddress || prev.address,
-          city: storeSettings.city || prev.city,
-          district: storeSettings.district || prev.district,
-          zipCode: storeSettings.zipCode || prev.zipCode,
-          country: storeSettings.country || prev.country
+          address: address.address || prev.address,
+          city: address.city || prev.city,
+          district: address.district || prev.district,
+          zipCode: address.zip_code || prev.zipCode,
+          country: address.country || prev.country
         }));
         
         setShippingSettings(prev => ({
           ...prev,
-          enableFreeShipping: storeSettings.enableFreeShipping === 'true' || prev.enableFreeShipping,
-          freeShippingThreshold: storeSettings.freeShippingThreshold ? parseInt(storeSettings.freeShippingThreshold, 10) : prev.freeShippingThreshold,
-          flatRate: storeSettings.flatRate ? parseInt(storeSettings.flatRate, 10) : prev.flatRate,
-          shippingFromAddress: storeSettings.shippingFromAddress === 'true' || prev.shippingFromAddress,
-          enableLocalPickup: storeSettings.enableLocalPickup === 'true' || prev.enableLocalPickup
+          enableFreeShipping: shipping.enable_free_shipping === 'true' || prev.enableFreeShipping,
+          freeShippingThreshold: shipping.free_shipping_threshold ? parseInt(shipping.free_shipping_threshold, 10) : prev.freeShippingThreshold,
+          flatRate: shipping.flat_rate ? parseInt(shipping.flat_rate, 10) : prev.flatRate,
+          shippingFromAddress: shipping.shipping_from_address === 'true' || prev.shippingFromAddress,
+          enableLocalPickup: shipping.enable_local_pickup === 'true' || prev.enableLocalPickup
         }));
         
         setEmailSettings(prev => ({
           ...prev,
-          emailNotifications: storeSettings.emailNotifications === 'true' || prev.emailNotifications,
-          adminEmail: storeSettings.adminEmail || prev.adminEmail,
-          sendOrderConfirmation: storeSettings.sendOrderConfirmation === 'true' || prev.sendOrderConfirmation,
-          sendOrderStatusUpdates: storeSettings.sendOrderStatusUpdates === 'true' || prev.sendOrderStatusUpdates,
-          emailFooter: storeSettings.emailFooter || prev.emailFooter
+          emailNotifications: email.email_notifications === 'true' || prev.emailNotifications,
+          adminEmail: email.admin_email || prev.adminEmail,
+          sendOrderConfirmation: email.send_order_confirmation === 'true' || prev.sendOrderConfirmation,
+          sendOrderStatusUpdates: email.send_order_status_updates === 'true' || prev.sendOrderStatusUpdates,
+          emailFooter: email.email_footer || prev.emailFooter
         }));
         
         setSocialSettings(prev => ({
           ...prev,
-          facebook: storeSettings.facebook || prev.facebook,
-          instagram: storeSettings.instagram || prev.instagram,
-          twitter: storeSettings.twitter || prev.twitter,
-          youtube: storeSettings.youtube || prev.youtube,
-          tiktok: storeSettings.tiktok || prev.tiktok,
-          linkedin: storeSettings.linkedin || prev.linkedin,
-          enableSocialIcons: storeSettings.enableSocialIcons === 'true' || prev.enableSocialIcons,
-          shareBtnsOnProduct: storeSettings.shareBtnsOnProduct === 'true' || prev.shareBtnsOnProduct
+          facebook: social.facebook_url || prev.facebook,
+          instagram: social.instagram_url || prev.instagram,
+          twitter: social.twitter_url || prev.twitter,
+          youtube: social.youtube_url || prev.youtube,
+          tiktok: social.tiktok_url || prev.tiktok,
+          linkedin: social.linkedin_url || prev.linkedin,
+          enableSocialIcons: social.enable_social_icons === 'true' || prev.enableSocialIcons,
+          shareBtnsOnProduct: social.share_btns_on_product === 'true' || prev.shareBtnsOnProduct
         }));
         
         setLoading(false);
@@ -225,10 +239,12 @@ const StoreSettings = () => {
           settingsByGroup[setting.groupName][setting.settingKey] = setting.settingValue;
         });
         
-        // Update settings for each group
+        // Update settings for each group (import)
         const updatePromises = [];
         for (const [groupName, groupSettings] of Object.entries(settingsByGroup)) {
-          updatePromises.push(updateSettingByKey(groupSettings, groupName));
+          for (const [key, value] of Object.entries(groupSettings)) {
+            updatePromises.push(updateSettingByKey(key, value));
+          }
         }
         
         await Promise.all(updatePromises);
@@ -355,11 +371,7 @@ const StoreSettings = () => {
       } else {
         // Nếu không tìm thấy, thử tạo mới
         try {
-          await updateSettingByKey({
-            key: 'order_prefix',
-            value: generalSettings.orderPrefix,
-            groupName: 'general'
-          });
+          await updateSettingByKey('order_prefix', generalSettings.orderPrefix);
           toast.success('Đã tạo mới tiền tố mã đơn hàng');
         } catch (createError) {
           console.error('Error creating setting:', createError);
@@ -410,24 +422,25 @@ const StoreSettings = () => {
     setSaving(true);
     
     try {
-      // Convert general settings to API format
+      // Convert general settings to API format (snake_case keys)
       const generalSettingsData = {
-        storeName: generalSettings.storeName,
-        storeDescription: generalSettings.storeDescription,
-        storeEmail: generalSettings.storeEmail,
-        storePhone: generalSettings.storePhone,
-        storeLogo: generalSettings.storeLogo,
-        storeFavicon: generalSettings.storeFavicon,
-        currencyCode: generalSettings.currencyCode,
-        currencySymbol: generalSettings.currencySymbol,
-        orderPrefix: generalSettings.orderPrefix
+        store_name: generalSettings.storeName,
+        store_description: generalSettings.storeDescription,
+        store_email: generalSettings.storeEmail,
+        store_phone: generalSettings.storePhone,
+        logo_url: generalSettings.storeLogo,
+        favicon_url: generalSettings.storeFavicon,
+        currency_code: generalSettings.currencyCode,
+        currency_symbol: generalSettings.currencySymbol,
+        order_prefix: generalSettings.orderPrefix
       };
       
       console.log("Saving order prefix:", generalSettings.orderPrefix);
       
       // Save general settings
-      const results = await updateSettingByKey(generalSettingsData, 'general');
-      console.log("Update results:", results);
+      for (const [key, value] of Object.entries(generalSettingsData)) {
+        await updateSettingByKey(key, value);
+      }
       
       // Save other settings based on active tab
       if (activeTab === 'address') {
@@ -435,40 +448,48 @@ const StoreSettings = () => {
           address: addressSettings.address,
           city: addressSettings.city,
           district: addressSettings.district,
-          zipCode: addressSettings.zipCode,
+          zip_code: addressSettings.zipCode,
           country: addressSettings.country
         };
-        await updateSettingByKey(addressSettingsData, 'address');
+        for (const [key, value] of Object.entries(addressSettingsData)) {
+          await updateSettingByKey(key, value);
+        }
       } else if (activeTab === 'shipping') {
         const shippingSettingsData = {
-          enableFreeShipping: shippingSettings.enableFreeShipping.toString(),
-          freeShippingThreshold: shippingSettings.freeShippingThreshold.toString(),
-          flatRate: shippingSettings.flatRate.toString(),
-          shippingFromAddress: shippingSettings.shippingFromAddress.toString(),
-          enableLocalPickup: shippingSettings.enableLocalPickup.toString()
+          enable_free_shipping: shippingSettings.enableFreeShipping.toString(),
+          free_shipping_threshold: shippingSettings.freeShippingThreshold.toString(),
+          flat_rate: shippingSettings.flatRate.toString(),
+          shipping_from_address: shippingSettings.shippingFromAddress.toString(),
+          enable_local_pickup: shippingSettings.enableLocalPickup.toString()
         };
-        await updateSettingByKey(shippingSettingsData, 'shipping');
+        for (const [key, value] of Object.entries(shippingSettingsData)) {
+          await updateSettingByKey(key, value);
+        }
       } else if (activeTab === 'email') {
         const emailSettingsData = {
-          emailNotifications: emailSettings.emailNotifications.toString(),
-          adminEmail: emailSettings.adminEmail,
-          sendOrderConfirmation: emailSettings.sendOrderConfirmation.toString(),
-          sendOrderStatusUpdates: emailSettings.sendOrderStatusUpdates.toString(),
-          emailFooter: emailSettings.emailFooter
+          email_notifications: emailSettings.emailNotifications.toString(),
+          admin_email: emailSettings.adminEmail,
+          send_order_confirmation: emailSettings.sendOrderConfirmation.toString(),
+          send_order_status_updates: emailSettings.sendOrderStatusUpdates.toString(),
+          email_footer: emailSettings.emailFooter
         };
-        await updateSettingByKey(emailSettingsData, 'email');
+        for (const [key, value] of Object.entries(emailSettingsData)) {
+          await updateSettingByKey(key, value);
+        }
       } else if (activeTab === 'social') {
         const socialSettingsData = {
-          facebook: socialSettings.facebook,
-          instagram: socialSettings.instagram,
-          twitter: socialSettings.twitter,
-          youtube: socialSettings.youtube,
-          tiktok: socialSettings.tiktok,
-          linkedin: socialSettings.linkedin,
-          enableSocialIcons: socialSettings.enableSocialIcons.toString(),
-          shareBtnsOnProduct: socialSettings.shareBtnsOnProduct.toString()
+          facebook_url: socialSettings.facebook,
+          instagram_url: socialSettings.instagram,
+          twitter_url: socialSettings.twitter,
+          youtube_url: socialSettings.youtube,
+          tiktok_url: socialSettings.tiktok,
+          linkedin_url: socialSettings.linkedin,
+          enable_social_icons: socialSettings.enableSocialIcons.toString(),
+          share_btns_on_product: socialSettings.shareBtnsOnProduct.toString()
         };
-        await updateSettingByKey(socialSettingsData, 'social');
+        for (const [key, value] of Object.entries(socialSettingsData)) {
+          await updateSettingByKey(key, value);
+        }
       }
       
       setSaving(false);

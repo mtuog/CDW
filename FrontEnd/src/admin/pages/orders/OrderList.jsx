@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
-import { getAllOrders, updateOrderStatus, getOrderById } from '../../../api/orderApi';
-import Pagination from '../../../user/components/Pagination/Pagination';
+import { updateOrderStatus as apiUpdateOrderStatus, getAllOrders } from '../../../api/orderApi';
+import Pagination from '../../../components/Pagination/Pagination';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
@@ -70,20 +70,24 @@ const OrderList = () => {
       if (response && response.orders) {
         const formattedOrders = response.orders.map(order => {
           console.log("Processing order:", order);
+          console.log("Payment method from API:", order.paymentMethod);
+          console.log("User data:", order.user);
+          console.log("Phone from order:", order.phone);
+          console.log("Shipping address:", order.shippingAddress);
           
           return {
             id: order.id,
             orderCode: order.orderCode || `ORD-${order.id}`,
-            customer: order.user ? order.user.username : 'Khách vãng lai',
+            customer: order.user ? (order.user.fullName || order.user.username) : 'Khách vãng lai',
             email: order.user ? order.user.email : 'N/A',
-            phone: order.user ? order.user.phone : 'N/A',
+            phone: order.phone || (order.user ? order.user.phone : 'N/A'),
             date: new Date(order.createdAt).toISOString().split('T')[0],
             amount: order.totalAmount,
             subtotalAmount: order.subtotalAmount,
             discountCodeValue: order.discountCodeValue,
             discountCodeId: order.discountCodeId,
             items: order.orderItems ? order.orderItems.length : 0,
-            payment_method: order.paymentMethod,
+            payment_method: order.paymentMethod, // Should now be properly set from API
             status: order.status,
             statusVi: statusTranslations[order.status] || order.status,
             createdAt: new Date(order.createdAt) // Add createdAt for sorting
@@ -91,6 +95,7 @@ const OrderList = () => {
         });
         
         console.log("Formatted orders:", formattedOrders);
+        console.log("First order payment method:", formattedOrders[0]?.payment_method);
         
         // Store all orders for filtering
         setAllOrders(formattedOrders);
@@ -310,7 +315,7 @@ const OrderList = () => {
       console.log(`Updating order ${orderId} from status ${oldStatus} to ${newStatus}`);
       
       // Gọi API cập nhật trạng thái đơn hàng từ orderApi
-      const updatedOrder = await updateOrderStatus(orderId, newStatus);
+      const updatedOrder = await apiUpdateOrderStatus(orderId, newStatus);
       console.log("Updated order response:", updatedOrder);
       
       // Cập nhật trạng thái đơn hàng trong danh sách
@@ -479,8 +484,8 @@ const OrderList = () => {
                   <td>{order.orderCode}</td>
                   <td>{order.customer}</td>
                   <td>
-                    <div><b>Email:</b> {order.email}</div>
-                    <div><b>ĐT:</b> {order.phone}</div>
+                    <div>{order.email}</div>
+                    <div>{order.phone}</div>
                   </td>
                   <td>{formatDate(order.date)}</td>
                   <td>{formatPrice(order.amount)}</td>

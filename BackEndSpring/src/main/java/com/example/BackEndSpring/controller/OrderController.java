@@ -149,8 +149,17 @@ public class OrderController {
                 dto.setId(order.getId());
                 dto.setOrderCode(order.getOrderCode());
                 dto.setTotalAmount(order.getTotalAmount());
+                dto.setSubtotalAmount(order.getSubtotalAmount());
                 dto.setStatus(order.getStatus().name());
                 dto.setCreatedAt(order.getCreatedAt());
+                dto.setUpdatedAt(order.getUpdatedAt());
+                dto.setPaymentMethod(order.getPaymentMethod());
+                dto.setPhone(order.getPhone());
+                dto.setShippingAddress(order.getShippingAddress());
+                dto.setDiscountCodeId(order.getDiscountCodeId());
+                dto.setDiscountCodeValue(order.getDiscountCodeValue());
+                dto.setOrderItems(order.getOrderItems());
+                
                 if (order.getUser() != null) {
                     User user = order.getUser();
                     dto.setUser(new UserShortDTO(user.getId(), user.getUsername(), user.getFullName(), user.getPhone()));
