@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { Tabs, Tab, Badge, Table, Button, Modal, Form, Row, Col } from 'react-bootstrap';
-import paymentSettingsApi from '../../api/paymentSettingsApi';
-import authApi from '../../api/authApi';
+import { getPaymentSettings, updatePaymentSettings } from '../../../api/settingApi';
+import authApi from '../../../api/authApi';
 
 const PaymentSettings = () => {
   const [loading, setLoading] = useState(true);

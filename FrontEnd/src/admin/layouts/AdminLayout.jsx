@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/common/Sidebar';
 import Header from '../components/common/Header';
 import AdminRoutes from '../routes/AdminRoutes';
-import authApi from '../api/authApi';
+import authApi from '../../api/authApi';
 
 // Sidebar links
 const sidebarLinks = [
@@ -50,11 +50,11 @@ const AdminLayout = () => {
       }
 
       try {
-        const { authenticated } = await authApi.checkAuth();
-        setIsAuthenticated(authenticated);
+        const result = await authApi.checkAuth();
+        setIsAuthenticated(result.authenticated);
         
         // Nếu không xác thực và không phải trang login, chuyển về trang login
-        if (!authenticated && location.pathname !== '/admin/login') {
+        if (!result.authenticated && location.pathname !== '/admin/login') {
           navigate('/admin/login');
         }
       } catch (error) {

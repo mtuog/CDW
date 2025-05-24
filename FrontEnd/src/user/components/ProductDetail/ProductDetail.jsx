@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { addToCart } from '../../store/Actions';
+import { addToCart } from '../../../store/Actions';
 import { findProductSizesById } from '../../../sizeColorHelpers';
-import { getProductById } from '../../../admin/api/productApi';
+import { getProductById } from '../../../api/productApi';
 import { BACKEND_URL_HTTP } from '../../../config';
 import axios from 'axios';
 import Swal from 'sweetalert2';

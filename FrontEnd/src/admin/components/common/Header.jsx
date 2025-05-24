@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import authApi from '../../api/authApi';
+import authApi from '../../../api/authApi';
 import { toast } from 'react-toastify';
 import { FaUserCircle } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
@@ -56,7 +56,6 @@ const Header = ({ toggleSidebar }) => {
   };
   
   const handleLogout = () => {
-    // Đăng xuất admin
     authApi.logout();
     toast.success('Đăng xuất thành công');
     navigate('/admin/login');

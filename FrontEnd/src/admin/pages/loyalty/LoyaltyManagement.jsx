@@ -4,7 +4,7 @@ import { faSync, faSearch, faPlus, faMinus, faUserTag, faInfoCircle } from '@for
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 import Swal from 'sweetalert2';
-import loyaltyApi from '../../../admin/api/loyaltyApi';
+import loyaltyApi from '../../../api/loyaltyApi';
 import LoyaltyUsersList from './LoyaltyUsersList';
 import LoyaltyTransactionsList from './LoyaltyTransactionsList';
 import LoyaltySettings from './LoyaltySettings';
@@ -65,12 +65,10 @@ const LoyaltyManagement = () => {
       // Cập nhật thông tin người dùng trong danh sách
       const updatedUsers = users.map(user => {
         if (user.id === userId) {
-          // Cập nhật điểm và có thể là hạng thành viên mới nếu server trả về
           const updatedUser = { ...user };
           if (response.transaction) {
             updatedUser.loyaltyPoints = (user.loyaltyPoints || 0) + points;
-            // Nếu server trả về hạng thành viên mới, cập nhật luôn
-            if (response.transaction.user && response.transaction.user.membershipRank) {
+            if (response.transaction.user?.membershipRank) {
               updatedUser.membershipRank = response.transaction.user.membershipRank;
             }
           }
@@ -81,20 +79,18 @@ const LoyaltyManagement = () => {
       
       setUsers(updatedUsers);
       
-      // Cập nhật người dùng đang được chọn nếu đó là người vừa được thêm điểm
       if (selectedUser && selectedUser.id === userId) {
         const updatedSelectedUser = { 
           ...selectedUser,
           loyaltyPoints: (selectedUser.loyaltyPoints || 0) + points
         };
         
-        // Nếu server trả về hạng thành viên mới, cập nhật luôn
-        if (response.transaction && response.transaction.user && response.transaction.user.membershipRank) {
+        if (response.transaction?.user?.membershipRank) {
           updatedSelectedUser.membershipRank = response.transaction.user.membershipRank;
         }
         
         setSelectedUser(updatedSelectedUser);
-        fetchUserTransactions(userId); // Vẫn cần lấy lại giao dịch để thấy giao dịch mới
+        fetchUserTransactions(userId);
       }
       
       Swal.fire({
@@ -118,15 +114,12 @@ const LoyaltyManagement = () => {
     try {
       const response = await loyaltyApi.redeemPoints(userId, points, description);
       
-      // Cập nhật thông tin người dùng trong danh sách
       const updatedUsers = users.map(user => {
         if (user.id === userId) {
-          // Cập nhật điểm và có thể là hạng thành viên mới nếu server trả về
           const updatedUser = { ...user };
           if (response.transaction) {
             updatedUser.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - points);
-            // Nếu server trả về hạng thành viên mới, cập nhật luôn
-            if (response.transaction.user && response.transaction.user.membershipRank) {
+            if (response.transaction.user?.membershipRank) {
               updatedUser.membershipRank = response.transaction.user.membershipRank;
             }
           }
@@ -137,20 +130,18 @@ const LoyaltyManagement = () => {
       
       setUsers(updatedUsers);
       
-      // Cập nhật người dùng đang được chọn nếu đó là người vừa được trừ điểm
       if (selectedUser && selectedUser.id === userId) {
         const updatedSelectedUser = { 
           ...selectedUser,
           loyaltyPoints: Math.max(0, (selectedUser.loyaltyPoints || 0) - points)
         };
         
-        // Nếu server trả về hạng thành viên mới, cập nhật luôn
-        if (response.transaction && response.transaction.user && response.transaction.user.membershipRank) {
+        if (response.transaction?.user?.membershipRank) {
           updatedSelectedUser.membershipRank = response.transaction.user.membershipRank;
         }
         
         setSelectedUser(updatedSelectedUser);
-        fetchUserTransactions(userId); // Vẫn cần lấy lại giao dịch để thấy giao dịch mới
+        fetchUserTransactions(userId);
       }
       
       Swal.fire({
@@ -183,14 +174,10 @@ const LoyaltyManagement = () => {
       
       const result = await loyaltyApi.processDeliveredOrders();
       
-      // Sau khi xử lý, cần lấy lại toàn bộ danh sách người dùng vì nhiều người có thể được cập nhật
       await fetchUsers();
       
-      // Nếu đang xem giao dịch của một người dùng, cập nhật thông tin giao dịch của họ
       if (selectedUser) {
         await fetchUserTransactions(selectedUser.id);
-        
-        // Cập nhật thông tin người dùng đang được chọn từ danh sách người dùng mới
         const updatedUser = users.find(u => u.id === selectedUser.id);
         if (updatedUser) {
           setSelectedUser(updatedUser);

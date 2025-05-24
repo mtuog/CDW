@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { updateQuantity, removeFromCart, loadCart } from '../../store/Actions';
-import { getProductById } from '../../../admin/api/productApi';
+import { updateCart, removeFromCart, loadCart, updateQuantity } from '../../../store/Actions';
+import { getProductById } from '../../../api/productApi';
 import { findProductSizesById } from '../../../sizeColorHelpers';
 import discountCodeApi from '../../../api/discountCodeApi';
 import Swal from 'sweetalert2';
-
-export async function loadcart() {
-	const cart = JSON.parse(localStorage.getItem('cart')) ?? [];
-	return cart;
-}
 
 const ShoppingCart = () => {
 	const dispatch = useDispatch();

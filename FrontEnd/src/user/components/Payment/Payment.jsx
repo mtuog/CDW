@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import Select from 'react-select';
-import {loadCart, removeFromCart, updateQuantity, clearCart} from "../../store/Actions";
+import { updateCart, clearCart } from '../../../store/Actions';
 import {useDispatch, useSelector} from "react-redux";
 import {Link, useNavigate} from "react-router-dom";
-import {getProductById} from '../../../admin/api/productApi';
+import { getProductById } from '../../../api/productApi';
 import discountCodeApi from '../../../api/discountCodeApi';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';

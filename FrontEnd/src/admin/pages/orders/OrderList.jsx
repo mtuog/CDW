@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
-import { updateOrderStatus as apiUpdateOrderStatus, getAllOrders } from '../../../admin/api/orderApi';
+import { getAllOrders, updateOrderStatus, getOrderById } from '../../../api/orderApi';
 import Pagination from '../../../user/components/Pagination/Pagination';
 
 const OrderList = () => {
@@ -310,7 +310,7 @@ const OrderList = () => {
       console.log(`Updating order ${orderId} from status ${oldStatus} to ${newStatus}`);
       
       // Gọi API cập nhật trạng thái đơn hàng từ orderApi
-      const updatedOrder = await apiUpdateOrderStatus(orderId, newStatus);
+      const updatedOrder = await updateOrderStatus(orderId, newStatus);
       console.log("Updated order response:", updatedOrder);
       
       // Cập nhật trạng thái đơn hàng trong danh sách

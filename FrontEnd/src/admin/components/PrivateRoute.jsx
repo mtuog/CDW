@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import authApi from '../api/authApi';
+import authApi from '../../api/authApi';
 import { toast } from 'react-toastify';
 
 const PrivateRoute = ({ children }) => {

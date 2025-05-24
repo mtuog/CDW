@@ -4,7 +4,7 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import './Home.css'; // Ensure you have a CSS file for additional styles
-import { getBestSellerProducts, getNewProducts, getFavoriteProducts } from '../../../admin/api/productApi';
+import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../api/productApi';
 
 const Home = () => {
 	const slideImages = [
@@ -28,9 +28,9 @@ const Home = () => {
 				
 				// Fetch all product categories in parallel for better performance
 				const [bestSellers, newProds, favorites] = await Promise.all([
-					getBestSellerProducts(),
-					getNewProducts(),
-					getFavoriteProducts()
+					getTopSellingProducts(),
+					getFeaturedProducts(),
+					getFeaturedProducts()
 				]);
 				
 				setBestSellerProducts(bestSellers);

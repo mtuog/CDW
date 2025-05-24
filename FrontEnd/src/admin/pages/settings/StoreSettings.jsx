@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { getSettingsByGroup, bulkUpdateSettings, getAllSettings, getSettingByKey, updateSettingByKey, createSetting } from '../../../admin/api/settingApi';
-import { uploadFile } from '../../../admin/api/uploadApi';
+import { getSettingsByGroup, updateSettingByKey, bulkUpdateSettings } from '../../../api/settingApi';
+import { uploadFile } from '../../../api/uploadApi';
 
 const StoreSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('general');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -17,11 +18,14 @@ const StoreSettings = () => {
   // State for General Settings
   const [generalSettings, setGeneralSettings] = useState({
     storeName: '',
+    storeLogo: '',
+    storeFavicon: '',
     storeDescription: '',
     storeEmail: '',
     storePhone: '',
-    logoUrl: '',
-    faviconUrl: '',
+    storeAddress: '',
+    storeCity: '',
+    storeZipCode: '',
     currencyCode: 'VND',
     currencySymbol: '₫',
     orderPrefix: 'ORD-'
@@ -72,126 +76,83 @@ const StoreSettings = () => {
   
   // Load settings from database
   useEffect(() => {
-    const loadSettings = async () => {
+    const fetchSettings = async () => {
       try {
         setLoading(true);
+        // Use getSettingsByGroup instead of getStoreSettings
+        const settings = await getSettingsByGroup('store');
         
-        console.log('Fetching settings from backend...');
+        // Transform settings into the expected format
+        const storeSettings = settings.reduce((acc, setting) => {
+          acc[setting.key] = setting.value;
+          return acc;
+        }, {});
         
-        // Fetch general settings
-        const generalSettingsData = await getSettingsByGroup('general');
-        if (generalSettingsData && generalSettingsData.length > 0) {
-          const settingsMap = {};
-          generalSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          console.log('Loaded general settings:', settingsMap);
-          
-          setGeneralSettings(prev => ({
-            ...prev,
-            storeName: settingsMap.store_name || prev.storeName,
-            storeDescription: settingsMap.store_description || prev.storeDescription,
-            storeEmail: settingsMap.store_email || prev.storeEmail,
-            storePhone: settingsMap.store_phone || prev.storePhone,
-            logoUrl: settingsMap.logo_url || prev.logoUrl,
-            faviconUrl: settingsMap.favicon_url || prev.faviconUrl,
-            currencyCode: settingsMap.currency_code || prev.currencyCode,
-            currencySymbol: settingsMap.currency_symbol || prev.currencySymbol,
-            orderPrefix: settingsMap.order_prefix || prev.orderPrefix
-          }));
-        } else {
-          console.log('No general settings found in response');
-        }
+        // Update state with the settings
+        setGeneralSettings(prev => ({
+          ...prev,
+          storeName: storeSettings.storeName || prev.storeName,
+          storeDescription: storeSettings.storeDescription || prev.storeDescription,
+          storeEmail: storeSettings.storeEmail || prev.storeEmail,
+          storePhone: storeSettings.storePhone || prev.storePhone,
+          storeLogo: storeSettings.storeLogo || prev.storeLogo,
+          storeFavicon: storeSettings.storeFavicon || prev.storeFavicon,
+          storeAddress: storeSettings.storeAddress || prev.storeAddress,
+          storeCity: storeSettings.city || prev.storeCity,
+          storeZipCode: storeSettings.zipCode || prev.storeZipCode,
+          currencyCode: storeSettings.currencyCode || prev.currencyCode,
+          currencySymbol: storeSettings.currencySymbol || prev.currencySymbol,
+          orderPrefix: storeSettings.orderPrefix || prev.orderPrefix
+        }));
         
-        // Fetch address settings
-        const addressSettingsData = await getSettingsByGroup('address');
-        if (addressSettingsData && addressSettingsData.length > 0) {
-          const settingsMap = {};
-          addressSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          setAddressSettings(prev => ({
-            ...prev,
-            address: settingsMap.address || prev.address,
-            city: settingsMap.city || prev.city,
-            district: settingsMap.district || prev.district,
-            zipCode: settingsMap.zip_code || prev.zipCode,
-            country: settingsMap.country || prev.country
-          }));
-        }
+        setAddressSettings(prev => ({
+          ...prev,
+          address: storeSettings.storeAddress || prev.address,
+          city: storeSettings.city || prev.city,
+          district: storeSettings.district || prev.district,
+          zipCode: storeSettings.zipCode || prev.zipCode,
+          country: storeSettings.country || prev.country
+        }));
         
-        // Fetch shipping settings
-        const shippingSettingsData = await getSettingsByGroup('shipping');
-        if (shippingSettingsData && shippingSettingsData.length > 0) {
-          const settingsMap = {};
-          shippingSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          setShippingSettings(prev => ({
-            ...prev,
-            enableFreeShipping: settingsMap.enable_free_shipping === 'true' || prev.enableFreeShipping,
-            freeShippingThreshold: settingsMap.free_shipping_threshold ? parseInt(settingsMap.free_shipping_threshold, 10) : prev.freeShippingThreshold,
-            flatRate: settingsMap.flat_rate ? parseInt(settingsMap.flat_rate, 10) : prev.flatRate,
-            shippingFromAddress: settingsMap.shipping_from_address === 'true' || prev.shippingFromAddress,
-            enableLocalPickup: settingsMap.enable_local_pickup === 'true' || prev.enableLocalPickup
-          }));
-        }
+        setShippingSettings(prev => ({
+          ...prev,
+          enableFreeShipping: storeSettings.enableFreeShipping === 'true' || prev.enableFreeShipping,
+          freeShippingThreshold: storeSettings.freeShippingThreshold ? parseInt(storeSettings.freeShippingThreshold, 10) : prev.freeShippingThreshold,
+          flatRate: storeSettings.flatRate ? parseInt(storeSettings.flatRate, 10) : prev.flatRate,
+          shippingFromAddress: storeSettings.shippingFromAddress === 'true' || prev.shippingFromAddress,
+          enableLocalPickup: storeSettings.enableLocalPickup === 'true' || prev.enableLocalPickup
+        }));
         
-        // Fetch email settings
-        const emailSettingsData = await getSettingsByGroup('email');
-        if (emailSettingsData && emailSettingsData.length > 0) {
-          const settingsMap = {};
-          emailSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          setEmailSettings(prev => ({
-            ...prev,
-            emailNotifications: settingsMap.email_notifications === 'true' || prev.emailNotifications,
-            adminEmail: settingsMap.admin_email || prev.adminEmail,
-            sendOrderConfirmation: settingsMap.send_order_confirmation === 'true' || prev.sendOrderConfirmation,
-            sendOrderStatusUpdates: settingsMap.send_order_status_updates === 'true' || prev.sendOrderStatusUpdates,
-            emailFooter: settingsMap.email_footer || prev.emailFooter
-          }));
-        }
+        setEmailSettings(prev => ({
+          ...prev,
+          emailNotifications: storeSettings.emailNotifications === 'true' || prev.emailNotifications,
+          adminEmail: storeSettings.adminEmail || prev.adminEmail,
+          sendOrderConfirmation: storeSettings.sendOrderConfirmation === 'true' || prev.sendOrderConfirmation,
+          sendOrderStatusUpdates: storeSettings.sendOrderStatusUpdates === 'true' || prev.sendOrderStatusUpdates,
+          emailFooter: storeSettings.emailFooter || prev.emailFooter
+        }));
         
-        // Fetch social media settings
-        const socialSettingsData = await getSettingsByGroup('social');
-        if (socialSettingsData && socialSettingsData.length > 0) {
-          const settingsMap = {};
-          socialSettingsData.forEach(setting => {
-            settingsMap[setting.settingKey] = setting.settingValue;
-          });
-          
-          setSocialSettings(prev => ({
-            ...prev,
-            facebook: settingsMap.facebook_url || prev.facebook,
-            instagram: settingsMap.instagram_url || prev.instagram,
-            twitter: settingsMap.twitter_url || prev.twitter,
-            youtube: settingsMap.youtube_url || prev.youtube,
-            tiktok: settingsMap.tiktok_url || prev.tiktok,
-            linkedin: settingsMap.linkedin_url || prev.linkedin,
-            enableSocialIcons: settingsMap.enable_social_icons === 'true' || prev.enableSocialIcons,
-            shareBtnsOnProduct: settingsMap.share_btns_on_product === 'true' || prev.shareBtnsOnProduct
-          }));
-        }
+        setSocialSettings(prev => ({
+          ...prev,
+          facebook: storeSettings.facebook || prev.facebook,
+          instagram: storeSettings.instagram || prev.instagram,
+          twitter: storeSettings.twitter || prev.twitter,
+          youtube: storeSettings.youtube || prev.youtube,
+          tiktok: storeSettings.tiktok || prev.tiktok,
+          linkedin: storeSettings.linkedin || prev.linkedin,
+          enableSocialIcons: storeSettings.enableSocialIcons === 'true' || prev.enableSocialIcons,
+          shareBtnsOnProduct: storeSettings.shareBtnsOnProduct === 'true' || prev.shareBtnsOnProduct
+        }));
         
         setLoading(false);
       } catch (error) {
-        console.error('Error loading settings:', error);
-        if (error.response) {
-          console.error('Response data:', error.response.data);
-          console.error('Response status:', error.response.status);
-        }
-        toast.error('Không thể tải cài đặt từ máy chủ. Vui lòng thử lại sau.');
+        console.error('Error fetching store settings:', error);
+        setError('Không thể tải cài đặt cửa hàng');
         setLoading(false);
       }
     };
-    
-    loadSettings();
+
+    fetchSettings();
   }, []);
   
   // Handle input changes
@@ -267,7 +228,7 @@ const StoreSettings = () => {
         // Update settings for each group
         const updatePromises = [];
         for (const [groupName, groupSettings] of Object.entries(settingsByGroup)) {
-          updatePromises.push(bulkUpdateSettings(groupSettings, groupName));
+          updatePromises.push(updateSettingByKey(groupSettings, groupName));
         }
         
         await Promise.all(updatePromises);
@@ -300,35 +261,28 @@ const StoreSettings = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file
-    if (!file.type.includes('image/')) {
-      toast.error('Vui lòng chọn một file hình ảnh');
-      return;
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        toast.error('Vui lòng chọn file hình ảnh');
+        return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Kích thước file không được vượt quá 2MB');
-      return;
+        toast.error('Kích thước file không được vượt quá 2MB');
+        return;
     }
 
     try {
-      setUploadingLogo(true);
-      const result = await uploadFile(file, 'logo');
-      if (!result || !result.fileUrl) {
-        throw new Error('Không nhận được URL file từ server');
-      }
-      
-      setGeneralSettings(prev => ({
-        ...prev,
-        logoUrl: result.fileUrl
-      }));
-      toast.success('Tải lên logo thành công!');
+        const result = await uploadFile(file, 'logo');
+        setGeneralSettings(prev => ({
+            ...prev,
+            storeLogo: result.fileUrl
+        }));
+        toast.success('Upload logo thành công');
     } catch (error) {
-      console.error('Error uploading logo:', error);
-      toast.error(`Tải lên logo thất bại: ${error.response?.data || error.message}`);
-    } finally {
-      setUploadingLogo(false);
+        console.error('Error uploading logo:', error);
+        toast.error('Không thể upload logo. Vui lòng thử lại sau.');
     }
   };
 
@@ -337,35 +291,28 @@ const StoreSettings = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file
-    if (!file.type.includes('image/')) {
-      toast.error('Vui lòng chọn một file hình ảnh');
-      return;
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        toast.error('Vui lòng chọn file hình ảnh');
+        return;
     }
 
     // Validate file size (max 1MB)
     if (file.size > 1 * 1024 * 1024) {
-      toast.error('Kích thước file không được vượt quá 1MB');
-      return;
+        toast.error('Kích thước file không được vượt quá 1MB');
+        return;
     }
 
     try {
-      setUploadingFavicon(true);
-      const result = await uploadFile(file, 'favicon');
-      if (!result || !result.fileUrl) {
-        throw new Error('Không nhận được URL file từ server');
-      }
-      
-      setGeneralSettings(prev => ({
-        ...prev,
-        faviconUrl: result.fileUrl
-      }));
-      toast.success('Tải lên favicon thành công!');
+        const result = await uploadFile(file, 'favicon');
+        setGeneralSettings(prev => ({
+            ...prev,
+            storeFavicon: result.fileUrl
+        }));
+        toast.success('Upload favicon thành công');
     } catch (error) {
-      console.error('Error uploading favicon:', error);
-      toast.error(`Tải lên favicon thất bại: ${error.response?.data || error.message}`);
-    } finally {
-      setUploadingFavicon(false);
+        console.error('Error uploading favicon:', error);
+        toast.error('Không thể upload favicon. Vui lòng thử lại sau.');
     }
   };
 
@@ -373,7 +320,7 @@ const StoreSettings = () => {
   const handleExportSettings = async () => {
     try {
       setSaving(true);
-      const allSettings = await getAllSettings();
+      const allSettings = await getSettingsByGroup('store');
       const settingsJson = JSON.stringify(allSettings, null, 2);
       const blob = new Blob([settingsJson], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -402,15 +349,15 @@ const StoreSettings = () => {
   const checkCurrentPrefix = async () => {
     try {
       setCheckingPrefix(true);
-      const setting = await getSettingByKey('order_prefix');
+      const setting = await getSettingsByGroup('order_prefix');
       if (setting) {
-        toast.info(`Tiền tố mã đơn hàng hiện tại: "${setting.settingValue}"`);
+        toast.info(`Tiền tố mã đơn hàng hiện tại: "${setting.value}"`);
       } else {
         // Nếu không tìm thấy, thử tạo mới
         try {
-          await createSetting({
-            settingKey: 'order_prefix',
-            settingValue: generalSettings.orderPrefix,
+          await updateSettingByKey({
+            key: 'order_prefix',
+            value: generalSettings.orderPrefix,
             groupName: 'general'
           });
           toast.success('Đã tạo mới tiền tố mã đơn hàng');
@@ -445,11 +392,7 @@ const StoreSettings = () => {
       // Nếu lỗi 404, thử tạo mới cài đặt
       if (error.response && error.response.status === 404) {
         try {
-          await createSetting({
-            settingKey: 'order_prefix',
-            settingValue: generalSettings.orderPrefix,
-            groupName: 'general'
-          });
+          await updateSettingByKey('order_prefix', generalSettings.orderPrefix);
           toast.success('Đã tạo mới tiền tố mã đơn hàng!');
         } catch (createError) {
           console.error('Error creating setting:', createError);
@@ -469,21 +412,21 @@ const StoreSettings = () => {
     try {
       // Convert general settings to API format
       const generalSettingsData = {
-        store_name: generalSettings.storeName,
-        store_description: generalSettings.storeDescription,
-        store_email: generalSettings.storeEmail,
-        store_phone: generalSettings.storePhone,
-        logo_url: generalSettings.logoUrl,
-        favicon_url: generalSettings.faviconUrl,
-        currency_code: generalSettings.currencyCode,
-        currency_symbol: generalSettings.currencySymbol,
-        order_prefix: generalSettings.orderPrefix
+        storeName: generalSettings.storeName,
+        storeDescription: generalSettings.storeDescription,
+        storeEmail: generalSettings.storeEmail,
+        storePhone: generalSettings.storePhone,
+        storeLogo: generalSettings.storeLogo,
+        storeFavicon: generalSettings.storeFavicon,
+        currencyCode: generalSettings.currencyCode,
+        currencySymbol: generalSettings.currencySymbol,
+        orderPrefix: generalSettings.orderPrefix
       };
       
       console.log("Saving order prefix:", generalSettings.orderPrefix);
       
       // Save general settings
-      const results = await bulkUpdateSettings(generalSettingsData, 'general');
+      const results = await updateSettingByKey(generalSettingsData, 'general');
       console.log("Update results:", results);
       
       // Save other settings based on active tab
@@ -492,40 +435,40 @@ const StoreSettings = () => {
           address: addressSettings.address,
           city: addressSettings.city,
           district: addressSettings.district,
-          zip_code: addressSettings.zipCode,
+          zipCode: addressSettings.zipCode,
           country: addressSettings.country
         };
-        await bulkUpdateSettings(addressSettingsData, 'address');
+        await updateSettingByKey(addressSettingsData, 'address');
       } else if (activeTab === 'shipping') {
         const shippingSettingsData = {
-          enable_free_shipping: shippingSettings.enableFreeShipping.toString(),
-          free_shipping_threshold: shippingSettings.freeShippingThreshold.toString(),
-          flat_rate: shippingSettings.flatRate.toString(),
-          shipping_from_address: shippingSettings.shippingFromAddress.toString(),
-          enable_local_pickup: shippingSettings.enableLocalPickup.toString()
+          enableFreeShipping: shippingSettings.enableFreeShipping.toString(),
+          freeShippingThreshold: shippingSettings.freeShippingThreshold.toString(),
+          flatRate: shippingSettings.flatRate.toString(),
+          shippingFromAddress: shippingSettings.shippingFromAddress.toString(),
+          enableLocalPickup: shippingSettings.enableLocalPickup.toString()
         };
-        await bulkUpdateSettings(shippingSettingsData, 'shipping');
+        await updateSettingByKey(shippingSettingsData, 'shipping');
       } else if (activeTab === 'email') {
         const emailSettingsData = {
-          email_notifications: emailSettings.emailNotifications.toString(),
-          admin_email: emailSettings.adminEmail,
-          send_order_confirmation: emailSettings.sendOrderConfirmation.toString(),
-          send_order_status_updates: emailSettings.sendOrderStatusUpdates.toString(),
-          email_footer: emailSettings.emailFooter
+          emailNotifications: emailSettings.emailNotifications.toString(),
+          adminEmail: emailSettings.adminEmail,
+          sendOrderConfirmation: emailSettings.sendOrderConfirmation.toString(),
+          sendOrderStatusUpdates: emailSettings.sendOrderStatusUpdates.toString(),
+          emailFooter: emailSettings.emailFooter
         };
-        await bulkUpdateSettings(emailSettingsData, 'email');
+        await updateSettingByKey(emailSettingsData, 'email');
       } else if (activeTab === 'social') {
         const socialSettingsData = {
-          facebook_url: socialSettings.facebook,
-          instagram_url: socialSettings.instagram,
-          twitter_url: socialSettings.twitter,
-          youtube_url: socialSettings.youtube,
-          tiktok_url: socialSettings.tiktok,
-          linkedin_url: socialSettings.linkedin,
-          enable_social_icons: socialSettings.enableSocialIcons.toString(),
-          share_btns_on_product: socialSettings.shareBtnsOnProduct.toString()
+          facebook: socialSettings.facebook,
+          instagram: socialSettings.instagram,
+          twitter: socialSettings.twitter,
+          youtube: socialSettings.youtube,
+          tiktok: socialSettings.tiktok,
+          linkedin: socialSettings.linkedin,
+          enableSocialIcons: socialSettings.enableSocialIcons.toString(),
+          shareBtnsOnProduct: socialSettings.shareBtnsOnProduct.toString()
         };
-        await bulkUpdateSettings(socialSettingsData, 'social');
+        await updateSettingByKey(socialSettingsData, 'social');
       }
       
       setSaving(false);
@@ -776,7 +719,7 @@ const StoreSettings = () => {
                       type="text"
                       id="logoUrl"
                       name="logoUrl"
-                      value={generalSettings.logoUrl}
+                      value={generalSettings.storeLogo}
                       onChange={handleGeneralChange}
                       placeholder="URL hình ảnh logo"
                     />
@@ -801,9 +744,9 @@ const StoreSettings = () => {
                       {uploadingLogo ? 'Đang tải...' : 'Tải lên'}
                     </button>
                   </div>
-                  {generalSettings.logoUrl && (
+                  {generalSettings.storeLogo && (
                     <div className="image-preview">
-                      <img src={generalSettings.logoUrl} alt="Logo preview" />
+                      <img src={generalSettings.storeLogo} alt="Logo preview" />
                     </div>
                   )}
                 </div>
@@ -815,7 +758,7 @@ const StoreSettings = () => {
                       type="text"
                       id="faviconUrl"
                       name="faviconUrl"
-                      value={generalSettings.faviconUrl}
+                      value={generalSettings.storeFavicon}
                       onChange={handleGeneralChange}
                       placeholder="URL hình ảnh favicon"
                     />
@@ -840,9 +783,9 @@ const StoreSettings = () => {
                       {uploadingFavicon ? 'Đang tải...' : 'Tải lên'}
                     </button>
                   </div>
-                  {generalSettings.faviconUrl && (
+                  {generalSettings.storeFavicon && (
                     <div className="image-preview small">
-                      <img src={generalSettings.faviconUrl} alt="Favicon preview" />
+                      <img src={generalSettings.storeFavicon} alt="Favicon preview" />
                     </div>
                   )}
                 </div>

@@ -4,7 +4,7 @@ import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
 import './Payment.css';
-import { sendConfirmOrderEmail } from '../../../admin/api/orderApi';
+import { sendConfirmOrderEmail, getOrderById } from '../../../api/orderApi';
 
 const OrderSuccess = () => {
     const { orderId } = useParams();

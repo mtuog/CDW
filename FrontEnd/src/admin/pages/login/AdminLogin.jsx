@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import authApi from '../../api/authApi';
+import authApi from '../../../api/authApi';
 import './AdminLogin.css';
 
 const AdminLogin = () => {

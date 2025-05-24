@@ -5,8 +5,8 @@ import ReactSlider from 'react-slider';
 import './Product.css';
 import './Slider.css';
 import { remove as removeDiacritics } from 'diacritics';
-import { getAllProducts } from '../../../admin/api/productApi';
-import { getAllCategories } from '../../../admin/api/categoryApi';
+import { getAllProducts, getProductsByCategory } from '../../../api/productApi';
+import { getAllCategories } from '../../../api/categoryApi';
 
 // Function to format categories for display
 const formatCategories = (categories) => {

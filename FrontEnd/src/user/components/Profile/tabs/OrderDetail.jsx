@@ -5,7 +5,7 @@ import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../../config';
 import './OrderDetail.css';
 import Swal from 'sweetalert2';
-import { getOrderById } from '../../../../admin/api/orderApi';
+import { getOrderById } from '../../../../api/orderApi';
 
 const OrderDetail = () => {
     const { orderId } = useParams();

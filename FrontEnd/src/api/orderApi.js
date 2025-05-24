@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config';
+import { BACKEND_URL_HTTP, CORS_CONFIG } from '../config';
 
 const API_URL = `${BACKEND_URL_HTTP}/api`;
 

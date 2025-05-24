@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import authApi from '../../api/authApi';
+import authApi from '../../../api/authApi';
 import { useNavigate } from 'react-router-dom';
+import { getUserById, updateUser } from '../../../api/userApi';
 
 const AdminAccount = () => {
   const [admin, setAdmin] = useState(null);

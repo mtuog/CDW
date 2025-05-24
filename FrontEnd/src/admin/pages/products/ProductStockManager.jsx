@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { getAllProducts, updateProductStock, updateProductQuantity } from '../../../admin/api/productApi';
-import { getProductSizes, updateSizeQuantity, addProductSize, deleteSize } from '../../../admin/api/productSizeApi';
-import { getAllCategories } from '../../../admin/api/categoryApi';
+import { getAllProducts, updateProductStock } from '../../../api/productApi';
+import { getAllCategories } from '../../../api/categoryApi';
+import { getProductSizes, addProductSize, updateProductSize, updateSizeQuantity } from '../../../api/productSizeApi';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 const ProductStockManager = () => {
   const navigate = useNavigate();
@@ -223,7 +224,7 @@ const ProductStockManager = () => {
       setUpdatingProductId(productId);
       
       // Call API to update quantity
-      await updateProductQuantity(productId, newQuantity);
+      await updateProductStock(productId, newQuantity);
       
       // Update local state
       setProducts(products.map(product => 
@@ -278,22 +279,14 @@ const ProductStockManager = () => {
   // Tải kích thước cho sản phẩm
   const fetchProductSizes = async (productId) => {
     try {
-      setLoadingSizes(prev => ({ ...prev, [productId]: true }));
-      
       const sizes = await getProductSizes(productId);
-      setProductSizes(prev => ({ ...prev, [productId]: sizes }));
-      
-      setLoadingSizes(prev => ({ ...prev, [productId]: false }));
+      setProductSizes(prev => ({
+        ...prev,
+        [productId]: sizes
+      }));
     } catch (error) {
-      console.error(`Error fetching sizes for product ${productId}:`, error);
-      setLoadingSizes(prev => ({ ...prev, [productId]: false }));
-      
-      Swal.fire({
-        title: 'Lỗi',
-        text: 'Không thể tải thông tin kích thước sản phẩm.',
-        icon: 'error',
-        confirmButtonText: 'Đóng'
-      });
+      console.error('Error fetching product sizes:', error);
+      toast.error('Không thể tải thông tin kích thước sản phẩm');
     }
   };
   
@@ -306,7 +299,7 @@ const ProductStockManager = () => {
       setUpdatingProductId(productId);
       
       // Call API to update size quantity
-      await updateSizeQuantity(sizeId, newQuantity);
+      await updateProductStock(productId, newQuantity);
       
       // Update local state
       setProductSizes(prev => ({
@@ -397,12 +390,12 @@ const ProductStockManager = () => {
         active: true
       };
       
-      const addedSize = await addProductSize(productId, sizeData);
+      const updatedSizes = await getProductSizes(productId, sizeData);
       
       // Cập nhật state
       setProductSizes(prev => ({
         ...prev,
-        [productId]: [...(prev[productId] || []), addedSize]
+        [productId]: updatedSizes
       }));
       
       // Cập nhật tổng số lượng của sản phẩm
@@ -426,7 +419,7 @@ const ProductStockManager = () => {
       // Thông báo thành công
       Swal.fire({
         title: 'Thêm thành công',
-        text: `Đã thêm kích thước ${addedSize.size}`,
+        text: `Đã thêm kích thước ${updatedSizes[updatedSizes.length - 1].size}`,
         icon: 'success',
         timer: 1500,
         showConfirmButton: false
@@ -468,12 +461,12 @@ const ProductStockManager = () => {
       const quantityToRemove = sizeToDelete ? sizeToDelete.quantity : 0;
       
       // Gọi API để xóa kích thước
-      await deleteSize(sizeId);
+      const updatedSizes = await getProductSizes(productId);
       
       // Cập nhật state
       setProductSizes(prev => ({
         ...prev,
-        [productId]: prev[productId].filter(size => size.id !== sizeId)
+        [productId]: updatedSizes
       }));
       
       // Cập nhật tổng số lượng của sản phẩm

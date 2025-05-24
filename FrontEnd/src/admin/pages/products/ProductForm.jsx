@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductById, createProduct, updateProduct } from '../../../admin/api/productApi';
-import { getAllCategories } from '../../../admin/api/categoryApi';
-import { getProductSizes, addProductSize, updateProductSize } from '../../../admin/api/productSizeApi';
+import { createProduct, updateProduct, getProductById } from '../../../api/productApi';
+import { getAllCategories } from '../../../api/categoryApi';
+import { getProductSizes, addProductSize, updateProductSize } from '../../../api/productSizeApi';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { uploadImage } from '../../../api/uploadApi';
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -84,10 +85,10 @@ const ProductForm = () => {
           
           if (data.img) {
             setImagePreview(data.img);
-            setImageUrlInput(data.img); // Set the image URL input when editing
+            setImageUrlInput(data.img);
           }
           
-          // Fetch product sizes
+          // Fetch product sizes using getProductSizes instead of getAllProductSizes
           const sizesData = await getProductSizes(parseInt(id));
           setProductSizes(sizesData);
           

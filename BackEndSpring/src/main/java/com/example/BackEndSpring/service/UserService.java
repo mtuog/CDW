@@ -97,23 +97,23 @@ public class UserService {
             user.setCreatedAt(LocalDateTime.now());
             // Nếu user chưa xác thực (tức là đăng ký thường), tạo OTP và gửi mail xác thực
             if (!user.isVerified()) {
-                String otp = generateOTP();
-                user.setOtp(otp);
-                user.setVerified(false);
-                user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(30)); // OTP có hiệu lực 30 phút
-                // Lưu user vào database
-                User savedUser = userRepository.save(user);
-                // Gửi email xác thực
-                try {
-                    emailService.sendVerificationEmail(
-                        user.getEmail(), 
-                        user.getUsername(), 
-                        otp
-                    );
-                } catch (MessagingException | UnsupportedEncodingException e) {
-                    throw new RuntimeException("Failed to send verification email: " + e.getMessage(), e);
-                }
-                return savedUser;
+            String otp = generateOTP();
+            user.setOtp(otp);
+            user.setVerified(false);
+            user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(30)); // OTP có hiệu lực 30 phút
+            // Lưu user vào database
+            User savedUser = userRepository.save(user);
+            // Gửi email xác thực
+            try {
+                emailService.sendVerificationEmail(
+                    user.getEmail(), 
+                    user.getUsername(), 
+                    otp
+                );
+            } catch (MessagingException | UnsupportedEncodingException e) {
+                throw new RuntimeException("Failed to send verification email: " + e.getMessage(), e);
+            }
+            return savedUser;
             } else {
                 // Nếu là user Google/Facebook đã xác thực, không gửi mail xác thực
                 user.setOtp(null);
