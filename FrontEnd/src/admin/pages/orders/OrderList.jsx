@@ -76,13 +76,9 @@ const OrderList = () => {
             orderCode: order.orderCode || `ORD-${order.id}`,
             customer: order.user ? order.user.username : 'Khách vãng lai',
             email: order.user ? order.user.email : 'N/A',
-<<<<<<< Updated upstream
-            phone: order.user ? order.user.phone : 'N/A',
-            date: new Date(order.createdAt).toISOString().split('T')[0],
-=======
+
             phone: order.phone || (order.user ? order.user.phone : 'N/A'),
             date: order.createdAt, // Giữ nguyên để format sau
->>>>>>> Stashed changes
             amount: order.totalAmount,
             subtotalAmount: order.subtotalAmount,
             discountCodeValue: order.discountCodeValue,

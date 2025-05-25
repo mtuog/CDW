@@ -38,12 +38,7 @@ function Login() {
                 const { email, name, picture } = userInfo.data;
                 console.log("Google login info:", email, name, picture);
                 
-<<<<<<< Updated upstream
-                // 2. Gửi thông tin đến backend
-                const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/login-google`, {
-                    email: email,
-                    userName: name
-=======
+
                 // 2. Gửi thông tin đến backend thông qua authService
                 const response = await authService.loginWithGoogle(tokenResponse.access_token, userInfo.data);
                 
@@ -55,7 +50,6 @@ function Login() {
                     showConfirmButton: false
                 }).then(() => {
                     navigate('/');
->>>>>>> Stashed changes
                 });
                 
                 // 3. Xử lý phản hồi từ backend
