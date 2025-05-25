@@ -1,3 +1,12 @@
+com\example\BackEndSpring\controller\AdminController.class
 com\example\BackEndSpring\service\OrderService$1.class
+com\example\BackEndSpring\config\GlobalCorsConfig$1.class
+com\example\BackEndSpring\model\Role.class
+com\example\BackEndSpring\model\UserShortDTO.class
+com\example\BackEndSpring\repository\RoleRepository.class
 com\example\BackEndSpring\controller\ProductController$1.class
+com\example\BackEndSpring\model\OrderDTO.class
+com\example\BackEndSpring\model\BankPaymentDTO.class
 com\example\BackEndSpring\service\LoyaltyService$1.class
+com\example\BackEndSpring\controller\PaymentSettingsAdminController.class
+com\example\BackEndSpring\config\GlobalCorsConfig.class

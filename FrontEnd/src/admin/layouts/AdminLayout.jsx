@@ -8,8 +8,8 @@ import authApi from '../../api/authApi';
 // Sidebar links
 const sidebarLinks = [
   { to: '/admin/dashboard', icon: 'fas fa-tachometer-alt', text: 'Dashboard' },
-  { 
-    icon: 'fas fa-box', 
+  {
+    icon: 'fas fa-box',
     text: 'Sản phẩm',
     submenu: [
       { to: '/admin/products', text: 'Danh sách sản phẩm' },
@@ -24,8 +24,8 @@ const sidebarLinks = [
   { to: '/admin/discount', icon: 'fas fa-percent', text: 'Mã giảm giá' },
   { to: '/admin/loyalty', icon: 'fas fa-award', text: 'Tích điểm' },
   { to: '/admin/settings/payment', icon: 'fas fa-credit-card', text: 'Thanh toán' },
-  { 
-    icon: 'fas fa-cog', 
+  {
+    icon: 'fas fa-cog',
     text: 'Cài đặt',
     submenu: [
       { to: '/admin/settings/store', text: 'Cửa hàng' }
@@ -52,10 +52,10 @@ const AdminLayout = () => {
       try {
         const result = await authApi.checkAuth();
         setIsAuthenticated(result.authenticated);
-        
+
         // Nếu không xác thực và không phải trang login, chuyển về trang login
         if (!result.authenticated && location.pathname !== '/admin/login') {
-          navigate('/admin/login');
+          // navigate('/admin/login');
         }
       } catch (error) {
         console.error('Lỗi kiểm tra xác thực:', error);
@@ -77,7 +77,7 @@ const AdminLayout = () => {
       <div className="admin-loading">
         <div className="loading-spinner"></div>
         <p>Đang tải...</p>
-        
+
         <style jsx>{`
           .admin-loading {
             display: flex;
@@ -117,15 +117,15 @@ const AdminLayout = () => {
   return (
     <div className="admin-layout">
       <Sidebar isOpen={sidebarOpen} links={sidebarLinks} />
-      
+
       <div className={`admin-main ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         <Header toggleSidebar={toggleSidebar} />
-        
+
         <main className="admin-content">
           <AdminRoutes />
         </main>
       </div>
-      
+
       <style jsx>{`
         .admin-layout {
           display: flex;
@@ -156,4 +156,4 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout; 
+export default AdminLayout;

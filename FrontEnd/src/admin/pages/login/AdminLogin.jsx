@@ -32,8 +32,9 @@ const AdminLogin = () => {
 
       console.log('Đang đăng nhập admin với email:', email);
       await authService.adminLogin(email, password);
-      
+
       toast.success('Đăng nhập thành công!');
+
       navigate('/admin/dashboard');
     } catch (error) {
       console.error('Admin login error:', error);
@@ -84,20 +85,20 @@ const AdminLogin = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="login-button" 
+          <button
+            type="submit"
+            className="login-button"
             disabled={loading}
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
-          
+
           <div className="login-hint">
             <p>Tài khoản mặc định: admin@cdweb.com / admin123</p>
           </div>
         </form>
       </div>
-      
+
       <style jsx>{`
         .error-message {
           background-color: #f8d7da;
@@ -119,4 +120,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;
