@@ -21,7 +21,7 @@ const ProductReviews = ({ productId }) => {
     
     setLoading(true);
     try {
-      const response = await axios.get(`http://${BACKEND_URL_HTTP}/api/reviews/product/${productId}`);
+      const response = await axios.get(`${BACKEND_URL_HTTP}/api/reviews/product/${productId}`);
       const data = response.data;
       
       setReviews(data.reviews || []);

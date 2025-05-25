@@ -4,15 +4,23 @@ import authApi from '../../../api/authApi';
 import { toast } from 'react-toastify';
 import { FaUserCircle } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
+import NotificationDropdown from './NotificationDropdown';
+import axios from 'axios';
+import { BACKEND_URL_HTTP } from '../../../config';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 
 const Header = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
   const [adminAvatar, setAdminAvatar] = useState('');
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const avatarBtnRef = useRef(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const stompClientRef = useRef(null);
   
   useEffect(() => {
     // Lấy thông tin admin từ localStorage nếu có
@@ -32,7 +40,111 @@ const Header = ({ toggleSidebar }) => {
     }
     setAdminName(displayName);
     setAdminAvatar(avatarUrl);
+    
+    // Lấy số lượng thông báo chưa đọc
+    fetchUnreadCount();
+    
+    // Thiết lập WebSocket connection để nhận thông báo real-time
+    setupWebSocketConnection();
+    
+    // Thiết lập interval để cập nhật số lượng thông báo định kỳ (backup)
+    const interval = setInterval(fetchUnreadCount, 60000); // 60 giây
+    
+    return () => {
+      clearInterval(interval);
+      if (stompClientRef.current) {
+        console.log('🔌 Deactivating WebSocket connection...');
+        stompClientRef.current.deactivate();
+      }
+    };
   }, []);
+  
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        console.log('❌ No admin token found');
+        return;
+      }
+      
+      console.log('🔍 Fetching unread count...');
+      const response = await axios.get(
+        `${BACKEND_URL_HTTP}/api/admin/notifications/unread/count`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('✅ Unread count response:', response.data);
+      setUnreadCount(response.data.count || 0);
+    } catch (error) {
+      console.error('❌ Error fetching unread count:', error);
+      console.error('❌ Error details:', error.response?.data);
+    }
+  };
+
+  const setupWebSocketConnection = () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        console.log('❌ No token for WebSocket connection');
+        return;
+      }
+
+      console.log('🔌 Setting up WebSocket connection...');
+      
+      const client = new Client({
+        webSocketFactory: () => new SockJS(`${BACKEND_URL_HTTP}/ws`),
+        connectHeaders: {
+          Authorization: `Bearer ${token}`
+        },
+        debug: (str) => {
+          console.log('🔌 STOMP Debug:', str);
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+      });
+
+      client.onConnect = (frame) => {
+        console.log('✅ WebSocket connected:', frame);
+        stompClientRef.current = client;
+        
+        // Subscribe to notification updates
+        client.subscribe('/topic/admin/notifications', (message) => {
+          console.log('🔔 Received notification:', message.body);
+          // Refresh unread count when new notification arrives
+          fetchUnreadCount();
+        });
+        
+        // Subscribe to unread count updates
+        client.subscribe('/topic/admin/unread-count', (message) => {
+          console.log('🔢 Received unread count update:', message.body);
+          const count = parseInt(message.body);
+          setUnreadCount(count);
+        });
+      };
+
+      client.onStompError = (frame) => {
+        console.error('❌ WebSocket STOMP error:', frame.headers['message']);
+        console.error('❌ Error details:', frame.body);
+      };
+
+      client.onWebSocketError = (error) => {
+        console.error('❌ WebSocket connection error:', error);
+      };
+
+      client.onDisconnect = () => {
+        console.log('🔌 WebSocket disconnected');
+      };
+
+      client.activate();
+    } catch (error) {
+      console.error('❌ Error setting up WebSocket:', error);
+    }
+  };
   
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -86,13 +198,25 @@ const Header = ({ toggleSidebar }) => {
       
       <div className="header-right">
         <div className="header-icons">
-          <button className="icon-button">
-            <i className="fa fa-bell"></i>
-            <span className="badge">3</span>
-          </button>
+          <div className="notification-container">
+            <button 
+              className="icon-button"
+              onClick={() => setNotificationOpen(!notificationOpen)}
+            >
+              <i className="fa fa-bell"></i>
+              {unreadCount > 0 && (
+                <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
+            </button>
+            <NotificationDropdown
+              isOpen={notificationOpen}
+              onClose={() => setNotificationOpen(false)}
+              unreadCount={unreadCount}
+              onUnreadCountChange={setUnreadCount}
+            />
+          </div>
           <button className="icon-button">
             <i className="fa fa-envelope"></i>
-            <span className="badge">5</span>
           </button>
         </div>
       </div>
@@ -150,6 +274,10 @@ const Header = ({ toggleSidebar }) => {
         .header-icons {
           display: flex;
           margin-right: 20px;
+        }
+        
+        .notification-container {
+          position: relative;
         }
         
         .icon-button {

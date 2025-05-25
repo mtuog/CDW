@@ -108,7 +108,7 @@ const Header = () => {
 			if (!token || !id) return;
 
 			const response = await axios.get(
-				`http://${BACKEND_URL_HTTP}/api/wishlist/count/${id}`,
+				`${BACKEND_URL_HTTP}/api/wishlist/count/${id}`,
 				{
 					headers: {
 						'Authorization': `Bearer ${token}`

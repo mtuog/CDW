@@ -61,7 +61,7 @@ const ProductDetail = () => {
 			console.log("Checking wishlist status for product:", productId, "and user:", userId);
 			
 			const response = await axios.get(
-				`http://${BACKEND_URL_HTTP}/api/wishlist/check?userId=${userId}&productId=${productId}`,
+				`${BACKEND_URL_HTTP}/api/wishlist/check?userId=${userId}&productId=${productId}`,
 				{
 					headers: {
 						'Authorization': `Bearer ${token}`
@@ -117,7 +117,7 @@ const ProductDetail = () => {
 			if (isInWishlist) {
 				// Xóa khỏi wishlist
 				response = await axios.delete(
-					`http://${BACKEND_URL_HTTP}/api/wishlist/remove/${product.id}?userId=${userId}`,
+					`${BACKEND_URL_HTTP}/api/wishlist/remove/${product.id}?userId=${userId}`,
 					{
 						headers: {
 							'Authorization': `Bearer ${token}`,
@@ -143,11 +143,11 @@ const ProductDetail = () => {
 				console.log("Sending request to add to wishlist:", {
 					productId: product.id,
 					userId: parseInt(userId),
-					endpoint: `http://${BACKEND_URL_HTTP}/api/wishlist/add`
+					endpoint: `${BACKEND_URL_HTTP}/api/wishlist/add`
 				});
 				
 				response = await axios.post(
-					`http://${BACKEND_URL_HTTP}/api/wishlist/add`,
+					`${BACKEND_URL_HTTP}/api/wishlist/add`,
 					{
 						productId: product.id,
 						userId: parseInt(userId)

@@ -19,6 +19,7 @@ import DiscountList from '../pages/discount';
 import AddDiscount from '../pages/discount/add';
 import EditDiscount from '../pages/discount/edit';
 import LoyaltyManagement from '../pages/loyalty/LoyaltyManagement';
+import NotificationPage from '../pages/NotificationPage';
 import AdminAccount from '../pages/account/AdminAccount';
 import AdminManagement from '../pages/AdminManagement';
 
@@ -135,6 +136,13 @@ const AdminRoutes = () => {
       <Route path="loyalty" element={
         <PrivateRoute>
           <LoyaltyManagement />
+        </PrivateRoute>
+      } />
+      
+      {/* Notifications */}
+      <Route path="notifications" element={
+        <PrivateRoute>
+          <NotificationPage />
         </PrivateRoute>
       } />
       

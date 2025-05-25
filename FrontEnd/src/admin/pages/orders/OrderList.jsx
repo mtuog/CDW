@@ -76,8 +76,13 @@ const OrderList = () => {
             orderCode: order.orderCode || `ORD-${order.id}`,
             customer: order.user ? order.user.username : 'Khách vãng lai',
             email: order.user ? order.user.email : 'N/A',
+<<<<<<< Updated upstream
             phone: order.user ? order.user.phone : 'N/A',
             date: new Date(order.createdAt).toISOString().split('T')[0],
+=======
+            phone: order.phone || (order.user ? order.user.phone : 'N/A'),
+            date: order.createdAt, // Giữ nguyên để format sau
+>>>>>>> Stashed changes
             amount: order.totalAmount,
             subtotalAmount: order.subtotalAmount,
             discountCodeValue: order.discountCodeValue,
@@ -197,7 +202,14 @@ const OrderList = () => {
   
   // Format date string to display format
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    const options = { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Ho_Chi_Minh'
+    };
     return new Date(dateString).toLocaleDateString('vi-VN', options);
   };
   
@@ -487,8 +499,12 @@ const OrderList = () => {
                   <td>
                     {order.payment_method === 'COD' ? (
                       <span className="payment-method cod">COD</span>
-                    ) : (
+                    ) : order.payment_method === 'Bank Transfer' ? (
                       <span className="payment-method banking">Chuyển khoản</span>
+                    ) : order.payment_method === 'VNPAY' ? (
+                      <span className="payment-method vnpay">VNPAY</span>
+                    ) : (
+                      <span className="payment-method other">{order.payment_method || 'Khác'}</span>
                     )}
                   </td>
                   <td>
@@ -698,6 +714,16 @@ const OrderList = () => {
         .payment-method.banking {
           background-color: #e8f4fd;
           color: #0d6efd;
+        }
+        
+        .payment-method.vnpay {
+          background-color: #fff3cd;
+          color: #856404;
+        }
+        
+        .payment-method.other {
+          background-color: #f8f9fa;
+          color: #6c757d;
         }
         
         .status-select {

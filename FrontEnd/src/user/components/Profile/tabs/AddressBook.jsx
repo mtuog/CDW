@@ -35,7 +35,7 @@ const AddressBook = ({ user }) => {
             
             // Gọi API mới
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/address-book/user/${userId}`,
+                `${BACKEND_URL_HTTP}/api/address-book/user/${userId}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -148,7 +148,7 @@ const AddressBook = ({ user }) => {
             if (isEditingAddress) {
                 // Update existing address
                 response = await axios.put(
-                    `http://${BACKEND_URL_HTTP}/api/address-book/update/${isEditingAddress}`,
+                    `${BACKEND_URL_HTTP}/api/address-book/update/${isEditingAddress}`,
                     addressData,
                     {
                         headers: {
@@ -167,7 +167,7 @@ const AddressBook = ({ user }) => {
             } else {
                 // Create new address
                 response = await axios.post(
-                    `http://${BACKEND_URL_HTTP}/api/address-book/add`,
+                    `${BACKEND_URL_HTTP}/api/address-book/add`,
                     addressData,
                     {
                         headers: {
@@ -253,7 +253,7 @@ const AddressBook = ({ user }) => {
                 
                 // Sử dụng API mới
                 const response = await axios.delete(
-                    `http://${BACKEND_URL_HTTP}/api/address-book/delete/${addressId}`,
+                    `${BACKEND_URL_HTTP}/api/address-book/delete/${addressId}`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`
@@ -291,7 +291,7 @@ const AddressBook = ({ user }) => {
             
             // Sử dụng API mới
             const response = await axios.put(
-                `http://${BACKEND_URL_HTTP}/api/address-book/set-default/${addressId}`,
+                `${BACKEND_URL_HTTP}/api/address-book/set-default/${addressId}`,
                 {},
                 {
                     headers: {

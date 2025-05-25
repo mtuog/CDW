@@ -65,7 +65,7 @@ function Register() {
         setIsLoading(true); // Bắt đầu hiển thị loading spinner
 
             try {
-                const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/register`, {
+                const response = await axios.post(`${BACKEND_URL_HTTP}/api/UserServices/register`, {
                     userName: username,
                     email: email,
                     password: password

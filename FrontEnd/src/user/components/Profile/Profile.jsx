@@ -44,7 +44,7 @@ const Profile = () => {
             setLoading(true);
             
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/users/${userId}`,
+                `${BACKEND_URL_HTTP}/api/users/${userId}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`

@@ -41,7 +41,7 @@ const ProfileInfo = ({ user, setUser }) => {
             
             // Lấy danh sách địa chỉ từ API có sẵn
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/address-book/user/${user.id}`,
+                `${BACKEND_URL_HTTP}/api/address-book/user/${user.id}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -65,7 +65,7 @@ const ProfileInfo = ({ user, setUser }) => {
                 
                 // Cập nhật user profile với địa chỉ mới
                 const updateResponse = await axios.put(
-                    `http://${BACKEND_URL_HTTP}/api/users/${user.id}`,
+                    `${BACKEND_URL_HTTP}/api/users/${user.id}`,
                     { ...user, address: fullAddress },
                     {
                         headers: {
@@ -114,7 +114,7 @@ const ProfileInfo = ({ user, setUser }) => {
             const token = localStorage.getItem('token');
             
             const response = await axios.put(
-                `http://${BACKEND_URL_HTTP}/api/users/${user.id}`, 
+                `${BACKEND_URL_HTTP}/api/users/${user.id}`, 
                 formData,
                 {
                     headers: {

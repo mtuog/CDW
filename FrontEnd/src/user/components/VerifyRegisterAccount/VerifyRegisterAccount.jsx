@@ -35,7 +35,7 @@ function VerifyRegisterAccount() {
         setIsLoading(true);
         
         try {
-            const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/verifyAccount`, {
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/UserServices/verifyAccount`, {
                 email: localStorage.getItem("email"),
                 otp: codeVerify
             });
@@ -97,7 +97,7 @@ function VerifyRegisterAccount() {
         
         setIsLoading(true);
         
-        axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/resend-verification`, { email })
+        axios.post(`${BACKEND_URL_HTTP}/api/UserServices/resend-verification`, { email })
             .then((response) => {
                 setIsLoading(false);
                 if (response.status === 200) {

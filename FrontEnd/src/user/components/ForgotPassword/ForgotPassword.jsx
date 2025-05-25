@@ -35,7 +35,7 @@ function ForgotPassword() {
         setIsLoading(true);
         
         try {
-            const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/ForgotPassword?email=${encodeURIComponent(email)}`);
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/UserServices/ForgotPassword?email=${encodeURIComponent(email)}`);
             
             setIsLoading(false);
 

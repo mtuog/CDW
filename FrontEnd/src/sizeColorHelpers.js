@@ -19,7 +19,7 @@ export const findProductSizesById = async (id) => {
     
     try {
         // Gọi API để lấy danh sách sizes từ backend
-        const response = await axios.get(`http://${BACKEND_URL_HTTP}/api/products/${id}/sizes`);
+        const response = await axios.get(`${BACKEND_URL_HTTP}/api/products/${id}/sizes`);
         
         if (response.status === 200) {
             // Lưu vào cache

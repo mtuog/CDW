@@ -25,7 +25,7 @@ const Reviews = ({ user }) => {
             const token = localStorage.getItem('token');
             
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/reviews/user/${user.id}`,
+                `${BACKEND_URL_HTTP}/api/reviews/user/${user.id}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -60,7 +60,7 @@ const Reviews = ({ user }) => {
                         if (productId) {
                             try {
                                 const productResponse = await axios.get(
-                                    `http://${BACKEND_URL_HTTP}/api/products/${productId}`
+                                    `${BACKEND_URL_HTTP}/api/products/${productId}`
                                 );
                                 
                                 if (productResponse.status === 200 && productResponse.data) {
@@ -107,7 +107,7 @@ const Reviews = ({ user }) => {
             const token = localStorage.getItem('token');
             
             const response = await axios.get(
-                `http://${BACKEND_URL_HTTP}/api/orders/pending-reviews/${user.id}`,
+                `${BACKEND_URL_HTTP}/api/orders/pending-reviews/${user.id}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -142,7 +142,7 @@ const Reviews = ({ user }) => {
                         if (productId) {
                             try {
                                 const productResponse = await axios.get(
-                                    `http://${BACKEND_URL_HTTP}/api/products/${productId}`
+                                    `${BACKEND_URL_HTTP}/api/products/${productId}`
                                 );
                                 
                                 if (productResponse.status === 200 && productResponse.data) {
@@ -212,7 +212,7 @@ const Reviews = ({ user }) => {
                 
                 try {
                     const response = await axios.delete(
-                        `http://${BACKEND_URL_HTTP}/api/reviews/${reviewId}`,
+                        `${BACKEND_URL_HTTP}/api/reviews/${reviewId}`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`
@@ -287,7 +287,7 @@ const Reviews = ({ user }) => {
             if (currentReview.id) {
                 // Update existing review
                 response = await axios.put(
-                    `http://${BACKEND_URL_HTTP}/api/reviews/${currentReview.id}`,
+                    `${BACKEND_URL_HTTP}/api/reviews/${currentReview.id}`,
                     reviewData,
                     {
                         headers: {
@@ -318,7 +318,7 @@ const Reviews = ({ user }) => {
             } else {
                 // Create new review
                 response = await axios.post(
-                    `http://${BACKEND_URL_HTTP}/api/reviews`,
+                    `${BACKEND_URL_HTTP}/api/reviews`,
                     reviewData,
                     {
                         headers: {
