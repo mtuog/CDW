@@ -40,12 +40,13 @@ public class OrderService {
     private final SettingService settingService;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Autowired
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, 
                         LoyaltyService loyaltyService, ProductService productService,
                         SettingService settingService, LoyaltyTransactionRepository loyaltyTransactionRepository,
-                        EmailService emailService) {
+                        EmailService emailService, NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.loyaltyService = loyaltyService;
@@ -53,6 +54,7 @@ public class OrderService {
         this.settingService = settingService;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
         this.emailService = emailService;
+        this.notificationService = notificationService;
     }
 
     public List<Order> getAllOrders() {
@@ -117,19 +119,19 @@ public class OrderService {
      */
     @Transactional
     public Order createOrder(Order order) {
-        // Đặt thời gian tạo đơn nếu chưa có
-        if (order.getCreatedAt() == null) {
-            order.setCreatedAt(LocalDateTime.now());
-        }
-        
         // Tạo mã đơn hàng nếu chưa có
         if (order.getOrderCode() == null || order.getOrderCode().isEmpty()) {
             String orderCode = generateOrderCode();
             order.setOrderCode(orderCode);
         }
         
+        // Không set thời gian thủ công, để @PrePersist tự động xử lý
+        System.out.println("Tạo đơn hàng, thời gian sẽ được set tự động bởi @PrePersist");
+        
         // Lưu đơn hàng trước
         Order savedOrder = orderRepository.save(order);
+        
+        System.out.println("Đơn hàng đã lưu với ID: " + savedOrder.getId() + ", thời gian tạo: " + savedOrder.getCreatedAt());
         
         // Chỉ cập nhật số lượng sản phẩm trong kho ngay lập tức nếu là thanh toán COD
         // Các phương thức khác sẽ chờ xác nhận thanh toán thành công
@@ -166,6 +168,23 @@ public class OrderService {
         } catch (Exception e) {
             // Log lỗi nhưng không gián đoạn quá trình tạo đơn hàng
             System.err.println("Error sending order confirmation email: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        // Tạo thông báo cho admin về đơn hàng mới
+        try {
+            String customerName = savedOrder.getUser() != null ? 
+                (savedOrder.getUser().getFullName() != null ? savedOrder.getUser().getFullName() : savedOrder.getUser().getUsername()) 
+                : "Khách vãng lai";
+            System.out.println("Đang tạo thông báo đơn hàng mới cho đơn hàng #" + savedOrder.getId() + " - Khách hàng: " + customerName);
+            notificationService.createNewOrderNotification(
+                savedOrder.getId(), 
+                customerName, 
+                savedOrder.getTotalAmount()
+            );
+            System.out.println("Đã tạo thông báo đơn hàng mới thành công");
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tạo thông báo đơn hàng mới: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -554,6 +573,20 @@ public class OrderService {
             // Cần tăng số lượng trong kho
             for (OrderItem item : order.getOrderItems()) {
                 productService.increaseStock(item.getProduct().getId(), item.getQuantity(), item.getSize());
+            }
+            
+            // Tạo thông báo cho admin về đơn hàng bị hủy
+            try {
+                String customerName = order.getUser() != null ? 
+                    (order.getUser().getFullName() != null ? order.getUser().getFullName() : order.getUser().getUsername()) 
+                    : "Khách vãng lai";
+                notificationService.createOrderCancelledNotification(
+                    order.getId(), 
+                    customerName, 
+                    "Đơn hàng bị hủy bởi admin"
+                );
+            } catch (Exception e) {
+                System.err.println("Lỗi khi tạo thông báo đơn hàng bị hủy: " + e.getMessage());
             }
         }
         

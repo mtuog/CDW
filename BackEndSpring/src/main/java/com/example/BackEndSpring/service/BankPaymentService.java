@@ -71,14 +71,13 @@ public class BankPaymentService {
         
         Order order = orderOpt.get();
         
-        // Kiểm tra nếu đơn hàng đã thanh toán
-        String paymentMethod = order.getPaymentMethod();
-        if (paymentMethod == null 
-            || (!paymentMethod.equalsIgnoreCase("COD") 
-                && !paymentMethod.equalsIgnoreCase("Bank Transfer") 
-                && !paymentMethod.equalsIgnoreCase("bank"))) {
-            throw new RuntimeException("Phương thức thanh toán không hợp lệ, không thể thanh toán qua ngân hàng");
+        // Kiểm tra trạng thái đơn hàng
+        if (order.getStatus() == Order.Status.DELIVERED || order.getStatus() == Order.Status.CANCELLED) {
+            throw new RuntimeException("Không thể thanh toán cho đơn hàng đã hoàn thành hoặc đã hủy");
         }
+        
+        // Cho phép thanh toán chuyển khoản cho tất cả các phương thức thanh toán
+        System.out.println("Đơn hàng #" + orderId + " hiện tại có phương thức thanh toán: " + order.getPaymentMethod());
         
         // Cập nhật thông tin đơn hàng - chỉ thay đổi phương thức thanh toán, không thay đổi trạng thái
         order.setPaymentMethod("Bank Transfer");

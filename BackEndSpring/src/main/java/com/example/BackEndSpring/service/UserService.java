@@ -24,6 +24,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     @Value("${app.verification.expiration}")
     private long verificationExpirationMs;
@@ -35,10 +36,11 @@ public class UserService {
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     @Autowired
-    public UserService(UserRepository userRepository, EmailService emailService, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, EmailService emailService, PasswordEncoder passwordEncoder, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     public List<User> getAllUsers() {
@@ -113,6 +115,18 @@ public class UserService {
             } catch (MessagingException | UnsupportedEncodingException e) {
                 throw new RuntimeException("Failed to send verification email: " + e.getMessage(), e);
             }
+            
+            // Tạo thông báo cho admin về người dùng mới đăng ký
+            try {
+                notificationService.createNewUserNotification(
+                    savedUser.getId(),
+                    savedUser.getUsername(),
+                    savedUser.getEmail()
+                );
+            } catch (Exception e) {
+                System.err.println("Lỗi khi tạo thông báo người dùng mới: " + e.getMessage());
+            }
+            
             return savedUser;
             } else {
                 // Nếu là user Google/Facebook đã xác thực, không gửi mail xác thực
@@ -426,6 +440,17 @@ public class UserService {
             
             // Lưu user vào database
             User savedUser = userRepository.save(user);
+            
+            // Tạo thông báo cho admin về người dùng mới từ social login
+            try {
+                notificationService.createNewUserNotification(
+                    savedUser.getId(),
+                    savedUser.getUsername(),
+                    savedUser.getEmail()
+                );
+            } catch (Exception e) {
+                System.err.println("Lỗi khi tạo thông báo người dùng mới từ social login: " + e.getMessage());
+            }
             
             return savedUser;
         } catch (Exception e) {
