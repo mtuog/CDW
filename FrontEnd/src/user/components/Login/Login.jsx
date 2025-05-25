@@ -10,7 +10,7 @@ import '../css/Loading.css';
 import { BACKEND_URL_HTTP } from '../../../config';
 import imgHolder from '../img/login-holder.jpg';
 import Swal from 'sweetalert2';
-
+import authService from '../../../services/authService';
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
