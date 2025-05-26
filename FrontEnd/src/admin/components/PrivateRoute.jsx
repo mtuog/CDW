@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import authApi from '../../api/authApi';
+import authService from '../../services/authService';
 import { toast } from 'react-toastify';
 
 const PrivateRoute = ({ children }) => {
@@ -12,18 +12,21 @@ const PrivateRoute = ({ children }) => {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        console.log('Checking authentication in PrivateRoute...');
-        const { authenticated } = await authApi.checkAuth();
-        console.log('Authentication result:', authenticated);
+        console.log('Checking admin authentication in PrivateRoute...');
         
-        setIsAuthenticated(authenticated);
+        // Kiểm tra xác thực admin
+        const isAdmin = authService.isAdminAuthenticated();
         
-        if (!authenticated) {
-          console.log('Not authenticated, redirecting to login');
-          toast.error('Vui lòng đăng nhập để tiếp tục');
+        console.log('Admin authentication result:', isAdmin);
+        
+        setIsAuthenticated(isAdmin);
+        
+        if (!isAdmin) {
+          console.log('Not authenticated as admin, redirecting to login');
+          toast.error('Vui lòng đăng nhập với tài khoản admin để tiếp tục');
         }
       } catch (error) {
-        console.error('Authentication check failed:', error);
+        console.error('Admin authentication check failed:', error);
         setIsAuthenticated(false);
         toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
       } finally {

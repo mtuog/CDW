@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import authApi from '../../../api/authApi';
+import authService from '../../../services/authService';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
@@ -12,19 +12,10 @@ const AdminLogin = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if already logged in
-    const checkAuth = async () => {
-      try {
-        const { authenticated } = await authApi.checkAuth();
-        if (authenticated) {
-          navigate('/admin/dashboard');
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-      }
-    };
-
-    checkAuth();
+    // Check if already logged in as admin
+    if (authService.isAdminAuthenticated()) {
+      navigate('/admin/dashboard');
+    }
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -36,40 +27,20 @@ const AdminLogin = () => {
       if (!email || !password) {
         setErrorMessage('Vui lòng nhập đầy đủ email và mật khẩu');
         toast.error('Vui lòng nhập đầy đủ email và mật khẩu');
-        setLoading(false);
         return;
       }
 
-      console.log('Đang đăng nhập với email:', email);
-      const response = await authApi.login(email, password);
-      console.log('Login response:', response);
-      
-      // Kiểm tra rõ ràng role của người dùng
-      if (!response.userRoles || !Array.isArray(response.userRoles) || !response.userRoles.includes('ADMIN')) {
-        const errorMsg = 'Tài khoản không có quyền quản trị';
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg);
-        setLoading(false);
-        return;
-      }
-      
+      console.log('Đang đăng nhập admin với email:', email);
+      await authService.adminLogin(email, password);
+
       toast.success('Đăng nhập thành công!');
+
       navigate('/admin/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Xử lý các trường hợp lỗi cụ thể
-      if (error.message) {
-        setErrorMessage(error.message);
-        toast.error(error.message);
-      } else if (error.response && error.response.data) {
-        const errorMsg = error.response.data.message || JSON.stringify(error.response.data);
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg);
-      } else {
-        setErrorMessage('Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
-        toast.error('Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
-      }
+      console.error('Admin login error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Đăng nhập thất bại';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -114,20 +85,20 @@ const AdminLogin = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="login-button" 
+          <button
+            type="submit"
+            className="login-button"
             disabled={loading}
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
-          
+
           <div className="login-hint">
             <p>Tài khoản mặc định: admin@cdweb.com / admin123</p>
           </div>
         </form>
       </div>
-      
+
       <style jsx>{`
         .error-message {
           background-color: #f8d7da;
@@ -149,4 +120,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;

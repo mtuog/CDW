@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.HashSet;
+import java.util.TimeZone;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Lớp chính khởi động ứng dụng Spring Boot
@@ -24,6 +26,13 @@ import java.util.HashSet;
  */
 @SpringBootApplication
 public class BackEndSpringApplication {
+
+	@PostConstruct
+	public void init() {
+		// Set timezone cho toàn bộ ứng dụng
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+		System.out.println("Timezone đã được set thành: " + TimeZone.getDefault().getID());
+	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(BackEndSpringApplication.class, args);

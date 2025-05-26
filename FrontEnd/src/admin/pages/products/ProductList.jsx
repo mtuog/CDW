@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllProducts, deleteProduct, updateProductStock } from '../../../api/productApi';
+import { getAllProducts, updateProductStock } from '../../../api/productApi';
 import { getAllCategories } from '../../../api/categoryApi';
 
 const ProductList = () => {
@@ -116,12 +116,21 @@ const ProductList = () => {
     }
   };
   
-  const handleToggleStatus = async (productId) => {
+  const handleToggleStock = async (productId, currentStock) => {
     try {
-      await updateProductStock(productId, 0); // Set stock to 0 to disable the product
-      // ... rest of the function ...
+      // Gọi API cập nhật trạng thái tồn kho
+      await updateProductStock(productId, !currentStock);
+      
+      // Cập nhật state local
+      setProducts(products.map(product => 
+        product.id === productId 
+          ? { ...product, inStock: !product.inStock } 
+          : product
+      ));
+      
     } catch (error) {
-      // ... error handling ...
+      console.error('Error toggling stock status:', error);
+      alert('Không thể cập nhật trạng thái tồn kho. Vui lòng thử lại sau.');
     }
   };
 
@@ -227,19 +236,20 @@ const ProductList = () => {
                     {!product.inStock && (
                       <span 
                         className="status-badge out-of-stock"
-                        onClick={() => handleToggleStatus(product.id)}
+                        onClick={() => handleToggleStock(product.id, product.inStock)}
                         title="Click để thay đổi trạng thái"
                       >
                         Hết hàng
                       </span>
                     )}
                     {product.inStock && (
-                      <button 
-                        className={`btn btn-sm ${product.inStock ? 'btn-warning' : 'btn-success'}`}
-                        onClick={() => handleToggleStatus(product.id)}
+                      <span 
+                        className="status-toggle-link"
+                        onClick={() => handleToggleStock(product.id, product.inStock)}
+                        title="Click để đánh dấu hết hàng"
                       >
-                        {product.inStock ? 'Ẩn' : 'Hiện'}
-                      </button>
+                        <i className="fa fa-check-circle"></i> Còn hàng
+                      </span>
                     )}
                   </td>
                   <td className="actions-cell">

@@ -32,13 +32,19 @@ const OrderDetail = () => {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
       
       const response = await axios.get(`${BACKEND_URL_HTTP}/api/orders/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      console.log("OrderDetail API response:", response.data);
+      console.log("Payment method:", response.data.paymentMethod);
+      console.log("User data:", response.data.user);
+      console.log("Phone from order:", response.data.phone);
+      console.log("Shipping address:", response.data.shippingAddress);
       
       // Tạo orderCode nếu chưa có từ API
       const orderData = response.data;
@@ -248,7 +254,7 @@ const OrderDetail = () => {
           <div className="info-grid">
             <div className="info-item">
               <div className="info-label">Tên khách hàng:</div>
-              <div className="info-value">{order.user ? order.user.username : 'Khách vãng lai'}</div>
+              <div className="info-value">{order.user ? (order.user.fullName || order.user.username) : 'Khách vãng lai'}</div>
             </div>
             <div className="info-item">
               <div className="info-label">Email:</div>
@@ -256,7 +262,7 @@ const OrderDetail = () => {
             </div>
             <div className="info-item">
               <div className="info-label">Số điện thoại:</div>
-              <div className="info-value">{order.phone}</div>
+              <div className="info-value">{order.phone || (order.user ? order.user.phone : 'N/A')}</div>
             </div>
             <div className="info-item">
               <div className="info-label">Phương thức thanh toán:</div>
