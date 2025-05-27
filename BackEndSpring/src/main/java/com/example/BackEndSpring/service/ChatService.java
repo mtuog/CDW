@@ -10,6 +10,7 @@ import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.repository.ChatConversationRepository;
 import com.example.BackEndSpring.repository.ChatMessageRepository;
 import com.example.BackEndSpring.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -86,6 +87,13 @@ public class ChatService {
      * Gửi tin nhắn
      */
     public ChatMessageDTO sendMessage(Long conversationId, Long senderId, String content) {
+        return sendMessage(conversationId, senderId, content, false); // Default: not admin context
+    }
+    
+    /**
+     * Gửi tin nhắn với context
+     */
+    public ChatMessageDTO sendMessage(Long conversationId, Long senderId, String content, boolean isAdminContext) {
         ChatConversation conversation = conversationRepository.findById(conversationId)
             .orElseThrow(() -> new RuntimeException("Conversation not found"));
         
@@ -97,11 +105,12 @@ public class ChatService {
         System.out.println("   - Conversation ID: " + conversationId);
         System.out.println("   - Sender ID: " + senderId);
         System.out.println("   - Sender name: " + sender.getUsername());
+        System.out.println("   - Admin Context: " + isAdminContext);
         System.out.println("   - Sender roles: " + sender.getRoles().stream()
             .map(role -> role.getName()).reduce("", (a, b) -> a + "," + b));
         
-        boolean isFromAdmin = isUserAdmin(sender);
-        System.out.println("   - Is from admin: " + isFromAdmin);
+        boolean isFromAdmin = isAdminContext && isUserAdmin(sender); // Context + role check
+        System.out.println("   - Is from admin (forced): " + isFromAdmin);
         System.out.println("   - Conversation status: " + conversation.getStatus());
         
         // Kiểm tra trạng thái conversation - Không cho phép gửi tin nhắn trong conversation đã đóng
@@ -138,7 +147,7 @@ public class ChatService {
         conversationRepository.save(conversation);
         
         // Gửi tin nhắn real-time
-        ChatMessageDTO messageDTO = convertToMessageDTO(message);
+        ChatMessageDTO messageDTO = convertToMessageDTO(message, isAdminContext);
         sendRealTimeMessage(messageDTO, isFromAdmin);
         
         return messageDTO;
@@ -256,8 +265,11 @@ public class ChatService {
         assignmentMessage = messageRepository.save(assignmentMessage);
         
         // Gửi realtime notification
-        ChatMessageDTO messageDTO = convertToMessageDTO(assignmentMessage);
+        ChatMessageDTO messageDTO = convertToMessageDTO(assignmentMessage, true);
         sendRealTimeMessage(messageDTO, true);
+        
+        // FIXED VẤN ĐỀ 1: Gửi thông báo cập nhật status cho user
+        sendConversationStatusUpdate(conversation);
         
         return convertToConversationDTO(conversation);
     }
@@ -273,7 +285,11 @@ public class ChatService {
         Page<ChatMessage> messages = messageRepository.findByConversationOrderBySentAtDesc(conversation, pageable);
         
         return messages.getContent().stream()
-            .map(this::convertToMessageDTO)
+            .map(message -> {
+                // Khi load từ DB, cần check thực tế là admin message hay không
+                boolean isActuallyFromAdmin = isUserAdmin(message.getSender());
+                return convertToMessageDTO(message, isActuallyFromAdmin);
+            })
             .collect(Collectors.toList());
     }
     
@@ -323,7 +339,7 @@ public class ChatService {
         conversationRepository.save(conversation);
         
         // Gửi thông báo realtime cho user
-        ChatMessageDTO messageDTO = convertToMessageDTO(closeMessage);
+        ChatMessageDTO messageDTO = convertToMessageDTO(closeMessage, true);
         sendRealTimeMessage(messageDTO, isUserAdmin(systemUser));
         
         // Cập nhật danh sách cuộc hội thoại
@@ -382,7 +398,7 @@ public class ChatService {
             messageRepository.save(closeMessage);
             
             // Gửi realtime notification
-            ChatMessageDTO messageDTO = convertToMessageDTO(closeMessage);
+            ChatMessageDTO messageDTO = convertToMessageDTO(closeMessage, true);
             sendRealTimeMessage(messageDTO, false);
         }
         
@@ -399,15 +415,70 @@ public class ChatService {
     public long getPendingConversationsCount() {
         return conversationRepository.countByStatusAndAdminIsNull(ConversationStatus.PENDING);
     }
+
+    /**
+     * Xóa cuộc hội thoại đã đóng (chỉ admin mới được xóa)
+     */
+    public void deleteConversation(Long conversationId) {
+        ChatConversation conversation = conversationRepository.findById(conversationId)
+            .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        
+        // Chỉ cho phép xóa cuộc hội thoại đã đóng
+        if (conversation.getStatus() != ConversationStatus.CLOSED) {
+            throw new RuntimeException("Only closed conversations can be deleted");
+        }
+        
+        // Xóa tất cả tin nhắn trong cuộc hội thoại trước
+        messageRepository.deleteByConversation(conversation);
+        
+        // Xóa cuộc hội thoại
+        conversationRepository.delete(conversation);
+        
+        System.out.println("🗑️ Deleted conversation: " + conversationId + " and all its messages");
+    }
+
+    /**
+     * Xóa tất cả cuộc hội thoại đã đóng
+     */
+    public int deleteAllClosedConversations() {
+        List<ChatConversation> closedConversations = conversationRepository.findByStatus(ConversationStatus.CLOSED);
+        
+        int deletedCount = 0;
+        for (ChatConversation conversation : closedConversations) {
+            // Xóa tất cả tin nhắn trong cuộc hội thoại trước
+            messageRepository.deleteByConversation(conversation);
+            
+            // Xóa cuộc hội thoại
+            conversationRepository.delete(conversation);
+            deletedCount++;
+        }
+        
+        System.out.println("🗑️ Deleted " + deletedCount + " closed conversations and all their messages");
+        return deletedCount;
+    }
     
     // Helper methods
     
     private boolean isUserAdmin(User user) {
         if (user == null) {
+            System.out.println("🔍 isUserAdmin: user is null -> false");
             return false;
         }
-        return user.getRoles().stream()
-            .anyMatch(role -> "ADMIN".equals(role.getName()) || user.isSuperAdmin());
+        
+        boolean hasAdminRole = user.getRoles().stream()
+            .anyMatch(role -> "ADMIN".equals(role.getName()));
+        boolean isSuperAdmin = user.isSuperAdmin();
+        boolean isAdmin = hasAdminRole || isSuperAdmin;
+        
+        System.out.println("🔍 isUserAdmin debug:");
+        System.out.println("   - User ID: " + user.getId());
+        System.out.println("   - Username: " + user.getUsername());
+        System.out.println("   - Roles: " + user.getRoles().stream().map(role -> role.getName()).toList());
+        System.out.println("   - Has ADMIN role: " + hasAdminRole);
+        System.out.println("   - Is super admin: " + isSuperAdmin);
+        System.out.println("   - FINAL isAdmin: " + isAdmin);
+        
+        return isAdmin;
     }
     
     private ChatConversationDTO convertToConversationDTO(ChatConversation conversation) {
@@ -444,7 +515,7 @@ public class ChatService {
         return dto;
     }
     
-    private ChatMessageDTO convertToMessageDTO(ChatMessage message) {
+    public ChatMessageDTO convertToMessageDTO(ChatMessage message, boolean isAdminContext) {
         ChatMessageDTO dto = new ChatMessageDTO();
         dto.setId(message.getId());
         dto.setConversationId(message.getConversation().getId());
@@ -460,7 +531,7 @@ public class ChatService {
         dto.setReadAt(message.getReadAt());
         
         // Debug log để kiểm tra isUserAdmin
-        boolean isFromAdmin = isUserAdmin(message.getSender());
+        boolean isFromAdmin = isAdminContext && isUserAdmin(message.getSender());
         System.out.println("🔍 convertToMessageDTO debug:");
         System.out.println("   - Message ID: " + message.getId());
         System.out.println("   - Sender ID: " + message.getSender().getId());
@@ -471,22 +542,47 @@ public class ChatService {
         
         dto.setIsFromAdmin(isFromAdmin);
         
+        // Set chatbot specific fields
+        dto.setMessageSource(message.getMessageSource());
+        dto.setMetadata(message.getMetadata());
+        
+        // Parse quick replies if available
+        if (message.getQuickReplies() != null && !message.getQuickReplies().trim().isEmpty()) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                @SuppressWarnings("unchecked")
+                List<String> quickReplies = objectMapper.readValue(message.getQuickReplies(), List.class);
+                dto.setQuickReplies(quickReplies);
+            } catch (Exception e) {
+                System.err.println("Error parsing quick replies: " + e.getMessage());
+            }
+        }
+        
         return dto;
     }
     
     private void sendRealTimeMessage(ChatMessageDTO messageDTO, boolean isFromAdmin) {
         try {
+            System.out.println("📤 Sending real-time message to topics:");
+            System.out.println("   - Message ID: " + messageDTO.getId());
+            System.out.println("   - Conversation ID: " + messageDTO.getConversationId());
+            System.out.println("   - Is from admin: " + messageDTO.getIsFromAdmin());
+            
             // Gửi tin nhắn đến admin channel chung để tất cả admin nhận được ngay lập tức
             messagingTemplate.convertAndSend("/topic/admin/chat/messages", messageDTO);
+            System.out.println("   ✅ Sent to /topic/admin/chat/messages");
             
-            // Gửi tin nhắn đến specific admin conversation (cho backward compatibility)
-            messagingTemplate.convertAndSend("/topic/admin/chat/conversation/" + messageDTO.getConversationId(), messageDTO);
+            // Gửi tin nhắn đến specific conversation channel (match frontend subscription)
+            messagingTemplate.convertAndSend("/topic/conversation/" + messageDTO.getConversationId() + "/messages", messageDTO);
+            System.out.println("   ✅ Sent to /topic/conversation/" + messageDTO.getConversationId() + "/messages");
             
             // Gửi tin nhắn đến user channel (luôn gửi để user có thể thấy tin nhắn từ admin)
             messagingTemplate.convertAndSend("/topic/user/" + messageDTO.getConversationId() + "/messages", messageDTO);
+            System.out.println("   ✅ Sent to /topic/user/" + messageDTO.getConversationId() + "/messages");
             
             // Cập nhật danh sách cuộc hội thoại cho admin
             messagingTemplate.convertAndSend("/topic/admin/chat/conversations-update", messageDTO.getConversationId());
+            System.out.println("   ✅ Sent conversation update");
             
         } catch (Exception e) {
             System.err.println("Error sending real-time message: " + e.getMessage());
@@ -500,6 +596,32 @@ public class ChatService {
             messagingTemplate.convertAndSend("/topic/admin/chat/new-conversation", conversationDTO);
         } catch (Exception e) {
             System.err.println("Error notifying admins of new conversation: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * FIXED VẤN ĐỀ 1: Gửi thông báo cập nhật status conversation cho user
+     */
+    private void sendConversationStatusUpdate(ChatConversation conversation) {
+        try {
+            // Tạo payload chứa thông tin status update
+            String statusUpdate = "{\"conversationId\":" + conversation.getId() + 
+                                ",\"status\":\"" + conversation.getStatus() + "\"" +
+                                ",\"adminName\":\"" + (conversation.getAdmin() != null ? 
+                                    (conversation.getAdmin().getFullName() != null ? 
+                                        conversation.getAdmin().getFullName() : 
+                                        conversation.getAdmin().getUsername()) : "N/A") + "\"}";
+            
+            // Gửi status update cho user cụ thể
+            messagingTemplate.convertAndSend(
+                "/topic/user/" + conversation.getId() + "/status", 
+                statusUpdate
+            );
+            
+            System.out.println("✅ Sent conversation status update to user: " + conversation.getId() + " -> " + conversation.getStatus());
+        } catch (Exception e) {
+            System.err.println("Error sending conversation status update: " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -3,6 +3,7 @@ package com.example.BackEndSpring.controller;
 import com.example.BackEndSpring.dto.ChatConversationDTO;
 import com.example.BackEndSpring.dto.ChatMessageDTO;
 import com.example.BackEndSpring.service.ChatService;
+import com.example.BackEndSpring.service.AutoChatService;
 import com.example.BackEndSpring.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,9 @@ public class ChatController {
     
     @Autowired
     private ChatService chatService;
+    
+    @Autowired
+    private AutoChatService autoChatService;
     
     @Autowired
     private JwtUtil jwtUtil;
@@ -158,6 +162,59 @@ public class ChatController {
         } catch (Exception e) {
             System.err.println("Error closing conversation: " + e.getMessage());
             throw new RuntimeException("Failed to close conversation");
+        }
+    }
+    
+    /**
+     * Auto chat response endpoint - Chế độ tự động với selection options
+     */
+    @PostMapping("/autochat/response")
+    public ResponseEntity<ChatMessageDTO> getAutoChatResponse(
+            @RequestBody Map<String, Object> request,
+            HttpServletRequest httpRequest) {
+        try {
+            Long conversationId = Long.valueOf(request.get("conversationId").toString());
+            String userMessage = request.get("message").toString();
+            
+            // Check if user wants to transfer to agent
+            if (autoChatService.shouldTransferToAgent(userMessage)) {
+                // Return a special response indicating transfer
+                Map<String, String> transferResponse = new HashMap<>();
+                transferResponse.put("action", "TRANSFER_TO_AGENT");
+                transferResponse.put("message", "Đang chuyển bạn đến nhân viên hỗ trợ...");
+                
+                // Here you could trigger the actual transfer logic
+                return ResponseEntity.ok().build(); // Handle this in frontend
+            }
+            
+            // Get auto chat response
+            ChatMessageDTO autoResponse = autoChatService.processAutoMessage(conversationId, userMessage);
+            return ResponseEntity.ok(autoResponse);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting auto chat response: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get auto chat response");
+        }
+    }
+    
+    /**
+     * Initialize auto chat conversation - Khởi tạo chế độ tự động
+     */
+    @PostMapping("/autochat/init")
+    public ResponseEntity<ChatMessageDTO> initAutoChat(
+            @RequestBody Map<String, String> request,
+            HttpServletRequest httpRequest) {
+        try {
+            Long conversationId = Long.valueOf(request.get("conversationId"));
+            
+            // Get welcome message from auto chat
+            ChatMessageDTO welcomeMessage = autoChatService.getWelcomeMessage(conversationId);
+            return ResponseEntity.ok(welcomeMessage);
+            
+        } catch (Exception e) {
+            System.err.println("Error initializing auto chat: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize auto chat");
         }
     }
     

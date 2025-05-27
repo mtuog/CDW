@@ -26,6 +26,9 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
     // Tìm cuộc hội thoại theo status
     List<ChatConversation> findByStatusOrderByLastMessageAtDesc(ConversationStatus status);
     
+    // Tìm cuộc hội thoại theo status (không sort)
+    List<ChatConversation> findByStatus(ConversationStatus status);
+    
     // Tìm cuộc hội thoại được gán cho admin
     List<ChatConversation> findByAdminOrderByLastMessageAtDesc(User admin);
     

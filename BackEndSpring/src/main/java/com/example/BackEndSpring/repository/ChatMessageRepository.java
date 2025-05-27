@@ -66,4 +66,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Transactional
     @Query("DELETE FROM ChatMessage m WHERE m.sentAt < :cutoffDate")
     void deleteOldMessages(@Param("cutoffDate") LocalDateTime cutoffDate);
+    
+    // Xóa tất cả tin nhắn trong cuộc hội thoại
+    @Modifying
+    @Transactional
+    void deleteByConversation(ChatConversation conversation);
 } 

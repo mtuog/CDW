@@ -1,7 +1,9 @@
 package com.example.BackEndSpring.dto;
 
 import com.example.BackEndSpring.model.ChatMessage.MessageType;
+import com.example.BackEndSpring.model.ChatMessage.MessageSource;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class ChatMessageDTO {
     private Long id;
@@ -16,6 +18,11 @@ public class ChatMessageDTO {
     private Boolean isRead;
     private LocalDateTime readAt;
     private Boolean isFromAdmin; // Helper field để frontend biết tin nhắn từ admin hay user
+    
+    // Chatbot specific fields
+    private MessageSource messageSource;
+    private List<String> quickReplies; // Quick reply options for chatbot
+    private String metadata; // Additional metadata
     
     // Constructors
     public ChatMessageDTO() {}
@@ -131,5 +138,29 @@ public class ChatMessageDTO {
     
     public void setIsFromAdmin(Boolean isFromAdmin) {
         this.isFromAdmin = isFromAdmin;
+    }
+    
+    public MessageSource getMessageSource() {
+        return messageSource;
+    }
+    
+    public void setMessageSource(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+    
+    public List<String> getQuickReplies() {
+        return quickReplies;
+    }
+    
+    public void setQuickReplies(List<String> quickReplies) {
+        this.quickReplies = quickReplies;
+    }
+    
+    public String getMetadata() {
+        return metadata;
+    }
+    
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
     }
 } 

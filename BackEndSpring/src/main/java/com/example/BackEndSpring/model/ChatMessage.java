@@ -10,7 +10,15 @@ public class ChatMessage {
     public enum MessageType {
         TEXT,
         IMAGE,
-        FILE
+        FILE,
+        CHATBOT_RESPONSE,
+        QUICK_REPLY
+    }
+    
+    public enum MessageSource {
+        USER,
+        ADMIN,
+        CHATBOT
     }
     
     @Id
@@ -46,6 +54,17 @@ public class ChatMessage {
     
     @Column(name = "read_at")
     private LocalDateTime readAt;
+    
+    // Chatbot specific fields
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_source")
+    private MessageSource messageSource = MessageSource.USER;
+    
+    @Column(name = "quick_replies", columnDefinition = "TEXT")
+    private String quickReplies; // JSON array of quick reply options
+    
+    @Column(name = "metadata", columnDefinition = "TEXT")
+    private String metadata; // Additional metadata for chatbot responses
     
     // Constructors
     public ChatMessage() {
@@ -146,5 +165,29 @@ public class ChatMessage {
     
     public void setReadAt(LocalDateTime readAt) {
         this.readAt = readAt;
+    }
+    
+    public MessageSource getMessageSource() {
+        return messageSource;
+    }
+    
+    public void setMessageSource(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+    
+    public String getQuickReplies() {
+        return quickReplies;
+    }
+    
+    public void setQuickReplies(String quickReplies) {
+        this.quickReplies = quickReplies;
+    }
+    
+    public String getMetadata() {
+        return metadata;
+    }
+    
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
     }
 } 

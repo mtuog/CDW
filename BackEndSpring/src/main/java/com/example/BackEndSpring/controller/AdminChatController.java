@@ -80,6 +80,20 @@ public class AdminChatController {
     }
     
     /**
+     * Đếm số cuộc hội thoại chờ xử lý (shorthand endpoint for header)
+     */
+    @GetMapping("/pending/count")
+    public ResponseEntity<Long> getPendingCount() {
+        try {
+            long count = chatService.getPendingConversationsCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            System.err.println("Error getting pending count: " + e.getMessage());
+            throw new RuntimeException("Failed to get count");
+        }
+    }
+    
+    /**
      * Gán admin xử lý cuộc hội thoại
      */
     @PutMapping("/conversations/{conversationId}/assign")
@@ -145,7 +159,7 @@ public class AdminChatController {
                 throw new RuntimeException("Message content cannot be empty");
             }
             
-            ChatMessageDTO message = chatService.sendMessage(conversationId, adminId, content);
+            ChatMessageDTO message = chatService.sendMessage(conversationId, adminId, content, true); // Admin context
             
             // Debug log phản hồi
             System.out.println("✅ Message sent successfully:");
@@ -186,13 +200,10 @@ public class AdminChatController {
      * Đóng cuộc hội thoại
      */
     @PutMapping("/conversations/{conversationId}/close")
-    public ResponseEntity<Map<String, String>> closeConversation(@PathVariable Long conversationId) {
+    public ResponseEntity<String> closeConversation(@PathVariable Long conversationId) {
         try {
             chatService.closeConversation(conversationId);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Conversation closed successfully");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok("Conversation closed successfully");
         } catch (Exception e) {
             System.err.println("Error closing conversation: " + e.getMessage());
             throw new RuntimeException("Failed to close conversation");
@@ -200,23 +211,36 @@ public class AdminChatController {
     }
     
     /**
-     * Lấy thống kê chat (placeholder cho tương lai)
+     * Xóa cuộc hội thoại đã đóng
      */
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getChatStats() {
+    @DeleteMapping("/conversations/{conversationId}")
+    public ResponseEntity<String> deleteConversation(
+            @PathVariable Long conversationId,
+            HttpServletRequest request) {
         try {
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalConversations", 0);
-            stats.put("activeConversations", 0);
-            stats.put("pendingConversations", chatService.getPendingConversationsCount());
-            stats.put("totalMessages", 0);
-            
-            return ResponseEntity.ok(stats);
+            chatService.deleteConversation(conversationId);
+            return ResponseEntity.ok("Conversation deleted successfully");
         } catch (Exception e) {
-            System.err.println("Error getting chat stats: " + e.getMessage());
-            throw new RuntimeException("Failed to get stats");
+            System.err.println("Error deleting conversation: " + e.getMessage());
+            throw new RuntimeException("Failed to delete conversation: " + e.getMessage());
         }
     }
+    
+    /**
+     * Xóa tất cả cuộc hội thoại đã đóng
+     */
+    @DeleteMapping("/conversations/closed/all")
+    public ResponseEntity<String> deleteAllClosedConversations(HttpServletRequest request) {
+        try {
+            int deletedCount = chatService.deleteAllClosedConversations();
+            return ResponseEntity.ok("Deleted " + deletedCount + " closed conversations successfully");
+        } catch (Exception e) {
+            System.err.println("Error deleting closed conversations: " + e.getMessage());
+            throw new RuntimeException("Failed to delete closed conversations: " + e.getMessage());
+        }
+    }
+    
+
     
     // Helper method để lấy user ID từ JWT token
     private Long getCurrentUserId(HttpServletRequest request) {
