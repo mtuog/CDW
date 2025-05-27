@@ -16,6 +16,7 @@ const Header = ({ toggleSidebar }) => {
   const [adminAvatar, setAdminAvatar] = useState('');
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingChatCount, setPendingChatCount] = useState(0);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const avatarBtnRef = useRef(null);
@@ -44,11 +45,17 @@ const Header = ({ toggleSidebar }) => {
     // Lấy số lượng thông báo chưa đọc
     fetchUnreadCount();
     
+    // Lấy số lượng chat chờ xử lý
+    fetchPendingChatCount();
+    
     // Thiết lập WebSocket connection để nhận thông báo real-time
     setupWebSocketConnection();
     
     // Thiết lập interval để cập nhật số lượng thông báo định kỳ (backup)
-    const interval = setInterval(fetchUnreadCount, 60000); // 60 giây
+    const interval = setInterval(() => {
+      fetchUnreadCount();
+      fetchPendingChatCount();
+    }, 60000); // 60 giây
     
     return () => {
       clearInterval(interval);
@@ -81,6 +88,32 @@ const Header = ({ toggleSidebar }) => {
       setUnreadCount(response.data.count || 0);
     } catch (error) {
       console.error('❌ Error fetching unread count:', error);
+      console.error('❌ Error details:', error.response?.data);
+    }
+  };
+
+  const fetchPendingChatCount = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        console.log('❌ No admin token found for chat count');
+        return;
+      }
+      
+      console.log('🔍 Fetching pending chat count...');
+      const response = await axios.get(
+        `${BACKEND_URL_HTTP}/api/admin/chat/conversations/pending/count`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('✅ Pending chat count response:', response.data);
+      setPendingChatCount(response.data.count || 0);
+    } catch (error) {
+      console.error('❌ Error fetching pending chat count:', error);
       console.error('❌ Error details:', error.response?.data);
     }
   };
@@ -124,6 +157,17 @@ const Header = ({ toggleSidebar }) => {
           console.log('🔢 Received unread count update:', message.body);
           const count = parseInt(message.body);
           setUnreadCount(count);
+        });
+
+        // Subscribe to chat updates
+        client.subscribe('/topic/admin/chat/new-conversation', (message) => {
+          console.log('💬 New chat conversation:', message.body);
+          fetchPendingChatCount();
+        });
+
+        client.subscribe('/topic/admin/chat/conversations-update', (message) => {
+          console.log('💬 Chat conversation updated:', message.body);
+          fetchPendingChatCount();
         });
       };
 
@@ -215,9 +259,55 @@ const Header = ({ toggleSidebar }) => {
               onUnreadCountChange={setUnreadCount}
             />
           </div>
-          <button className="icon-button">
-            <i className="fa fa-envelope"></i>
+          <Link to="/admin/chat" className="icon-button">
+            <i className="fa fa-comments"></i>
+            {pendingChatCount > 0 && (
+              <span className="badge">{pendingChatCount > 99 ? '99+' : pendingChatCount}</span>
+            )}
+          </Link>
+        </div>
+        
+        <div className="user-dropdown" ref={dropdownRef}>
+          <button 
+            ref={avatarBtnRef}
+            className="dropdown-toggle" 
+            onClick={toggleDropdown}
+          >
+            {adminAvatar ? (
+              <img src={adminAvatar} alt={adminName} className="user-avatar" />
+            ) : (
+              <FaUserCircle size={32} color="#6c757d" />
+            )}
+            <span className="user-name">{adminName}</span>
+            <i className={`fa fa-chevron-down ${dropdownOpen ? 'rotate' : ''}`}></i>
           </button>
+          
+          {dropdownOpen && createPortal(
+            <div 
+              className="dropdown-menu"
+              style={{
+                position: 'fixed',
+                top: `${dropdownPos.top}px`,
+                left: `${dropdownPos.left}px`,
+                zIndex: 99999
+              }}
+            >
+              <Link to="/admin/account" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                <i className="fa fa-user"></i>
+                Thông tin tài khoản
+              </Link>
+              <Link to="/admin/settings/store" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                <i className="fa fa-cog"></i>
+                Cài đặt
+              </Link>
+              <div className="dropdown-divider"></div>
+              <button className="dropdown-item" onClick={handleLogout}>
+                <i className="fa fa-sign-out-alt"></i>
+                Đăng xuất
+              </button>
+            </div>,
+            document.body
+          )}
         </div>
       </div>
       
@@ -288,6 +378,17 @@ const Header = ({ toggleSidebar }) => {
           position: relative;
           margin-left: 15px;
           cursor: pointer;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          padding: 8px;
+          border-radius: 6px;
+          transition: background-color 0.2s;
+        }
+
+        .icon-button:hover {
+          background-color: #f8f9fa;
+          color: #495057;
         }
         
         .badge {
@@ -305,23 +406,47 @@ const Header = ({ toggleSidebar }) => {
           justify-content: center;
         }
         
-        .user-dropdown {
+                .user-dropdown {
           position: relative;
           overflow: visible !important;
+          margin-left: 15px;
         }
         
+        .user-name {
+          margin: 0 8px;
+          color: #495057;
+          font-weight: 500;
+        }
+
+        .user-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
         .dropdown-toggle {
           display: flex;
           align-items: center;
           background: none;
           border: none;
           cursor: pointer;
-          padding: 0;
+          padding: 8px;
+          border-radius: 6px;
+          transition: background-color 0.2s;
         }
-        
-        .user-name {
-          margin-right: 5px;
-          color: #495057;
+
+        .dropdown-toggle:hover {
+          background-color: #f8f9fa;
+        }
+
+        .fa-chevron-down {
+          font-size: 12px;
+          transition: transform 0.2s;
+        }
+
+        .fa-chevron-down.rotate {
+          transform: rotate(180deg);
         }
         
         .dropdown-menu {
