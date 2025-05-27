@@ -8,5 +8,4 @@ com\example\BackEndSpring\controller\ProductController$1.class
 com\example\BackEndSpring\model\OrderDTO.class
 com\example\BackEndSpring\model\BankPaymentDTO.class
 com\example\BackEndSpring\service\LoyaltyService$1.class
-com\example\BackEndSpring\controller\PaymentSettingsAdminController.class
 com\example\BackEndSpring\config\GlobalCorsConfig.class

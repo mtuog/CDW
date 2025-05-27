@@ -109,13 +109,7 @@ public class DiscountCodeController {
         return ResponseEntity.ok(discountCodeService.toggleDiscountCodeStatus(id));
     }
 
-    // Adding a GET endpoint for toggle-status to avoid CORS preflight issues
-    @GetMapping("/{id}/toggle-status")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<DiscountCodeDTO> toggleDiscountCodeStatusGet(@PathVariable Long id) {
-        log.info("Toggling discount code status via GET endpoint for ID: {}", id);
-        return ResponseEntity.ok(discountCodeService.toggleDiscountCodeStatus(id));
-    }
+
 
     @GetMapping("/validate")
     public ResponseEntity<?> validateDiscountCode(

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BACKEND_URL_HTTP } from '../../config';
+import { BACKEND_URL_HTTP } from '../../../config';
 import './NotificationPage.css';
 
 const NotificationPage = () => {
