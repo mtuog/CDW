@@ -61,7 +61,58 @@ const LoyaltyUsersList = ({ users, loading, onUserSelect, onAddPoints, onRedeemP
     });
   };
   
-
+  const handleRedeemPoints = (userId, currentPoints) => {
+    Swal.fire({
+      title: 'Trừ điểm',
+      html: `
+        <div class="swal2-input-container">
+          <input 
+            id="points" 
+            class="swal2-input" 
+            type="number" 
+            min="1" 
+            max="${currentPoints}"
+            placeholder="Số điểm"
+            style="margin-bottom: 10px;"
+          >
+          <input 
+            id="description" 
+            class="swal2-input" 
+            placeholder="Mô tả (vd: Điều chỉnh do nhập sai)"
+          >
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Trừ điểm',
+      cancelButtonText: 'Hủy',
+      preConfirm: () => {
+        const points = document.getElementById('points').value;
+        const description = document.getElementById('description').value;
+        
+        if (!points || isNaN(points) || parseInt(points) <= 0) {
+          Swal.showValidationMessage('Vui lòng nhập số điểm hợp lệ (lớn hơn 0)');
+          return false;
+        }
+        
+        if (parseInt(points) > currentPoints) {
+          Swal.showValidationMessage(`Số điểm không thể lớn hơn số điểm hiện có (${currentPoints})`);
+          return false;
+        }
+        
+        if (!description) {
+          Swal.showValidationMessage('Vui lòng nhập mô tả');
+          return false;
+        }
+        
+        return { points: parseInt(points), description };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onRedeemPoints(userId, result.value.points, result.value.description);
+      }
+    });
+  };
   
   // Filter users based on search term and selected rank
   const filteredUsers = users.filter(user => {
@@ -157,59 +208,7 @@ const LoyaltyUsersList = ({ users, loading, onUserSelect, onAddPoints, onRedeemP
                       </button>
                       <button
                         className="action-btn redeem-btn"
-                        onClick={() => {
-                          const currentPoints = user.loyaltyPoints || 0;
-                          Swal.fire({
-                            title: 'Trừ điểm',
-                            html: `
-                              <div class="swal2-input-container">
-                                <input 
-                                  id="points" 
-                                  class="swal2-input" 
-                                  type="number" 
-                                  min="1" 
-                                  max="${currentPoints}"
-                                  placeholder="Số điểm"
-                                  style="margin-bottom: 10px;"
-                                >
-                                <input 
-                                  id="description" 
-                                  class="swal2-input" 
-                                  placeholder="Mô tả (vd: Điều chỉnh do nhập sai)"
-                                >
-                              </div>
-                            `,
-                            focusConfirm: false,
-                            showCancelButton: true,
-                            confirmButtonText: 'Trừ điểm',
-                            cancelButtonText: 'Hủy',
-                            preConfirm: () => {
-                              const points = document.getElementById('points').value;
-                              const description = document.getElementById('description').value;
-                              
-                              if (!points || isNaN(points) || parseInt(points) <= 0) {
-                                Swal.showValidationMessage('Vui lòng nhập số điểm hợp lệ (lớn hơn 0)');
-                                return false;
-                              }
-                              
-                              if (parseInt(points) > currentPoints) {
-                                Swal.showValidationMessage(`Số điểm không thể lớn hơn số điểm hiện có (${currentPoints})`);
-                                return false;
-                              }
-                              
-                              if (!description) {
-                                Swal.showValidationMessage('Vui lòng nhập mô tả');
-                                return false;
-                              }
-                              
-                              return { points: parseInt(points), description };
-                            }
-                          }).then((result) => {
-                            if (result.isConfirmed) {
-                              onRedeemPoints(user.id, result.value.points, result.value.description);
-                            }
-                          });
-                        }}
+                        onClick={() => handleRedeemPoints(user.id, user.loyaltyPoints || 0)}
                         title="Trừ điểm"
                         disabled={!user.loyaltyPoints || user.loyaltyPoints <= 0}
                       >

@@ -57,7 +57,60 @@ const LoyaltyTransactionsList = ({ transactions, user, onAddPoints, onRedeemPoin
     });
   };
   
-
+  const handleRedeemPoints = () => {
+    if (!user) return;
+    
+    Swal.fire({
+      title: 'Trừ điểm',
+      html: `
+        <div class="swal2-input-container">
+          <input 
+            id="points" 
+            class="swal2-input" 
+            type="number" 
+            min="1" 
+            max="${user.loyaltyPoints || 0}"
+            placeholder="Số điểm"
+            style="margin-bottom: 10px;"
+          >
+          <input 
+            id="description" 
+            class="swal2-input" 
+            placeholder="Mô tả (vd: Điều chỉnh do nhập sai)"
+          >
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Trừ điểm',
+      cancelButtonText: 'Hủy',
+      preConfirm: () => {
+        const points = document.getElementById('points').value;
+        const description = document.getElementById('description').value;
+        
+        if (!points || isNaN(points) || parseInt(points) <= 0) {
+          Swal.showValidationMessage('Vui lòng nhập số điểm hợp lệ (lớn hơn 0)');
+          return false;
+        }
+        
+        if (parseInt(points) > (user.loyaltyPoints || 0)) {
+          Swal.showValidationMessage(`Số điểm không thể lớn hơn số điểm hiện có (${user.loyaltyPoints || 0})`);
+          return false;
+        }
+        
+        if (!description) {
+          Swal.showValidationMessage('Vui lòng nhập mô tả');
+          return false;
+        }
+        
+        return { points: parseInt(points), description };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onRedeemPoints(user.id, result.value.points, result.value.description);
+      }
+    });
+  };
   
   // Format date
   const formatDate = (dateString) => {
@@ -116,60 +169,7 @@ const LoyaltyTransactionsList = ({ transactions, user, onAddPoints, onRedeemPoin
             </button>
             <button
               className="btn btn-danger redeem-btn"
-              onClick={() => {
-                if (!user) return;
-                
-                Swal.fire({
-                  title: 'Trừ điểm',
-                  html: `
-                    <div class="swal2-input-container">
-                      <input 
-                        id="points" 
-                        class="swal2-input" 
-                        type="number" 
-                        min="1" 
-                        max="${user.loyaltyPoints || 0}"
-                        placeholder="Số điểm"
-                        style="margin-bottom: 10px;"
-                      >
-                      <input 
-                        id="description" 
-                        class="swal2-input" 
-                        placeholder="Mô tả (vd: Điều chỉnh do nhập sai)"
-                      >
-                    </div>
-                  `,
-                  focusConfirm: false,
-                  showCancelButton: true,
-                  confirmButtonText: 'Trừ điểm',
-                  cancelButtonText: 'Hủy',
-                  preConfirm: () => {
-                    const points = document.getElementById('points').value;
-                    const description = document.getElementById('description').value;
-                    
-                    if (!points || isNaN(points) || parseInt(points) <= 0) {
-                      Swal.showValidationMessage('Vui lòng nhập số điểm hợp lệ (lớn hơn 0)');
-                      return false;
-                    }
-                    
-                    if (parseInt(points) > (user.loyaltyPoints || 0)) {
-                      Swal.showValidationMessage(`Số điểm không thể lớn hơn số điểm hiện có (${user.loyaltyPoints || 0})`);
-                      return false;
-                    }
-                    
-                    if (!description) {
-                      Swal.showValidationMessage('Vui lòng nhập mô tả');
-                      return false;
-                    }
-                    
-                    return { points: parseInt(points), description };
-                  }
-                }).then((result) => {
-                  if (result.isConfirmed) {
-                    onRedeemPoints(user.id, result.value.points, result.value.description);
-                  }
-                });
-              }}
+              onClick={handleRedeemPoints}
               disabled={!user.loyaltyPoints || user.loyaltyPoints <= 0}
               title="Trừ điểm"
             >

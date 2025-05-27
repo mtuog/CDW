@@ -102,7 +102,7 @@ const Header = ({ toggleSidebar }) => {
       
       console.log('💬 Fetching pending chat count...');
       const response = await axios.get(
-        `${BACKEND_URL_HTTP}/api/admin/chat/conversations/pending/count`,
+        `${BACKEND_URL_HTTP}/api/admin/chat/pending/count`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -111,7 +111,7 @@ const Header = ({ toggleSidebar }) => {
       );
       
       console.log('✅ Pending chat count response:', response.data);
-      setPendingChatCount(response.data.count || 0);
+      setPendingChatCount(response.data || 0);
     } catch (error) {
       console.error('❌ Error fetching pending chat count:', error);
       console.error('❌ Error details:', error.response?.data);
@@ -209,13 +209,6 @@ const Header = ({ toggleSidebar }) => {
   }, [dropdownOpen]);
   
   const toggleDropdown = () => {
-    if (!dropdownOpen && avatarBtnRef.current) {
-      const rect = avatarBtnRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 8,
-        left: rect.left
-      });
-    }
     setDropdownOpen(!dropdownOpen);
   };
   
@@ -228,19 +221,27 @@ const Header = ({ toggleSidebar }) => {
   const handleChatNavigation = () => {
     navigate('/admin/chat');
   };
-  
+
+  // Tính toán vị trí dropdown khi mở
+  useEffect(() => {
+    if (dropdownOpen && avatarBtnRef.current) {
+      const rect = avatarBtnRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.right - 200 + window.scrollX // 200 là width dropdown
+      });
+    }
+  }, [dropdownOpen]);
+
   return (
-    <div className="admin-header">
+    <header className="admin-header">
       <div className="header-left">
         <button className="sidebar-toggle" onClick={toggleSidebar}>
           <i className="fa fa-bars"></i>
         </button>
-        
         <div className="search-box">
           <input type="text" placeholder="Tìm kiếm..." />
-          <button type="button">
-            <i className="fa fa-search"></i>
-          </button>
+          <button><i className="fa fa-search"></i></button>
         </div>
       </div>
       
@@ -248,9 +249,8 @@ const Header = ({ toggleSidebar }) => {
         <div className="header-icons">
           <div className="notification-container">
             <button 
-              className="icon-button" 
+              className="icon-button"
               onClick={() => setNotificationOpen(!notificationOpen)}
-              title="Thông báo"
             >
               <i className="fa fa-bell"></i>
               {unreadCount > 0 && (
@@ -264,7 +264,6 @@ const Header = ({ toggleSidebar }) => {
               onUnreadCountChange={setUnreadCount}
             />
           </div>
-          
           <button 
             className="icon-button"
             onClick={handleChatNavigation}
@@ -275,49 +274,6 @@ const Header = ({ toggleSidebar }) => {
               <span className="badge chat-badge">{pendingChatCount > 99 ? '99+' : pendingChatCount}</span>
             )}
           </button>
-        </div>
-        
-        <div className="user-dropdown" ref={dropdownRef}>
-          <button 
-            ref={avatarBtnRef}
-            className="dropdown-toggle" 
-            onClick={toggleDropdown}
-          >
-            {adminAvatar ? (
-              <img src={adminAvatar} alt={adminName} className="user-avatar" />
-            ) : (
-              <FaUserCircle size={32} color="#6c757d" />
-            )}
-            <span className="user-name">{adminName}</span>
-            <i className={`fa fa-chevron-down ${dropdownOpen ? 'rotate' : ''}`}></i>
-          </button>
-          
-          {dropdownOpen && createPortal(
-            <div 
-              className="dropdown-menu"
-              style={{
-                position: 'fixed',
-                top: `${dropdownPos.top}px`,
-                left: `${dropdownPos.left}px`,
-                zIndex: 99999
-              }}
-            >
-              <Link to="/admin/account" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                <i className="fa fa-user"></i>
-                Thông tin tài khoản
-              </Link>
-              <Link to="/admin/settings/store" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                <i className="fa fa-cog"></i>
-                Cài đặt
-              </Link>
-              <div className="dropdown-divider"></div>
-              <button className="dropdown-item" onClick={handleLogout}>
-                <i className="fa fa-sign-out-alt"></i>
-                Đăng xuất
-              </button>
-            </div>,
-            document.body
-          )}
         </div>
       </div>
       
@@ -433,7 +389,6 @@ const Header = ({ toggleSidebar }) => {
         .user-dropdown {
           position: relative;
           overflow: visible !important;
-          margin-left: 15px;
         }
         
         .dropdown-toggle {
@@ -442,71 +397,51 @@ const Header = ({ toggleSidebar }) => {
           background: none;
           border: none;
           cursor: pointer;
-          padding: 5px 10px;
-          border-radius: 25px;
-          transition: background-color 0.2s;
-        }
-        
-        .dropdown-toggle:hover {
-          background-color: #f8f9fa;
-        }
-        
-        .user-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          margin-right: 8px;
+          padding: 0;
         }
         
         .user-name {
-          margin-right: 8px;
-          font-weight: 500;
+          margin-right: 5px;
           color: #495057;
         }
         
-        .dropdown-toggle i {
-          transition: transform 0.2s;
-          color: #6c757d;
-        }
-        
-        .dropdown-toggle i.rotate {
-          transform: rotate(180deg);
-        }
-        
         .dropdown-menu {
-          background: white;
+          position: absolute;
+          top: 100%;
+          right: 0;
+          width: 200px;
+          background-color: #fff;
+          border-radius: 6px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.18);
           border: 1px solid #e9ecef;
-          border-radius: 8px;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-          min-width: 200px;
-          padding: 8px 0;
-          margin-top: 8px;
+          padding: 10px 0;
+          z-index: 9999 !important;
+          animation: fadeInDropdown 0.2s;
         }
         
         .dropdown-item {
           display: flex;
           align-items: center;
-          width: 100%;
-          padding: 10px 16px;
+          padding: 10px 24px;
           color: #495057;
           text-decoration: none;
-          border: none;
           background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
           cursor: pointer;
-          font-size: 14px;
-          transition: background-color 0.2s;
+          font-size: 15px;
+          transition: background 0.15s;
         }
         
         .dropdown-item:hover {
-          background-color: #f8f9fa;
-          color: #495057;
-          text-decoration: none;
+          background-color: #f1f3f5;
         }
         
         .dropdown-item i {
-          margin-right: 12px;
-          width: 16px;
-          color: #6c757d;
+          margin-right: 10px;
+          width: 20px;
+          text-align: center;
         }
         
         .dropdown-divider {
@@ -514,8 +449,16 @@ const Header = ({ toggleSidebar }) => {
           background-color: #e9ecef;
           margin: 8px 0;
         }
+        
+        .dropdown-menu.dropdown-animate {
+          animation: fadeInDropdown 0.2s;
+        }
+        @keyframes fadeInDropdown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
-    </div>
+    </header>
   );
 };
 

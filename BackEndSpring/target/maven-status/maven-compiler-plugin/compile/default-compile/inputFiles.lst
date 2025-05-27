@@ -77,10 +77,12 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\D
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ProductSizeRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\RestTemplateConfig.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\dto\WishlistRequest.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\ProductStructureController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\ProductService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\LoginRequest.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\PaymentLog.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\LoyaltyService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\EmailTestController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\BankAccountRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\PaymentSettingsRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ProductRepository.java
@@ -100,6 +102,7 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Resend
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\OrderDTO.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\RegisterRequest.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\OrderRepository.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\PaymentSettingsAdminController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\FileUploadController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\EmailService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\FileStorageService.java

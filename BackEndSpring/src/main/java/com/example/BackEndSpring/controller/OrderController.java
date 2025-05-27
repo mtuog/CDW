@@ -337,7 +337,151 @@ public class OrderController {
         }
         return ResponseEntity.notFound().build();
     }
+    
+    @Operation(summary = "Lấy thống kê tổng quan về đơn hàng")
+    @ApiResponse(responseCode = "200", description = "Thống kê thành công")
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getOrderStats() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        long totalOrders = orderService.countTotalOrders();
+        double totalRevenue = orderService.calculateTotalRevenue();
+        
+        // Thống kê theo trạng thái
+        Map<Order.Status, Long> ordersByStatus = orderService.countOrdersByStatus();
+        
+        // Thống kê theo thời gian (30 ngày gần đây)
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        long recentOrders = orderService.countOrdersAfterDate(thirtyDaysAgo);
+        double recentRevenue = orderService.calculateRevenueAfterDate(thirtyDaysAgo);
+        
+        // Đơn hàng theo ngày trong 7 ngày gần đây
+        Map<String, Long> ordersByDay = orderService.countOrdersByDayLast7Days();
+        
+        // Tỷ lệ hoàn thành đơn hàng
+        double completionRate = (double) ordersByStatus.getOrDefault(Order.Status.DELIVERED, 0L) / totalOrders;
+        
+        stats.put("totalOrders", totalOrders);
+        stats.put("totalRevenue", totalRevenue);
+        stats.put("ordersByStatus", ordersByStatus);
+        stats.put("recentOrders", recentOrders);
+        stats.put("recentRevenue", recentRevenue);
+        stats.put("ordersByDay", ordersByDay);
+        stats.put("completionRate", completionRate);
+        
+        return ResponseEntity.ok(stats);
+    }
 
+    @Operation(summary = "Tạo đơn hàng mẫu để test")
+    @ApiResponse(responseCode = "201", description = "Đơn hàng mẫu được tạo thành công")
+    @GetMapping("/test-create")
+    public ResponseEntity<Order> createTestOrder() {
+        try {
+            Order testOrder = new Order();
+            testOrder.setTotalAmount(100000);
+            testOrder.setStatus(Order.Status.PENDING);
+            testOrder.setShippingAddress("123 Test Street, Test City");
+            testOrder.setPhone("0123456789");
+            testOrder.setPaymentMethod("COD");
+            
+            // Lưu order trước và lấy ID
+            Order savedOrder = orderService.createOrder(testOrder);
+            
+            // Tạo một order item mẫu
+            OrderItem item = new OrderItem();
+            item.setOrder(savedOrder);
+            item.setQuantity(1);
+            item.setPrice(100000);
+            item.setSize("M");
+            item.setColor("Blue");
+            
+            // Cần một product từ database để gán vào order item
+            // Giả sử có một product với ID = 1
+            Optional<Product> product = productService.getProductById(1L);
+            if (product.isPresent()) {
+                item.setProduct(product.get());
+                // Thêm item vào order và lưu
+                savedOrder.getOrderItems().add(item);
+                return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(savedOrder));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(savedOrder); // Trả về order không có item nếu không có product
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/statistics")
+    @Operation(summary = "Get order statistics", description = "Retrieves aggregated order statistics for dashboard")
+    public ResponseEntity<Map<String, Object>> getOrderStatistics() {
+        Map<String, Object> statistics = new HashMap<>();
+        
+        // Lấy tổng doanh thu
+        double totalRevenue = orderService.calculateTotalRevenue();
+        statistics.put("totalRevenue", totalRevenue);
+        
+        // Lấy tổng số đơn hàng
+        long totalOrders = orderService.countTotalOrders();
+        statistics.put("totalOrders", totalOrders);
+        
+        // Tính giá trị đơn hàng trung bình
+        double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        statistics.put("averageOrderValue", averageOrderValue);
+        
+        // Đếm số lượng đơn hàng theo trạng thái
+        Map<Order.Status, Long> countByStatus = orderService.countOrdersByStatus();
+        statistics.put("countByStatus", countByStatus);
+        
+        // Tạo dữ liệu doanh thu theo tháng (6 tháng gần đây)
+        List<Map<String, Object>> revenueByMonth = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 5; i >= 0; i--) {
+            LocalDateTime startOfMonth = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime endOfMonth;
+            if (i > 0) {
+                endOfMonth = startOfMonth.plusMonths(1).minusNanos(1);
+            } else {
+                endOfMonth = now;
+            }
+            
+            double revenue = orderService.calculateRevenueBetweenDates(startOfMonth, endOfMonth);
+            long orders = orderService.countOrdersBetweenDates(startOfMonth, endOfMonth);
+            
+            Map<String, Object> monthData = new HashMap<>();
+            monthData.put("name", "Tháng " + startOfMonth.getMonthValue());
+            monthData.put("revenue", revenue);
+            monthData.put("orders", orders);
+            
+            revenueByMonth.add(monthData);
+        }
+        statistics.put("revenueByMonth", revenueByMonth);
+        
+        // Tạo dữ liệu doanh thu theo tuần (4 tuần gần đây)
+        List<Map<String, Object>> revenueByWeek = new ArrayList<>();
+        for (int i = 3; i >= 0; i--) {
+            LocalDateTime startOfWeek = now.minusWeeks(i).with(java.time.DayOfWeek.MONDAY).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime endOfWeek;
+            if (i > 0) {
+                endOfWeek = startOfWeek.plusWeeks(1).minusNanos(1);
+            } else {
+                endOfWeek = now;
+            }
+            
+            double revenue = orderService.calculateRevenueBetweenDates(startOfWeek, endOfWeek);
+            long orders = orderService.countOrdersBetweenDates(startOfWeek, endOfWeek);
+            
+            Map<String, Object> weekData = new HashMap<>();
+            weekData.put("name", "Tuần " + (4 - i));
+            weekData.put("revenue", revenue);
+            weekData.put("orders", orders);
+            
+            revenueByWeek.add(weekData);
+        }
+        statistics.put("revenueByWeek", revenueByWeek);
+        
+        return ResponseEntity.ok(statistics);
+    }
 
     @Operation(summary = "Lấy danh sách sản phẩm chưa đánh giá của người dùng")
     @ApiResponses(value = {

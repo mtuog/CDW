@@ -200,152 +200,272 @@ const ChatWidget = () => {
 
   const checkExistingConversation = async () => {
     try {
-      console.log('🔍 Checking for existing conversation...');
-      const response = await chatService.getCurrentConversation();
-      
-      if (response.data) {
-        const activeConversation = response.data;
-        console.log('✅ Found existing conversation:', activeConversation);
-        setConversation(activeConversation);
-
-        // Subscribe to this conversation
-        if (isConnected) {
-          subscribeToConversation(activeConversation.id);
+      const conversations = await chatService.getUserConversations();
+      if (conversations && conversations.length > 0) {
+        const activeConversation = conversations.find(c => c.status === 'OPEN' || c.status === 'PENDING');
+        if (activeConversation) {
+          setConversation(activeConversation);
+          
+          // FIXED VẤN ĐỀ 1: Không auto-set hasUnreadMessages khi check existing
+          // Badge unread chỉ hiển thị khi nhận tin nhắn real-time từ admin
+          // if (activeConversation.unreadCountUser > 0) {
+          //   setHasUnreadMessages(true);
+          // }
+          
+          // Subscribe to this conversation
+          if (isConnected) {
+            subscribeToConversation(activeConversation.id);
+          }
         }
-      } else {
-        console.log('ℹ️ No existing conversation found');
-        setConversation(null);
       }
     } catch (error) {
-      console.error('❌ Error checking existing conversation:', error);
-      setConversation(null);
+      console.error('Error checking existing conversation:', error);
     }
   };
 
   const handleOpenChat = async () => {
-    if (!isLoggedIn) {
-      showPopup('warning', 'Cần đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng chat!');
+    // Luôn hiển thị mode selector cho user mới hoặc khi chưa có mode
+    if (!chatMode) {
+      setShowModeSelector(true);
+      setIsOpen(true);
       return;
     }
-
-    // Mở widget trước để user thấy UI
+    
     setIsOpen(true);
     setHasUnreadMessages(false);
 
-    try {
-      // Nếu chưa có conversation, tạo mới
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      // User đã đăng nhập → chỉ kiểm tra conversation có sẵn, KHÔNG tạo mới
       if (!conversation) {
-        console.log('🆕 Creating new conversation...');
-        
-        // Hiển thị mode selector nếu chưa chọn mode
-        if (!chatMode) {
-          setShowModeSelector(true);
-          return; // Dừng lại đây, đợi user chọn mode
-        }
-
-        const newConversation = await chatService.createConversation(chatMode);
-        console.log('✅ New conversation created:', newConversation.data);
-        setConversation(newConversation.data);
-
-        // Subscribe to the new conversation
-        if (isConnected) {
-          subscribeToConversation(newConversation.data.id);
-        }
-      } else {
-        console.log('🔄 Using existing conversation:', conversation.id);
-        
-        // Nếu đã có conversation nhưng chưa subscribe (do connection mới)
-        if (isConnected) {
-          subscribeToConversation(conversation.id);
+        try {
+          // Chỉ lấy conversation active có sẵn (PENDING/OPEN)
+          const conversations = await chatService.getUserConversations();
+          const activeConversation = conversations.find(c => c.status === 'OPEN' || c.status === 'PENDING');
+          
+          if (activeConversation) {
+            setConversation(activeConversation);
+            
+            // Subscribe to existing conversation
+            if (isConnected) {
+              subscribeToConversation(activeConversation.id);
+            }
+          }
+          // Nếu không có conversation → ChatWindow sẽ hiển thị giao diện tạo mới
+        } catch (error) {
+          console.error('Error checking existing conversation:', error);
         }
       }
-    } catch (error) {
-      console.error('❌ Error handling chat open:', error);
-      showPopup('error', 'Lỗi', 'Không thể mở chat, vui lòng thử lại sau!');
-      setIsOpen(false);
+    } else {
+      // User chưa đăng nhập → sử dụng anonymous chat
+      // ChatWindow sẽ tự động khởi tạo anonymous chat
+      console.log('🔓 Opening anonymous chat for guest user');
     }
   };
 
-  const handleModeSelection = async (selectedMode) => {
+  const handleModeSelect = async (selectedMode) => {
+    // Kiểm tra nếu guest user chọn live mode
+    if (selectedMode === 'live' && !isLoggedIn) {
+      showPopup('warning', 'Cần đăng nhập', 
+        'Để chat với nhân viên hỗ trợ, bạn cần đăng nhập. Vui lòng đăng nhập hoặc sử dụng hỗ trợ tự động.');
+      return;
+    }
+
     setChatMode(selectedMode);
     setShowModeSelector(false);
     
     try {
-      console.log(`🎯 Creating conversation with mode: ${selectedMode}`);
-      const newConversation = await chatService.createConversation(selectedMode);
-      console.log('✅ New conversation created:', newConversation.data);
-      setConversation(newConversation.data);
-
-      // Subscribe to the new conversation
-      if (isConnected) {
-        subscribeToConversation(newConversation.data.id);
+      if (selectedMode === 'live' && isLoggedIn) {
+        console.log('🔄 Creating conversation for live chat...');
+        const response = await chatService.createOrGetConversation('Chat trực tiếp với nhân viên');
+        console.log('✅ Live chat conversation created:', response);
+        setConversation(response);
+        
+        if (stompClientRef.current && isConnected) {
+          subscribeToConversation(response.id);
+        }
+      } else if (selectedMode === 'auto') {
+        // Auto mode cho cả logged in và guest user
+        console.log('🔄 Creating conversation for auto chat...');
+        const conversationTitle = isLoggedIn ? 'Hỗ trợ tự động' : 'Hỗ trợ tự động (Khách)';
+        const response = await chatService.createOrGetConversation(conversationTitle);
+        console.log('✅ Auto chat conversation created:', response);
+        setConversation(response);
+        
+        if (stompClientRef.current && isConnected && isLoggedIn) {
+          subscribeToConversation(response.id);
+        }
       }
     } catch (error) {
       console.error('❌ Error creating conversation:', error);
-      showPopup('error', 'Lỗi', 'Không thể tạo cuộc trò chuyện, vui lòng thử lại!');
-      setIsOpen(false);
+      showPopup('error', 'Lỗi', 'Không thể tạo cuộc hội thoại. Vui lòng thử lại.');
     }
   };
 
   const showPopup = (type, title, message) => {
-    // Implement popup logic here
+    // Simple popup implementation for error handling
     alert(`${title}: ${message}`);
   };
 
   const handleCloseChat = () => {
     setIsOpen(false);
-    setHasUnreadMessages(false);
   };
 
   const showNotification = (messageData) => {
-    // Show browser notification if permission granted
+    // Hiển thị browser notification nếu được phép
     if (Notification.permission === 'granted') {
-      new Notification('Tin nhắn mới từ hỗ trợ viên', {
+      new Notification('Tin nhắn mới từ CDW', {
         body: messageData.content,
         icon: '/favicon.ico'
       });
     }
   };
 
-  // Request notification permission when component mounts
-  useEffect(() => {
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // Ẩn chat widget trên trang admin và login
-  const shouldHideWidget = location.pathname.startsWith('/admin') || 
-                          location.pathname.includes('/login') || 
-                          location.pathname.includes('/register');
-
-  if (shouldHideWidget) {
+  // Danh sách các trang không hiển thị chat widget
+  const excludedPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-account'];
+  
+  // Không hiển thị chat widget chỉ khi:
+  // 1. Đang ở trang login/register/... 
+  // 2. Đang ở admin panel
+  if (excludedPaths.includes(location.pathname) || 
+      location.pathname.startsWith('/admin/')) {
     return null;
   }
 
   return (
     <>
       {/* Chat Widget Button */}
-      <div className={`chat-widget ${isOpen ? 'hidden' : ''}`}>
-        <button className="chat-button" onClick={handleOpenChat}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor"/>
-          </svg>
-          {hasUnreadMessages && <div className="notification-badge"></div>}
-        </button>
-      </div>
+      {!isOpen && (
+        <div 
+          className={`chat-widget-button ${!isLoggedIn ? 'not-logged-in' : ''}`} 
+          onClick={handleOpenChat}
+        >
+          <div className="chat-icon">
+            <i className="fas fa-comments"></i>
+            {hasUnreadMessages && <div className="unread-indicator"></div>}
+            {!isLoggedIn && <div className="login-indicator">!</div>}
+          </div>
+          <div className="chat-tooltip">
+            {isLoggedIn 
+              ? 'Hỗ trợ trực tuyến 24/7' 
+              : 'Chat hỗ trợ - Đăng nhập để có trải nghiệm tốt hơn'
+            }
+          </div>
+        </div>
+      )}
+
+      {/* Chat Mode Selector */}
+      {isOpen && showModeSelector && (
+        <div className="chat-mode-selector">
+          <div className="mode-selector-header">
+            <div className="header-content">
+              <h3>Chọn cách bạn muốn được hỗ trợ</h3>
+              <p>Chúng tôi có 2 cách để giúp bạn giải quyết vấn đề</p>
+            </div>
+            <button className="close-btn" onClick={handleCloseChat}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div className="mode-options">
+            <div className="mode-option auto-option" onClick={() => handleModeSelect('auto')}>
+              <div className="mode-header">
+                <div className="mode-icon auto-icon">
+                  <i className="fas fa-bolt"></i>
+                </div>
+                <div className="mode-badge">Nhanh chóng</div>
+              </div>
+              <div className="mode-content">
+                <h4>Hỗ trợ tự động</h4>
+                <p>Giải đáp tức thì các câu hỏi phổ biến</p>
+                <div className="mode-features">
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Phản hồi ngay lập tức</span>
+                  </div>
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Hoạt động 24/7</span>
+                  </div>
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Hướng dẫn từng bước</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              className={`mode-option live-option ${!isLoggedIn ? 'disabled' : ''}`} 
+              onClick={() => handleModeSelect('live')}
+            >
+              <div className="mode-header">
+                <div className="mode-icon live-icon">
+                  <i className="fas fa-user-tie"></i>
+                </div>
+                <div className="mode-badge">
+                  {isLoggedIn ? 'Chuyên nghiệp' : 'Cần đăng nhập'}
+                </div>
+              </div>
+              <div className="mode-content">
+                <h4>Chat với chuyên viên</h4>
+                <p>
+                  {isLoggedIn 
+                    ? 'Tư vấn trực tiếp từ đội ngũ chuyên gia'
+                    : 'Đăng nhập để chat trực tiếp với nhân viên hỗ trợ'
+                  }
+                </p>
+                {isLoggedIn ? (
+                  <div className="mode-features">
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Tư vấn cá nhân hóa</span>
+                    </div>
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Giải quyết vấn đề phức tạp</span>
+                    </div>
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Hỗ trợ chuyên sâu</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="login-required">
+                    <div className="login-icon">
+                      <i className="fas fa-lock"></i>
+                    </div>
+                    <span>Vui lòng đăng nhập để sử dụng tính năng này</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mode-selector-footer">
+            <p>
+              {isLoggedIn 
+                ? '💡 Bạn có thể chuyển đổi giữa các chế độ bất cứ lúc nào'
+                : '🔐 Đăng nhập để truy cập đầy đủ tính năng hỗ trợ'
+              }
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Chat Window */}
-      {isOpen && (
+      {isOpen && !showModeSelector && (
         <ChatWindow
           conversation={conversation}
-          onClose={handleCloseChat}
           isConnected={isConnected}
+          isLoggedIn={isLoggedIn}
           newIncomingMessage={newIncomingMessage}
-          onNewMessageProcessed={() => setNewIncomingMessage(null)}
           chatMode={chatMode}
-          showModeSelector={showModeSelector}
-          onModeSelection={handleModeSelection}
+          onClose={handleCloseChat}
+          onNewMessage={() => setHasUnreadMessages(false)}
+          onMessageProcessed={() => setNewIncomingMessage(null)}
+          onModeChange={setChatMode}
         />
       )}
     </>

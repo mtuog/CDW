@@ -4,117 +4,180 @@ import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/auth/facebook")
-@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true",
-        allowedHeaders = {"authorization", "content-type", "x-auth-token", "origin", "x-requested-with", "accept"},
-        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
+@RequestMapping("/api/auth")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowedHeaders = "*", allowCredentials = "true")
 public class FacebookAuthController {
+
+    @Value("${facebook.app.id}")
+    private String facebookAppId;
+
+    @Value("${facebook.app.secret}")
+    private String facebookAppSecret;
 
     @Autowired
     private UserService userService;
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private RestTemplate restTemplate;
 
-    @PostMapping("/login")
-    public ResponseEntity<?> facebookLogin(@RequestBody Map<String, String> facebookData) {
-        try {
-            System.out.println("Facebook login attempt with data: " + facebookData);
-            
-            String email = facebookData.get("email");
-            String name = facebookData.get("name");
-            String facebookId = facebookData.get("id");
+    @PostMapping("/facebook")
+    public ResponseEntity<?> facebookLogin(@RequestBody Map<String, String> body) {
+        String accessToken = body.get("accessToken");
+        String userId = body.get("userId");
 
-            if (email == null || email.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
-            }
-
-            // Tìm user theo email
-            Optional<User> existingUser = userService.getUserByEmail(email);
-
-            User user;
-            if (existingUser.isPresent()) {
-                user = existingUser.get();
-                System.out.println("Found existing user: " + user.getUsername());
-            } else {
-                // Tạo user mới với Facebook
-                System.out.println("Creating new Facebook user");
-                user = new User();
-                user.setEmail(email);
-                user.setFullName(name != null ? name : "Facebook User");
-                
-                // Tạo username unique từ email
-                String baseUsername = email.split("@")[0];
-                String username = baseUsername;
-                int counter = 1;
-                while (userService.isUsernameExists(username)) {
-                    username = baseUsername + counter;
-                    counter++;
-                }
-                
-                user.setUsername(username);
-                user.setPassword(""); // Facebook user không cần password
-                user.setVerified(true); // Facebook user được verify tự động
-                user.setCreatedAt(LocalDateTime.now());
-                
-                try {
-                    user = userService.createUserFromSocialLogin(user);
-                    System.out.println("Created new user: " + user.getUsername());
-                } catch (Exception e) {
-                    System.err.println("Error creating user: " + e.getMessage());
-                    return ResponseEntity.status(500).body(Map.of("error", "Failed to create user"));
-                }
-            }
-
-            // Tạo JWT token
-            String token = jwtUtil.generateToken(user);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("user", Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "email", user.getEmail(),
-                "fullName", user.getFullName(),
-                "role", "USER"
+        if (accessToken == null || userId == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "AccessToken and userId are required"
             ));
-            response.put("message", "Facebook login successful");
+        }
 
-            System.out.println("Facebook login successful for user: " + user.getUsername());
-            return ResponseEntity.ok(response);
+        try {
+            System.out.println("Facebook login request received. Token: " + accessToken.substring(0, 10) + "..., UserId: " + userId);
+            
+            // Verify Facebook access token
+            String url = String.format("https://graph.facebook.com/debug_token?input_token=%s&access_token=%s|%s",
+                    accessToken, facebookAppId, facebookAppSecret);
 
+            Map<String, Object> tokenResponse = restTemplate.getForObject(url, Map.class);
+            System.out.println("Token verification response: " + tokenResponse);
+
+            if (tokenResponse != null && tokenResponse.containsKey("data")) {
+                Map<String, Object> data = (Map<String, Object>) tokenResponse.get("data");
+                
+                if (Boolean.TRUE.equals(data.get("is_valid")) && userId.equals(data.get("user_id"))) {
+                    // Get user info from Facebook
+                    String userInfoUrl = String.format("https://graph.facebook.com/v18.0/%s?fields=id,name,email,picture&access_token=%s",
+                            userId, accessToken);
+                    Map<String, Object> userInfo = restTemplate.getForObject(userInfoUrl, Map.class);
+                    System.out.println("User info from Facebook: " + userInfo);
+
+                    if (userInfo != null) {
+                        String email = (String) userInfo.get("email");
+                        String name = (String) userInfo.get("name");
+                        
+                        if (email == null) {
+                            return ResponseEntity.badRequest().body(Map.of(
+                                "success", false,
+                                "message", "Facebook account does not have an associated email"
+                            ));
+                        }
+                        
+                        // Get profile picture URL if available
+                        String pictureUrl = null;
+                        if (userInfo.containsKey("picture")) {
+                            Map<String, Object> picture = (Map<String, Object>) userInfo.get("picture");
+                            Map<String, Object> pictureData = (Map<String, Object>) picture.get("data");
+                            pictureUrl = (String) pictureData.get("url");
+                        }
+
+                        // Check if user exists by email
+                        Optional<User> existingUser = userService.getUserByEmail(email);
+                        User user;
+
+                        if (existingUser.isEmpty()) {
+                            // Create new user
+                            user = new User();
+                            user.setEmail(email);
+                            user.setUsername(email); // Use email as username to avoid duplicates
+                            user.setFullName(name);
+                            
+                            // Generate random password for Facebook users
+                            String randomPassword = UUID.randomUUID().toString();
+                            user.setPassword(passwordEncoder.encode(randomPassword));
+                            
+                            // Set Facebook specific fields if they exist in the User model
+                            try {
+                                user.setAvatar(pictureUrl);
+                                user.setProvider("facebook");
+                                user.setProviderId(userId);
+                            } catch (Exception e) {
+                                System.out.println("Could not set Facebook-specific fields: " + e.getMessage());
+                            }
+                            
+                            // Facebook users are already verified
+                            user.setVerified(true);
+                            user.setCreatedAt(LocalDateTime.now());
+                            
+                            // Create user in database
+                            user = userService.createUserFromSocialLogin(user);
+                            System.out.println("Created new user: " + user.getId() + ", " + user.getUsername());
+                        } else {
+                            user = existingUser.get();
+                            System.out.println("Using existing user: " + user.getId() + ", " + user.getUsername());
+                            
+                            // Đảm bảo user được xác thực
+                            if (!user.isVerified()) {
+                                user.setVerified(true);
+                            }
+
+                            // Update Facebook info if needed
+                            try {
+                                if (pictureUrl != null) {
+                                    user.setAvatar(pictureUrl);
+                                }
+                                user.setProvider("facebook");
+                                user.setProviderId(userId);
+                                userService.updateUser(user.getId(), user);
+                            } catch (Exception e) {
+                                System.out.println("Could not update Facebook-specific fields: " + e.getMessage());
+                            }
+                        }
+
+                        // Generate JWT token
+                        String token = jwtUtil.generateToken(user.getUsername());
+                        System.out.println("Generated token for user: " + user.getUsername());
+
+                        Map<String, Object> responseBody = new HashMap<>();
+                        responseBody.put("success", true);
+                        responseBody.put("token", token);
+                        responseBody.put("user", user);
+
+                        return ResponseEntity.ok(responseBody);
+                    }
+                }
+            }
+
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid Facebook token"
+            ));
         } catch (Exception e) {
-            System.err.println("Facebook login error: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", "Facebook login failed: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Error processing Facebook login: " + e.getMessage()
+            ));
         }
     }
 
-    @GetMapping("/status")
-    public ResponseEntity<?> getFacebookStatus() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("available", true);
-        response.put("message", "Facebook authentication is available");
-        response.put("endpoint", "/api/auth/facebook/login");
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/test")
-    public ResponseEntity<?> testEndpoint(@RequestBody(required = false) Map<String, Object> testData) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "OK");
-        response.put("message", "Facebook auth controller is working");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("receivedData", testData);
-        return ResponseEntity.ok(response);
+    @GetMapping("/facebook")
+    public ResponseEntity<?> facebookLoginInfo() {
+        Map<String, Object> info = new HashMap<>();
+        info.put("status", "API is working");
+        info.put("method", "This is GET method for testing only");
+        info.put("usage", "Please use POST method with 'accessToken' and 'userId' in the request body");
+        info.put("appId", facebookAppId);
+        
+        return ResponseEntity.ok(info);
     }
 } 

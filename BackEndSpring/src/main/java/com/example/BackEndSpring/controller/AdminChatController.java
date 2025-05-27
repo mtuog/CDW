@@ -240,7 +240,24 @@ public class AdminChatController {
         }
     }
     
-
+    /**
+     * Lấy thống kê chat (placeholder cho tương lai)
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getChatStats() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalConversations", 0);
+            stats.put("activeConversations", 0);
+            stats.put("pendingConversations", chatService.getPendingConversationsCount());
+            stats.put("totalMessages", 0);
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.err.println("Error getting chat stats: " + e.getMessage());
+            throw new RuntimeException("Failed to get stats");
+        }
+    }
     
     // Helper method để lấy user ID từ JWT token
     private Long getCurrentUserId(HttpServletRequest request) {
