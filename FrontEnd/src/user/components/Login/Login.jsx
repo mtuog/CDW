@@ -168,12 +168,12 @@ function Login() {
                     console.log('Sending data to backend:', userData);
                     
                     // Check API availability first
-                    axios.get(`http://${BACKEND_URL_HTTP}/api/auth/facebook`)
+                    axios.get(`${BACKEND_URL_HTTP}/api/auth/facebook/status`)
                         .then(checkResponse => {
                             console.log('API check successful:', checkResponse.data);
                             
                             // Send to backend
-                            axios.post(`http://${BACKEND_URL_HTTP}/api/auth/facebook`, userData, {
+                            axios.post(`${BACKEND_URL_HTTP}/api/auth/facebook/login`, userData, {
         headers: {
           'Content-Type': 'application/json',
                                     'Accept': 'application/json'

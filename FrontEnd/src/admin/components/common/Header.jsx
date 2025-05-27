@@ -45,7 +45,11 @@ const Header = ({ toggleSidebar }) => {
     // Lấy số lượng thông báo chưa đọc
     fetchUnreadCount();
     
+<<<<<<< Updated upstream
     // Lấy số lượng chat chờ xử lý
+=======
+    // Lấy số lượng chat pending
+>>>>>>> Stashed changes
     fetchPendingChatCount();
     
     // Thiết lập WebSocket connection để nhận thông báo real-time
@@ -100,9 +104,15 @@ const Header = ({ toggleSidebar }) => {
         return;
       }
       
+<<<<<<< Updated upstream
       console.log('🔍 Fetching pending chat count...');
       const response = await axios.get(
         `${BACKEND_URL_HTTP}/api/admin/chat/conversations/pending/count`,
+=======
+      console.log('💬 Fetching pending chat count...');
+      const response = await axios.get(
+        `${BACKEND_URL_HTTP}/api/admin/chat/pending/count`,
+>>>>>>> Stashed changes
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -111,7 +121,11 @@ const Header = ({ toggleSidebar }) => {
       );
       
       console.log('✅ Pending chat count response:', response.data);
+<<<<<<< Updated upstream
       setPendingChatCount(response.data.count || 0);
+=======
+      setPendingChatCount(response.data || 0);
+>>>>>>> Stashed changes
     } catch (error) {
       console.error('❌ Error fetching pending chat count:', error);
       console.error('❌ Error details:', error.response?.data);
@@ -158,6 +172,7 @@ const Header = ({ toggleSidebar }) => {
           const count = parseInt(message.body);
           setUnreadCount(count);
         });
+<<<<<<< Updated upstream
 
         // Subscribe to chat updates
         client.subscribe('/topic/admin/chat/new-conversation', (message) => {
@@ -167,6 +182,18 @@ const Header = ({ toggleSidebar }) => {
 
         client.subscribe('/topic/admin/chat/conversations-update', (message) => {
           console.log('💬 Chat conversation updated:', message.body);
+=======
+        
+        // Subscribe to chat pending count updates
+        client.subscribe('/topic/admin/chat/new-conversation', (message) => {
+          console.log('💬 New chat conversation, refreshing count...');
+          fetchPendingChatCount();
+        });
+        
+        // Subscribe to chat conversation updates
+        client.subscribe('/topic/admin/chat/conversations-update', (message) => {
+          console.log('💬 Chat conversation updated, refreshing count...');
+>>>>>>> Stashed changes
           fetchPendingChatCount();
         });
       };
@@ -217,6 +244,10 @@ const Header = ({ toggleSidebar }) => {
     navigate('/admin/login');
   };
 
+  const handleChatNavigation = () => {
+    navigate('/admin/chat');
+  };
+
   // Tính toán vị trí dropdown khi mở
   useEffect(() => {
     if (dropdownOpen && avatarBtnRef.current) {
@@ -259,6 +290,7 @@ const Header = ({ toggleSidebar }) => {
               onUnreadCountChange={setUnreadCount}
             />
           </div>
+<<<<<<< Updated upstream
           <Link to="/admin/chat" className="icon-button">
             <i className="fa fa-comments"></i>
             {pendingChatCount > 0 && (
@@ -280,6 +312,17 @@ const Header = ({ toggleSidebar }) => {
             )}
             <span className="user-name">{adminName}</span>
             <i className={`fa fa-chevron-down ${dropdownOpen ? 'rotate' : ''}`}></i>
+=======
+          <button 
+            className="icon-button"
+            onClick={handleChatNavigation}
+            title="Chat Management"
+          >
+            <i className="fa fa-envelope"></i>
+            {pendingChatCount > 0 && (
+              <span className="badge chat-badge">{pendingChatCount > 99 ? '99+' : pendingChatCount}</span>
+            )}
+>>>>>>> Stashed changes
           </button>
           
           {dropdownOpen && createPortal(
@@ -378,6 +421,7 @@ const Header = ({ toggleSidebar }) => {
           position: relative;
           margin-left: 15px;
           cursor: pointer;
+<<<<<<< Updated upstream
           text-decoration: none;
           display: inline-flex;
           align-items: center;
@@ -389,6 +433,17 @@ const Header = ({ toggleSidebar }) => {
         .icon-button:hover {
           background-color: #f8f9fa;
           color: #495057;
+=======
+          padding: 8px;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+        }
+        
+        .icon-button:hover {
+          background-color: #f8f9fa;
+          color: #333;
+          transform: translateY(-1px);
+>>>>>>> Stashed changes
         }
         
         .badge {
@@ -404,6 +459,22 @@ const Header = ({ toggleSidebar }) => {
           display: flex;
           align-items: center;
           justify-content: center;
+          animation: badgePulse 2s infinite;
+        }
+        
+        .chat-badge {
+          background-color: #ffc107;
+          color: #000;
+          font-weight: 600;
+        }
+        
+        @keyframes badgePulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.1);
+          }
         }
         
                 .user-dropdown {

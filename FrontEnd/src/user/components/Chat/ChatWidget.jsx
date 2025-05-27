@@ -15,6 +15,11 @@ const ChatWidget = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [newIncomingMessage, setNewIncomingMessage] = useState(null);
+<<<<<<< Updated upstream
+=======
+  const [chatMode, setChatMode] = useState(null); // 'auto' hoặc 'live'
+  const [showModeSelector, setShowModeSelector] = useState(false);
+>>>>>>> Stashed changes
   const stompClientRef = useRef(null);
 
   // Kiểm tra login status và setup chat connection
@@ -36,6 +41,14 @@ const ChatWidget = () => {
           // User vừa logout
           console.log('🔓 User logged out, cleaning up chat connection...');
           cleanupChatConnection(); // Chỉ cleanup connection, không ẩn widget
+<<<<<<< Updated upstream
+=======
+          
+          // Reset chat mode để hiển thị mode selector khi mở lại
+          setChatMode(null);
+          setShowModeSelector(false);
+          setConversation(null);
+>>>>>>> Stashed changes
         }
       }
     };
@@ -160,6 +173,17 @@ const ChatWidget = () => {
           setNewIncomingMessage(messageData);
         }
         
+<<<<<<< Updated upstream
+=======
+        // FIXED VẤN ĐỀ 1: Kiểm tra nếu là tin nhắn admin assignment để update conversation status
+        if (messageData.isFromAdmin && 
+            messageData.content.includes('đã được kết nối để hỗ trợ')) {
+          console.log('✅ Admin connected - updating conversation status');
+          // Reload conversation để cập nhật status từ PENDING → OPEN
+          checkExistingConversation();
+        }
+        
+>>>>>>> Stashed changes
         // Nếu tin nhắn từ admin và widget đang đóng thì hiển thị notification
         if (messageData.isFromAdmin && !isOpen) {
           setHasUnreadMessages(true);
@@ -168,6 +192,7 @@ const ChatWidget = () => {
       });
 
       // FIXED VẤN ĐỀ 1: Subscribe to conversation status updates
+<<<<<<< Updated upstream
       stompClientRef.current.subscribe('/topic/admin/chat/conversations-update', (message) => {
         console.log('🔔 Received conversation update:', message.body);
         const updatedConversationId = parseInt(message.body);
@@ -176,11 +201,24 @@ const ChatWidget = () => {
         if (conversation && conversation.id === updatedConversationId) {
           console.log('🔄 Current conversation updated, refreshing...');
           refreshConversationData();
+=======
+      stompClientRef.current.subscribe(`/topic/user/${conversationId}/status`, (message) => {
+        console.log('🔔 Conversation status update:', message.body);
+        const statusData = JSON.parse(message.body);
+        
+        // Update local conversation object
+        setConversation(prev => prev ? { ...prev, status: statusData.status } : prev);
+        
+        // If chat is open, conversation will be automatically updated via ChatWindow
+        if (isOpen && newIncomingMessage) {
+          // ChatWindow will handle the status update
+>>>>>>> Stashed changes
         }
       });
     }
   };
 
+<<<<<<< Updated upstream
   const refreshConversationData = async () => {
     try {
       const conversations = await chatService.getUserConversations();
@@ -201,6 +239,8 @@ const ChatWidget = () => {
     }
   };
 
+=======
+>>>>>>> Stashed changes
   const checkExistingConversation = async () => {
     try {
       const conversations = await chatService.getUserConversations();
@@ -227,6 +267,16 @@ const ChatWidget = () => {
   };
 
   const handleOpenChat = async () => {
+<<<<<<< Updated upstream
+=======
+    // Luôn hiển thị mode selector cho user mới hoặc khi chưa có mode
+    if (!chatMode) {
+      setShowModeSelector(true);
+      setIsOpen(true);
+      return;
+    }
+    
+>>>>>>> Stashed changes
     setIsOpen(true);
     setHasUnreadMessages(false);
 
@@ -260,6 +310,53 @@ const ChatWidget = () => {
     }
   };
 
+<<<<<<< Updated upstream
+=======
+  const handleModeSelect = async (selectedMode) => {
+    // Kiểm tra nếu guest user chọn live mode
+    if (selectedMode === 'live' && !isLoggedIn) {
+      showPopup('warning', 'Cần đăng nhập', 
+        'Để chat với nhân viên hỗ trợ, bạn cần đăng nhập. Vui lòng đăng nhập hoặc sử dụng hỗ trợ tự động.');
+      return;
+    }
+
+    setChatMode(selectedMode);
+    setShowModeSelector(false);
+    
+    try {
+      if (selectedMode === 'live' && isLoggedIn) {
+        console.log('🔄 Creating conversation for live chat...');
+        const response = await chatService.createOrGetConversation('Chat trực tiếp với nhân viên');
+        console.log('✅ Live chat conversation created:', response);
+        setConversation(response);
+        
+        if (stompClientRef.current && isConnected) {
+          subscribeToConversation(response.id);
+        }
+      } else if (selectedMode === 'auto') {
+        // Auto mode cho cả logged in và guest user
+        console.log('🔄 Creating conversation for auto chat...');
+        const conversationTitle = isLoggedIn ? 'Hỗ trợ tự động' : 'Hỗ trợ tự động (Khách)';
+        const response = await chatService.createOrGetConversation(conversationTitle);
+        console.log('✅ Auto chat conversation created:', response);
+        setConversation(response);
+        
+        if (stompClientRef.current && isConnected && isLoggedIn) {
+          subscribeToConversation(response.id);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error creating conversation:', error);
+      showPopup('error', 'Lỗi', 'Không thể tạo cuộc hội thoại. Vui lòng thử lại.');
+    }
+  };
+
+  const showPopup = (type, title, message) => {
+    // Simple popup implementation for error handling
+    alert(`${title}: ${message}`);
+  };
+
+>>>>>>> Stashed changes
   const handleCloseChat = () => {
     setIsOpen(false);
   };
@@ -307,16 +404,128 @@ const ChatWidget = () => {
         </div>
       )}
 
+<<<<<<< Updated upstream
       {/* Chat Window */}
       {isOpen && (
+=======
+      {/* Chat Mode Selector */}
+      {isOpen && showModeSelector && (
+        <div className="chat-mode-selector">
+          <div className="mode-selector-header">
+            <div className="header-content">
+              <h3>Chọn cách bạn muốn được hỗ trợ</h3>
+              <p>Chúng tôi có 2 cách để giúp bạn giải quyết vấn đề</p>
+            </div>
+            <button className="close-btn" onClick={handleCloseChat}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div className="mode-options">
+            <div className="mode-option auto-option" onClick={() => handleModeSelect('auto')}>
+              <div className="mode-header">
+                <div className="mode-icon auto-icon">
+                  <i className="fas fa-bolt"></i>
+                </div>
+                <div className="mode-badge">Nhanh chóng</div>
+              </div>
+              <div className="mode-content">
+                <h4>Hỗ trợ tự động</h4>
+                <p>Giải đáp tức thì các câu hỏi phổ biến</p>
+                <div className="mode-features">
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Phản hồi ngay lập tức</span>
+                  </div>
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Hoạt động 24/7</span>
+                  </div>
+                  <div className="feature-item">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Hướng dẫn từng bước</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              className={`mode-option live-option ${!isLoggedIn ? 'disabled' : ''}`} 
+              onClick={() => handleModeSelect('live')}
+            >
+              <div className="mode-header">
+                <div className="mode-icon live-icon">
+                  <i className="fas fa-user-tie"></i>
+                </div>
+                <div className="mode-badge">
+                  {isLoggedIn ? 'Chuyên nghiệp' : 'Cần đăng nhập'}
+                </div>
+              </div>
+              <div className="mode-content">
+                <h4>Chat với chuyên viên</h4>
+                <p>
+                  {isLoggedIn 
+                    ? 'Tư vấn trực tiếp từ đội ngũ chuyên gia'
+                    : 'Đăng nhập để chat trực tiếp với nhân viên hỗ trợ'
+                  }
+                </p>
+                {isLoggedIn ? (
+                  <div className="mode-features">
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Tư vấn cá nhân hóa</span>
+                    </div>
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Giải quyết vấn đề phức tạp</span>
+                    </div>
+                    <div className="feature-item">
+                      <i className="fas fa-check-circle"></i>
+                      <span>Hỗ trợ chuyên sâu</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="login-required">
+                    <div className="login-icon">
+                      <i className="fas fa-lock"></i>
+                    </div>
+                    <span>Vui lòng đăng nhập để sử dụng tính năng này</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mode-selector-footer">
+            <p>
+              {isLoggedIn 
+                ? '💡 Bạn có thể chuyển đổi giữa các chế độ bất cứ lúc nào'
+                : '🔐 Đăng nhập để truy cập đầy đủ tính năng hỗ trợ'
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && !showModeSelector && (
+>>>>>>> Stashed changes
         <ChatWindow
           conversation={conversation}
           isConnected={isConnected}
           isLoggedIn={isLoggedIn}
           newIncomingMessage={newIncomingMessage}
+<<<<<<< Updated upstream
           onClose={handleCloseChat}
           onNewMessage={() => setHasUnreadMessages(false)}
           onMessageProcessed={() => setNewIncomingMessage(null)}
+=======
+          chatMode={chatMode}
+          onClose={handleCloseChat}
+          onNewMessage={() => setHasUnreadMessages(false)}
+          onMessageProcessed={() => setNewIncomingMessage(null)}
+          onModeChange={setChatMode}
+>>>>>>> Stashed changes
         />
       )}
     </>
