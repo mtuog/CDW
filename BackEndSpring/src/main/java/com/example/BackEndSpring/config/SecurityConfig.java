@@ -46,6 +46,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/test-email/**").permitAll()
                 .requestMatchers("/api/payment-settings").permitAll() // Cho phép truy cập API settings công khai
                 .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                // WebSocket endpoints - cho phép truy cập
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/api/chat/**").authenticated() // Chat endpoints cần authentication
                 // Admin endpoints - yêu cầu vai trò ADMIN
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Protected endpoints - yêu cầu xác thực

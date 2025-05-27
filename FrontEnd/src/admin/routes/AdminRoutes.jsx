@@ -19,9 +19,10 @@ import DiscountList from '../pages/discount';
 import AddDiscount from '../pages/discount/add';
 import EditDiscount from '../pages/discount/edit';
 import LoyaltyManagement from '../pages/loyalty/LoyaltyManagement';
-import NotificationPage from '../pages/NotificationPage';
+import { NotificationPage } from '../pages/notifications';
 import AdminAccount from '../pages/account/AdminAccount';
-import AdminManagement from '../pages/AdminManagement';
+import AdminManagement from '../pages/account/AdminManagement';
+import { ChatManagement } from '../pages/chat';
 
 const AdminRoutes = () => {
   return (
@@ -143,6 +144,13 @@ const AdminRoutes = () => {
       <Route path="notifications" element={
         <PrivateRoute>
           <NotificationPage />
+        </PrivateRoute>
+      } />
+      
+      {/* Chat Management */}
+      <Route path="chat" element={
+        <PrivateRoute>
+          <ChatManagement />
         </PrivateRoute>
       } />
       

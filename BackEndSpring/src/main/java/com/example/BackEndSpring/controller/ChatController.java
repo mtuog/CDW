@@ -1,0 +1,190 @@
+package com.example.BackEndSpring.controller;
+
+import com.example.BackEndSpring.dto.ChatConversationDTO;
+import com.example.BackEndSpring.dto.ChatMessageDTO;
+import com.example.BackEndSpring.service.ChatService;
+import com.example.BackEndSpring.util.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/chat")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true")
+public class ChatController {
+    
+    @Autowired
+    private ChatService chatService;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
+    
+    /**
+     * Tạo cuộc hội thoại mới hoặc lấy cuộc hội thoại hiện có
+     */
+    @PostMapping("/conversations")
+    public ResponseEntity<ChatConversationDTO> createOrGetConversation(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        try {
+            Long userId = getCurrentUserId(httpRequest);
+            String subject = request.get("subject");
+            
+            ChatConversationDTO conversation = chatService.createOrGetConversation(userId, subject);
+            return ResponseEntity.ok(conversation);
+        } catch (Exception e) {
+            System.err.println("Error creating conversation: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create conversation");
+        }
+    }
+    
+    /**
+     * Lấy conversation ACTIVE của user hiện tại (Live Support)
+     */
+    @GetMapping("/conversations/active")
+    public ResponseEntity<ChatConversationDTO> getUserActiveConversation(HttpServletRequest httpRequest) {
+        try {
+            Long userId = getCurrentUserId(httpRequest);
+            ChatConversationDTO conversation = chatService.getUserActiveConversation(userId);
+            
+            if (conversation != null) {
+                return ResponseEntity.ok(conversation);
+            } else {
+                return ResponseEntity.noContent().build();
+            }
+        } catch (Exception e) {
+            System.err.println("Error getting user active conversation: " + e.getMessage());
+            throw new RuntimeException("Failed to get active conversation");
+        }
+    }
+    
+    /**
+     * Lấy tin nhắn trong cuộc hội thoại
+     */
+    @GetMapping("/conversations/{conversationId}/messages")
+    public ResponseEntity<List<ChatMessageDTO>> getConversationMessages(
+            @PathVariable Long conversationId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            List<ChatMessageDTO> messages = chatService.getConversationMessages(conversationId, page, size);
+            return ResponseEntity.ok(messages);
+        } catch (Exception e) {
+            System.err.println("Error getting conversation messages: " + e.getMessage());
+            throw new RuntimeException("Failed to get messages");
+        }
+    }
+    
+    /**
+     * Gửi tin nhắn
+     */
+    @PostMapping("/conversations/{conversationId}/messages")
+    public ResponseEntity<ChatMessageDTO> sendMessage(
+            @PathVariable Long conversationId,
+            @RequestBody Map<String, String> request,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = getCurrentUserId(httpRequest);
+            String content = request.get("content");
+            
+            if (content == null || content.trim().isEmpty()) {
+                throw new RuntimeException("Message content cannot be empty");
+            }
+            
+            ChatMessageDTO message = chatService.sendMessage(conversationId, userId, content);
+            return ResponseEntity.ok(message);
+        } catch (Exception e) {
+            System.err.println("Error sending message: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to send message");
+        }
+    }
+    
+    /**
+     * Đánh dấu tin nhắn đã đọc
+     */
+    @PutMapping("/conversations/{conversationId}/read")
+    public ResponseEntity<Map<String, String>> markMessagesAsRead(@PathVariable Long conversationId, HttpServletRequest httpRequest) {
+        try {
+            Long userId = getCurrentUserId(httpRequest);
+            chatService.markMessagesAsRead(conversationId, userId);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Messages marked as read");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error marking messages as read: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to mark messages as read");
+        }
+    }
+    
+    /**
+     * Lấy thông tin chi tiết cuộc hội thoại
+     */
+    @GetMapping("/conversations/{conversationId}")
+    public ResponseEntity<ChatConversationDTO> getConversationById(@PathVariable Long conversationId) {
+        try {
+            // Tạm thời return empty - sẽ implement sau
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Get conversation detail - to be implemented");
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println("Error getting conversation: " + e.getMessage());
+            throw new RuntimeException("Failed to get conversation");
+        }
+    }
+    
+    /**
+     * User đóng conversation (logout hoặc đóng tab)
+     */
+    @PutMapping("/conversations/{conversationId}/close")
+    public ResponseEntity<Map<String, String>> closeConversation(
+            @PathVariable Long conversationId,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = getCurrentUserId(httpRequest);
+            chatService.closeConversationByUser(conversationId, userId);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Conversation closed");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error closing conversation: " + e.getMessage());
+            throw new RuntimeException("Failed to close conversation");
+        }
+    }
+    
+    // Helper method để lấy user ID từ JWT token
+    private Long getCurrentUserId(HttpServletRequest request) {
+        try {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                throw new RuntimeException("No JWT token found");
+            }
+            
+            String jwt = authHeader.substring(7);
+            Object userIdObj = jwtUtil.extractAllClaims(jwt).get("id");
+            
+            if (userIdObj == null) {
+                throw new RuntimeException("User ID not found in token");
+            }
+            
+            // Convert to Long (có thể là Integer hoặc Long)
+            if (userIdObj instanceof Number) {
+                return ((Number) userIdObj).longValue();
+            }
+            
+            throw new RuntimeException("Invalid user ID format in token");
+        } catch (Exception e) {
+            System.err.println("Error extracting user ID: " + e.getMessage());
+            throw new RuntimeException("Failed to get user ID: " + e.getMessage());
+        }
+    }
+} 

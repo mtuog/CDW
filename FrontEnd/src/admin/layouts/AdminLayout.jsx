@@ -23,6 +23,7 @@ const sidebarLinks = [
   { to: '/admin/customers', icon: 'fas fa-users', text: 'Khách hàng' },
   { to: '/admin/discount', icon: 'fas fa-percent', text: 'Mã giảm giá' },
   { to: '/admin/loyalty', icon: 'fas fa-award', text: 'Tích điểm' },
+  { to: '/admin/chat', icon: 'fas fa-comments', text: 'Chat hỗ trợ' },
   { to: '/admin/notifications', icon: 'fas fa-bell', text: 'Thông báo' },
   { to: '/admin/settings/payment', icon: 'fas fa-credit-card', text: 'Thanh toán' },
   {

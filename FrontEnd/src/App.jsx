@@ -28,6 +28,7 @@ import CreditCardPayment from './user/components/Payment/CreditCardPayment';
 import PaymentResult from './user/components/Payment/PaymentResult';
 import OrderSuccess from './user/components/Payment/OrderSuccess';
 import UserOrderDetail from './user/components/Profile/tabs/OrderDetail';
+import ChatWidget from './user/components/Chat/ChatWidget';
 
 const Layout = () => {
     return (
@@ -35,6 +36,7 @@ const Layout = () => {
             <Header />
             <Outlet />
             <Footer />
+            <ChatWidget />
         </div>
     );
 }

@@ -2,7 +2,9 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\WebCo
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\DiscountCode.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\ProductSize.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\PaymentMethod.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\ChatConversation.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\security\CustomUserDetailsService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\dto\ChatConversationDTO.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\CategoryController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\LoyaltyController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\WishlistService.java
@@ -12,6 +14,8 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\ServletIniti
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\GlobalExceptionHandler.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\OrderItemRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\SettingService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\CorsConfig.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\WebSocketEventListener.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\ReviewController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\OrderService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\PasswordResetRequest.java
@@ -19,11 +23,14 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\BankAc
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\NotificationService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\config\OpenApiConfig.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\util\JwtUtil.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ChatMessageRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\dto\WishlistDTO.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\AdminController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\VietQRService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\DiscountCodeController.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\ChatController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\BankPaymentService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\ChatService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Review.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Role.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\security\JwtAuthenticationFilter.java
@@ -36,6 +43,7 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Change
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\User.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\VerifyAccountRequest.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\CategoryService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\AdminChatController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\BankPaymentRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\AddressBookController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\LoyaltyTransaction.java
@@ -51,6 +59,7 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\U
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\AddressBookRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Notification.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\SettingRepository.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\dto\ChatMessageDTO.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\LoyaltyTransactionRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\ProductSizeController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\PaymentLogRepository.java
@@ -85,6 +94,7 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\OrderI
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\BankPaymentDTO.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\exception\ResourceNotFoundException.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\Wishlist.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\ChatConversationRepository.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\NotificationController.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\ResendVerificationRequest.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\OrderDTO.java
@@ -104,4 +114,5 @@ E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\repository\N
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\AuthResponse.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\ProductSizeService.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\service\DiscountCodeService.java
+E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\model\ChatMessage.java
 E:\GitHub\CDW\BackEndSpring\src\main\java\com\example\BackEndSpring\controller\PaymentSettingsController.java
