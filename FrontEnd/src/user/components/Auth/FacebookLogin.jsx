@@ -48,7 +48,8 @@ const FacebookLogin = ({ onLoginSuccess }) => {
           };
           
           // Send to backend
-          fetch(`https://localhost:8080}/api/auth/facebook/login`, {
+          // fetch(`https://localhost:8080}/api/auth/facebook/login`, {
+          fetch(`${BACKEND_URL_HTTP}/api/auth/facebook/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

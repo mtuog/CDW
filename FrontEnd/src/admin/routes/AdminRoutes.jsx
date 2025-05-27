@@ -19,15 +19,9 @@ import DiscountList from '../pages/discount';
 import AddDiscount from '../pages/discount/add';
 import EditDiscount from '../pages/discount/edit';
 import LoyaltyManagement from '../pages/loyalty/LoyaltyManagement';
-<<<<<<< Updated upstream
-import NotificationPage from '../pages/NotificationPage';
-import AdminAccount from '../pages/account/AdminAccount';
-import AdminManagement from '../pages/AdminManagement';
-=======
 import NotificationPage from '../pages/notifications/NotificationPage';
 import AdminAccount from '../pages/account/AdminAccount';
 import ChatManagement from '../pages/chat/ChatManagement';
->>>>>>> Stashed changes
 
 const AdminRoutes = () => {
   return (
@@ -159,6 +153,12 @@ const AdminRoutes = () => {
         </PrivateRoute>
       } />
       
+      {/* Chat Management */}
+      <Route path="chat" element={
+        <PrivateRoute>
+          <ChatManagement />
+        </PrivateRoute>
+      } />
 
     </Routes>
   );
