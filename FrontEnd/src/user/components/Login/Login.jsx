@@ -7,7 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import '../css/login.css';
 import '../css/Loading.css';
-import { BACKEND_URL_HTTP } from '../../../config';
+import {BACKEND_URL_HTTP, BACKEND_URL_HTTPS} from '../../../config';
 import imgHolder from '../img/login-holder.jpg';
 import Swal from 'sweetalert2';
 import authService from '../../../services/authService';
@@ -28,7 +28,7 @@ function Login() {
         onSuccess: async (tokenResponse) => {
             try {
                 setIsLoading(true);
-                
+
                 // 1. Lấy thông tin từ Google API
                 const userInfo = await axios.get(
                     'https://www.googleapis.com/oauth2/v3/userinfo',
@@ -37,11 +37,11 @@ function Login() {
 
                 const { email, name, picture } = userInfo.data;
                 console.log("Google login info:", email, name, picture);
-                
+
 
                 // 2. Gửi thông tin đến backend thông qua authService
                 const response = await authService.loginWithGoogle(tokenResponse.access_token, userInfo.data);
-                
+
                 // 3. Xử lý phản hồi
                 Swal.fire({
                     title: 'Đăng nhập Google thành công!',
@@ -51,21 +51,21 @@ function Login() {
                 }).then(() => {
                     navigate('/');
                 });
-                
+
                 // 3. Xử lý phản hồi từ backend
                 if (response.status === 200) {
                     const { token, refreshToken, userId, userName, userRole } = response.data;
-                    
+
                     // Lưu thông tin vào localStorage
                     localStorage.setItem('token', token);
                     localStorage.setItem('refreshToken', refreshToken);
                     localStorage.setItem('userId', userId);
                     localStorage.setItem('userName', userName);
                     localStorage.setItem('userRole', userRole);
-                    
+
                     // Trigger event để cập nhật header
                     window.dispatchEvent(new Event('auth-change'));
-                    
+
                     // Thông báo thành công và chuyển hướng
                     Swal.fire({
                         title: 'Đăng nhập Google thành công!',
@@ -78,7 +78,7 @@ function Login() {
                 }
             } catch (error) {
                 console.error("Google login error:", error);
-                
+
                 // Hiển thị thông báo lỗi
                 Swal.fire({
                     title: 'Đăng nhập Google thất bại!',
@@ -100,7 +100,7 @@ function Login() {
             });
         }
     });
-    
+
     // Facebook SDK initialization
     useEffect(() => {
         // Load Facebook SDK
@@ -122,7 +122,7 @@ function Login() {
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
     }, []);
-    
+
     // Facebook login function
     const handleFacebookLogin = () => {
         if (!window.FB) {
@@ -135,16 +135,16 @@ function Login() {
             });
             return;
         }
-        
+
         setIsLoading(true);
-        
+
         window.FB.login(function(response) {
             if (response.authResponse) {
                 console.log('Facebook login successful:', response);
                 // Get user info
                 window.FB.api('/me', { fields: 'id,name,email,picture' }, function(userInfo) {
                     console.log('Facebook user info:', userInfo);
-                    
+
                     // Check if email is returned
                     if (!userInfo.email) {
                         setIsLoading(false);
@@ -156,7 +156,7 @@ function Login() {
                         });
                         return;
                     }
-                    
+
                     const userData = {
                         accessToken: response.authResponse.accessToken,
                         userId: response.authResponse.userID,
@@ -164,78 +164,61 @@ function Login() {
                         name: userInfo.name,
                         picture: userInfo.picture?.data?.url
                     };
-                    
+
                     console.log('Sending data to backend:', userData);
-                    
-                    // Check API availability first
-                    axios.get(`http://${BACKEND_URL_HTTP}/api/auth/facebook`)
-                        .then(checkResponse => {
-                            console.log('API check successful:', checkResponse.data);
-                            
-                            // Send to backend
-                            axios.post(`http://${BACKEND_URL_HTTP}/api/auth/facebook`, userData, {
-        headers: {
-          'Content-Type': 'application/json',
-                                    'Accept': 'application/json'
-                                },
-                                withCredentials: true
-                            })
-                            .then(response => {
-                                console.log('Backend response:', response.data);
-                                setIsLoading(false);
-                                
-                                if (response.data.token) {
-                                    // Save authentication data
-                                    localStorage.setItem('token', response.data.token);
-                                    localStorage.setItem('userId', response.data.user.id);
-                                    localStorage.setItem('userName', response.data.user.username);
-                                    localStorage.setItem('userRole', response.data.user.role);
-                                    
-                                    // Trigger event để cập nhật header
-                                    window.dispatchEvent(new Event('auth-change'));
-                                    
-                                    // Show success message and redirect
-                                    Swal.fire({
-                                        title: 'Đăng nhập Facebook thành công!',
-                                        icon: 'success',
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    }).then(() => {
-                                        navigate('/');
-                                    });
-          } else {
-                                    Swal.fire({
-                                        title: 'Đăng nhập thất bại',
-                                        text: response.data.message || 'Có lỗi xảy ra khi đăng nhập',
-                                        icon: 'error',
-                                        confirmButtonColor: "#3085d6",
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error during Facebook login:', error);
-                                console.error('Error details:', error.response?.data || error.message);
-                                setIsLoading(false);
-                                
-                                Swal.fire({
-                                    title: 'Đăng nhập thất bại',
-                                    text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
-                                    icon: 'error',
-                                    confirmButtonColor: "#3085d6",
-                                });
-                            });
-                        })
-                        .catch(checkError => {
-                            console.error('API check failed:', checkError);
-                            setIsLoading(false);
-                            
+
+                    // Send to backend using consistent HTTP URL
+                    axios.post(`${BACKEND_URL_HTTP}/api/auth/facebook`, userData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        withCredentials: true
+                    })
+                    .then(response => {
+                        console.log('Backend response:', response.data);
+                        setIsLoading(false);
+
+                        if (response.data.token) {
+                            // Save authentication data
+                            localStorage.setItem('token', response.data.token);
+                            localStorage.setItem('userId', response.data.user.id);
+                            localStorage.setItem('userName', response.data.user.username);
+                            localStorage.setItem('userRole', response.data.user.role);
+
+                            // Trigger event để cập nhật header
+                            window.dispatchEvent(new Event('auth-change'));
+
+                            // Show success message and redirect
                             Swal.fire({
-                                title: 'Lỗi kết nối API',
-                                text: 'Không thể kết nối đến máy chủ xác thực, vui lòng thử lại sau.',
+                                title: 'Đăng nhập Facebook thành công!',
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                navigate('/');
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Đăng nhập thất bại',
+                                text: response.data.message || 'Có lỗi xảy ra khi đăng nhập',
                                 icon: 'error',
                                 confirmButtonColor: "#3085d6",
                             });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during Facebook login:', error);
+                        console.error('Error details:', error.response?.data || error.message);
+                        setIsLoading(false);
+
+                        Swal.fire({
+                            title: 'Đăng nhập thất bại',
+                            text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
+                            icon: 'error',
+                            confirmButtonColor: "#3085d6",
                         });
+                    });
                 });
             } else {
                 setIsLoading(false);
@@ -243,10 +226,10 @@ function Login() {
             }
         }, { scope: 'public_profile,email' });
     };
-    
+
     const loginHandler = async (e) => {
         e.preventDefault();
-        
+
         if (email.length === 0 || password.length === 0) {
             Swal.fire({
                 title: 'Please fill in all fields',
@@ -266,15 +249,15 @@ function Login() {
         }
 
         setIsLoading(true);
-        
+
         try {
-            const response = await axios.post(`http://${BACKEND_URL_HTTP}/api/UserServices/login`, {
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/UserServices/login`, {
                 email: email,
                 password: password
             });
-            
+
             setIsLoading(false);
-            
+
             if (response.status === 200) {
                 const { token, refreshToken, userId, userName, userRole } = response.data;
                 localStorage.setItem('token', token);
@@ -282,10 +265,10 @@ function Login() {
                 localStorage.setItem('userId', userId);
                 localStorage.setItem('userName', userName);
                 localStorage.setItem('userRole', userRole);
-                
+
                 // Trigger event để cập nhật header
                 window.dispatchEvent(new Event('auth-change'));
-                
+
                 Swal.fire({
                     title: 'Login successful!',
                     icon: 'success',
@@ -297,7 +280,7 @@ function Login() {
             }
         } catch (error) {
             setIsLoading(false);
-            
+
             if (error.response?.status === 400 && error.response?.data?.message === "Tài khoản của bạn chưa được xác minh") {
                 Swal.fire({
                     title: 'Account not verified',
@@ -324,7 +307,7 @@ function Login() {
             }
         }
     };
-  
+
     return (
         <div className="background-image">
             <div className='overlay'>

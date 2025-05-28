@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config';
-import { getAllOrders, updateOrderStatus, getOrderById } from '../../../api/orderApi';
+import { getAllOrders, updateOrderStatus as updateOrderStatusAPI, getOrderById } from '../../../api/orderApi';
 import Pagination from '../../../user/components/Pagination/Pagination';
 
 const OrderList = () => {
@@ -65,28 +65,50 @@ const OrderList = () => {
       });
       
       console.log("Orders API response:", response);
+      console.log("Response.orders:", response.orders);
+      console.log("Response.orders type:", typeof response.orders);
+      console.log("Response.orders length:", response.orders?.length);
       
       // Kiểm tra có đúng cấu trúc dữ liệu không
-      if (response && response.orders) {
-        const formattedOrders = response.orders.map(order => {
+      let ordersData = [];
+      
+      // Handle different response structures
+      if (response && response.orders && Array.isArray(response.orders)) {
+        ordersData = response.orders;
+      } else if (response && Array.isArray(response)) {
+        // In case API returns array directly
+        ordersData = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        // In case there's nested data property
+        ordersData = response.data;
+      } else {
+        console.error("Invalid response structure:", response);
+        toast.error("Dữ liệu không đúng định dạng");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Orders data to process:", ordersData);
+      
+      if (ordersData.length > 0) {
+        const formattedOrders = ordersData.map(order => {
           console.log("Processing order:", order);
           
           return {
             id: order.id,
             orderCode: order.orderCode || `ORD-${order.id}`,
-            customer: order.user ? order.user.username : 'Khách vãng lai',
-            email: order.user ? order.user.email : 'N/A',
-
-            phone: order.phone || (order.user ? order.user.phone : 'N/A'),
+            customer: order.user?.username || 'Khách vãng lai',
+            email: order.user?.email || 'N/A',
+            phone: order.phone || order.user?.phone || 'N/A',
             date: order.createdAt, // Giữ nguyên để format sau
-            amount: order.totalAmount,
-            subtotalAmount: order.subtotalAmount,
-            discountCodeValue: order.discountCodeValue,
-            discountCodeId: order.discountCodeId,
+            amount: order.totalAmount || 0,
+            subtotalAmount: order.subtotalAmount || 0,
+            discountCodeValue: order.discountCodeValue || 0,
+            discountCodeId: order.discountCodeId || null,
             items: order.orderItems ? order.orderItems.length : 0,
-            payment_method: order.paymentMethod,
-            status: order.status,
-            statusVi: statusTranslations[order.status] || order.status,
+            payment_method: order.paymentMethod || 'N/A',
+            status: order.status || 'PENDING',
+            statusVi: statusTranslations[order.status] || order.status || 'PENDING',
             createdAt: new Date(order.createdAt) // Add createdAt for sorting
           };
         });
@@ -102,8 +124,12 @@ const OrderList = () => {
           totalItems: formattedOrders.length
         }));
       } else {
-        console.error("Invalid response structure:", response);
-        toast.error("Dữ liệu không đúng định dạng");
+        console.log("No orders found");
+        setAllOrders([]);
+        setPagination(prev => ({
+          ...prev,
+          totalItems: 0
+        }));
       }
       
       setLoading(false);
@@ -120,12 +146,12 @@ const OrderList = () => {
     
     // Apply filters
     let filteredResult = allOrders.filter(order => {
-      // Filter by search term (case insensitive)
+      // Filter by search term (case insensitive) - Add null checks
       const matchesSearch = searchTerm === '' || 
-                           order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.phone.toLowerCase().includes(searchTerm.toLowerCase());
+                           (order.orderCode && order.orderCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           (order.customer && order.customer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           (order.email && order.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           (order.phone && order.phone.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filter by status
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -318,7 +344,7 @@ const OrderList = () => {
       console.log(`Updating order ${orderId} from status ${oldStatus} to ${newStatus}`);
       
       // Gọi API cập nhật trạng thái đơn hàng từ orderApi
-      const updatedOrder = await updateOrderStatus(orderId, newStatus);
+      const updatedOrder = await updateOrderStatusAPI(orderId, newStatus);
       console.log("Updated order response:", updatedOrder);
       
       // Cập nhật trạng thái đơn hàng trong danh sách
@@ -333,7 +359,20 @@ const OrderList = () => {
         return order;
       });
       
+      // Cập nhật cả allOrders để giữ state khi filter
+      const updatedAllOrders = allOrders.map(order => {
+        if (order.id === orderId) {
+          return {
+            ...order,
+            status: newStatus,
+            statusVi: statusTranslations[newStatus] || newStatus
+          };
+        }
+        return order;
+      });
+      
       setOrders(updatedOrders);
+      setAllOrders(updatedAllOrders);
       
       // Hiển thị thông báo thành công với thông tin về tồn kho
       if (newStatus === 'CANCELLED') {

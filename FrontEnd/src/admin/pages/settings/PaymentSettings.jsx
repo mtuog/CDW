@@ -4,10 +4,12 @@ import axios from 'axios';
 import { Tabs, Tab, Badge, Table, Button, Modal, Form, Row, Col } from 'react-bootstrap';
 import { getPaymentSettings, updatePaymentSettings } from '../../../api/settingApi';
 import authApi from '../../../api/authApi';
+import paymentSettingsApi from '../../../api/paymentSettingsApi';
 
 const PaymentSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState(null);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [uploadingQR, setUploadingQR] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -109,7 +111,7 @@ const PaymentSettings = () => {
         
         // Gọi API để lấy cài đặt thanh toán
         try {
-          // Check for admin authentication
+          // Check authentication first
           const token = authApi.getToken();
           
           if (!token) {
@@ -118,13 +120,7 @@ const PaymentSettings = () => {
             return;
           }
           
-          const response = await axios.get('http://localhost:8080/api/payment-settings', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          const settings = response.data;
+          const settings = await paymentSettingsApi.getSettings();
           console.log('Đã tải cài đặt thanh toán từ API:', settings);
           
           // Cập nhật state từ dữ liệu API
@@ -514,17 +510,77 @@ const PaymentSettings = () => {
   // Thêm hàm kiểm tra token
   const checkToken = async () => {
     try {
-      const { authenticated } = await authApi.checkAuth();
+      console.log('🔍 Checking authentication...');
       
-      if (!authenticated) {
-        toast.error('Chưa đăng nhập. Vui lòng đăng nhập với tài khoản admin.');
+      // Kiểm tra token và role admin từ localStorage
+      const token = authApi.getToken();
+      const isAdmin = authApi.isAdmin();
+      
+      console.log('Token exists:', !!token);
+      console.log('Is admin role:', isAdmin);
+      
+      if (!token || !isAdmin) {
+        console.warn('❌ No token or not admin role');
+        setAlert({
+          type: 'error',
+          message: 'Bạn cần đăng nhập với tài khoản admin để thực hiện thao tác này.'
+        });
         return false;
       }
       
-      return true;
+      // Thực sự kiểm tra token với server bằng cách gọi một API
+      try {
+        console.log('🔐 Verifying token with server...');
+        
+        const response = await fetch('http://localhost:8080/api/admin/payment-settings', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        console.log('Token verification response status:', response.status);
+        
+        if (response.status === 401 || response.status === 403) {
+          console.warn('❌ Token is invalid or expired');
+          setAlert({
+            type: 'error',
+            message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+          });
+          
+          // Clear invalid token
+          authApi.logout();
+          return false;
+        }
+        
+        if (!response.ok) {
+          console.warn('❌ Server error during token verification:', response.status);
+          setAlert({
+            type: 'error',
+            message: `Lỗi server (${response.status}). Vui lòng thử lại sau.`
+          });
+          return false;
+        }
+        
+        console.log('✅ Token verification successful');
+        return true;
+        
+      } catch (fetchError) {
+        console.error('❌ Network error during token verification:', fetchError);
+        setAlert({
+          type: 'error',
+          message: 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.'
+        });
+        return false;
+      }
+      
     } catch (error) {
-      console.error('Lỗi kiểm tra token:', error);
-      toast.error('Lỗi xác thực. Vui lòng đăng nhập lại.');
+      console.error('❌ Error in checkToken:', error);
+      setAlert({
+        type: 'error',
+        message: 'Lỗi xác thực. Vui lòng đăng nhập lại.'
+      });
       return false;
     }
   };
@@ -534,66 +590,110 @@ const PaymentSettings = () => {
     setSaving(true);
     
     try {
-      // Kiểm tra token
+      console.log('🚀 Starting payment settings save process...');
+      
+      // Check if user is authenticated and has admin role
       const isTokenValid = await checkToken();
       if (!isTokenValid) {
-        toast.error('Vui lòng đăng nhập lại để tiếp tục.');
-        setSaving(false);
+        console.warn('❌ Token validation failed, aborting save');
         return;
       }
       
+      console.log('✅ Token validation passed, proceeding with save...');
+      
       // Lấy token từ localStorage
       const token = authApi.getToken();
+      console.log('Token for API call:', token ? `${token.substring(0, 20)}...` : 'null');
       
-      // Chuẩn bị dữ liệu để gửi lên server
-      const settingsData = {
-        paymentMethods,
+      // Chuẩn bị dữ liệu paymentMethods với cấu trúc chính xác
+      const formattedPaymentMethods = paymentMethods.map(method => ({
+        id: method.id,
+        name: method.name,
+        enabled: method.enabled,
+        description: method.description || '',
+        fee: method.fee || 0,
+        icon: method.icon || '',
+        position: method.position || 1
+      }));
+
+      const formData = {
         defaultPaymentMethod: generalSettings.defaultPaymentMethod,
         showPaymentIcons: generalSettings.showPaymentIcons,
         enablePaymentFees: generalSettings.enablePaymentFees,
         orderConfirmationRequired: generalSettings.orderConfirmationRequired,
-        pendingOrderTimeout: generalSettings.pendingOrderTimeout,
-        
-        // Cài đặt VNPAY
-        creditCardProvider: 'VNPAY',
-        publicKey: creditCardSettings.publicKey || 'TX30V45K',
-        secretKey: creditCardSettings.secretKey || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-        vnpTmnCode: creditCardSettings.vnpTmnCode || 'TX30V45K',
-        vnpHashSecret: creditCardSettings.vnpHashSecret || 'Y8WNT38V7MHWL0NZNRHYMTUCBDAELILN',
-        vnpPayUrl: creditCardSettings.vnpPayUrl || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-        vnpReturnUrl: creditCardSettings.vnpReturnUrl || 'http://localhost:3000/payment/vnpay-return',
-        vnpApiUrl: creditCardSettings.vnpApiUrl || 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
+        pendingOrderTimeout: parseInt(generalSettings.pendingOrderTimeout),
+        paymentMethods: formattedPaymentMethods,
+        vnpTmnCode: creditCardSettings.vnpTmnCode || '',
+        vnpHashSecret: creditCardSettings.vnpHashSecret || '',
+        vnpPayUrl: creditCardSettings.vnpPayUrl || '',
+        vnpReturnUrl: creditCardSettings.vnpReturnUrl || '',
+        vnpApiUrl: creditCardSettings.vnpApiUrl || '',
         testMode: creditCardSettings.testMode,
-        supportedCards: creditCardSettings.supportedCards || ['visa', 'mastercard'],
+        vnpProduction: creditCardSettings.vnpProduction || false,
+        secretKey: creditCardSettings.secretKey || '',
+        publicKey: creditCardSettings.publicKey || '',
+        creditCardProvider: creditCardSettings.providerName || 'VNPAY',
+        supportedCards: Array.isArray(creditCardSettings.supportedCards) ? creditCardSettings.supportedCards : [],
         currency: creditCardSettings.currency || 'VND',
-        
-        // Cài đặt chuyển khoản
-        bankTransferInstructions: bankDetails.instructions || 'Vui lòng chuyển khoản với nội dung: [Mã đơn hàng]'
+        bankName: bankDetails.bankName || 'Vietcombank',
+        bankAccountNumber: bankDetails.accountNumber || '1234567890',
+        bankAccountName: bankDetails.accountName || 'FASHION STORE JSC',
+        bankBranch: bankDetails.bankBranch || 'Hồ Chí Minh',
+        qrCode: newAccount.qrCodeUrl || ''
       };
+
+      console.log('📤 Sending payment settings data:', JSON.stringify(formData, null, 2));
+      console.log('📤 Payment methods count:', formattedPaymentMethods.length);
       
-      console.log('Gửi cài đặt thanh toán lên server:', settingsData);
+      const result = await paymentSettingsApi.saveSettings(formData);
       
-      // Gửi dữ liệu lên server
-      const response = await axios.post('http://localhost:8080/api/payment-settings', settingsData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+      console.log('✅ Save successful, result:', result);
+      
+      if (result) {
+        setAlert({
+          type: 'success',
+          message: 'Cài đặt thanh toán đã được lưu thành công!'
+        });
+        
+        // Tự động ẩn thông báo sau 3 giây
+        setTimeout(() => {
+          setAlert(null);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('❌ Error saving payment settings:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data
       });
       
-      console.log('Kết quả lưu cài đặt từ server:', response.data);
-      toast.success('Lưu cài đặt thanh toán thành công!');
-    } catch (error) {
-      console.error('Lỗi khi lưu cài đặt:', error);
+      let errorMessage = 'Có lỗi xảy ra khi lưu cài đặt thanh toán';
       
-      if (error.response) {
-        console.error('Phản hồi từ server:', error.response.data);
-        toast.error(`Không thể lưu cài đặt: ${error.response.data?.message || error.response.statusText}`);
-      } else {
-        toast.error('Không thể lưu cài đặt. Vui lòng thử lại sau.');
+      if (error.message) {
+        if (error.message.includes('401')) {
+          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        } else if (error.message.includes('403')) {
+          errorMessage = 'Bạn không có quyền thực hiện thao tác này.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Lỗi server nội bộ. Vui lòng thử lại sau.';
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
+      setAlert({
+        type: 'error',
+        message: errorMessage
+      });
+      
+      // Tự động ẩn thông báo lỗi sau 5 giây
+      setTimeout(() => {
+        setAlert(null);
+      }, 5000);
     } finally {
       setSaving(false);
+      console.log('🏁 Payment settings save process completed');
     }
   };
 
@@ -783,6 +883,19 @@ const PaymentSettings = () => {
       <div className="page-header mb-4">
         <h1>Cài đặt thanh toán</h1>
       </div>
+
+      {/* Alert display */}
+      {alert && (
+        <div className={`alert alert-${alert.type} alert-dismissible fade show`} role="alert">
+          {alert.message}
+          <button 
+            type="button" 
+            className="btn-close" 
+            aria-label="Close"
+            onClick={() => setAlert(null)}
+          ></button>
+        </div>
+      )}
 
       <Tabs defaultActiveKey="settings" id="payment-settings-tabs" className="mb-4">
         <Tab eventKey="settings" title="Cài đặt chung">

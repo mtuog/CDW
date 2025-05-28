@@ -113,8 +113,11 @@ const AdminManagement = () => {
     }
     if (modalVisible && !editingAdmin) {
       form.resetFields();
+      form.setFieldsValue({
+        enabled: true  // Default to enabled for new admins
+      });
     }
-  }, [modalVisible, editingAdmin]);
+  }, [modalVisible, editingAdmin, form]);
 
   const openModal = (admin = null) => {
     setEditingAdmin(admin);
@@ -141,7 +144,7 @@ const AdminManagement = () => {
           password: values.password,
           fullName: values.fullName,
           phone: values.phone,
-          enabled: values.enabled
+          enabled: values.enabled !== undefined ? values.enabled : true
         };
         await axios.post('http://localhost:8080/api/admin/admins', payload, {
           headers: {
@@ -154,7 +157,13 @@ const AdminManagement = () => {
       fetchAdmins();
     } catch (err) {
       console.error('Error saving admin:', err);
-      message.error('Lỗi khi lưu admin');
+      if (err.response?.data?.message) {
+        message.error(err.response.data.message);
+      } else if (err.response?.data) {
+        message.error(typeof err.response.data === 'string' ? err.response.data : 'Lỗi khi lưu admin');
+      } else {
+        message.error('Lỗi khi lưu admin');
+      }
     }
   };
 

@@ -7,6 +7,7 @@ const saveCartToLocalStorage = (cart) => {
 };
 
 const initialState = JSON.parse(localStorage.getItem('cart')) || [];
+
 const cartReducer = (state = initialState, action) => {
     let updatedCart;
     switch (action.type) {
@@ -34,43 +35,78 @@ const cartReducer = (state = initialState, action) => {
             }
             saveCartToLocalStorage(updatedCart);
             return updatedCart;
+            
         case REMOVE_FROM_CART:
-            updatedCart = state.filter(item => item.id !== action.payload);
+            console.log('CartReducer REMOVE_FROM_CART:', action.payload);
+            console.log('Current cart state:', state);
+            
+            // Remove specific item by id and size (if provided)
+            if (action.payload.size) {
+                console.log('Removing by id and size:', action.payload.id, action.payload.size);
+                updatedCart = state.filter(item => {
+                    const itemMatch = (String(item.id) === String(action.payload.id) && item.size === action.payload.size);
+                    console.log(`Checking item ${item.id}-${item.size} vs ${action.payload.id}-${action.payload.size}: match=${itemMatch}`);
+                    return !itemMatch;
+                });
+            } else {
+                console.log('Removing by id only:', action.payload.id);
+                // If no size specified, remove by id only (for backward compatibility)  
+                updatedCart = state.filter(item => String(item.id) !== String(action.payload.id));
+            }
+            
+            console.log('Updated cart after removal:', updatedCart);
             saveCartToLocalStorage(updatedCart);
             return updatedCart;
-        case UPDATE_QUANTITY:
-            const { productId, quantity, size, color } = action.payload;
             
-            // Nếu chỉ cập nhật số lượng (không cập nhật size)
-            if (!size) {
-                updatedCart = state.map(item =>
-                    item.id === productId
-                        ? { ...item, quantity }
-                        : item
-                );
+        case UPDATE_QUANTITY:
+            const { productId, quantity, size, color, currentSize } = action.payload;
+            
+            // Trường hợp chỉ cập nhật số lượng (không thay đổi size)
+            if (!size || size === currentSize) {
+                updatedCart = state.map(item => {
+                    if (currentSize) {
+                        // Có size cụ thể - tìm theo id và size
+                        return (item.id === productId && item.size === currentSize)
+                            ? { ...item, quantity }
+                            : item;
+                    } else {
+                        // Không có size - tìm theo id
+                        return item.id === productId
+                            ? { ...item, quantity }
+                            : item;
+                    }
+                });
             } 
-            // Trường hợp cập nhật cả size
+            // Trường hợp thay đổi size
             else {
-                // Kiểm tra xem đã có sản phẩm với size mới chưa
-                const existingSizeIndex = state.findIndex(item => 
+                // Tìm item hiện tại và item đích (nếu có)
+                const currentItemIndex = state.findIndex(item => 
+                    item.id === productId && item.size === currentSize
+                );
+                const targetItemIndex = state.findIndex(item => 
                     item.id === productId && item.size === size
                 );
                 
-                if (existingSizeIndex !== -1 && existingSizeIndex !== state.findIndex(item => item.id === productId)) {
-                    // Có sản phẩm với size mới, tăng số lượng sản phẩm đó và xóa sản phẩm cũ
+                if (currentItemIndex === -1) {
+                    // Không tìm thấy item hiện tại
+                    return state;
+                }
+                
+                if (targetItemIndex !== -1 && targetItemIndex !== currentItemIndex) {
+                    // Đã có item với size mới - gộp quantity và xóa item cũ
                     updatedCart = state.map((item, index) => {
-                        if (index === existingSizeIndex) {
+                        if (index === targetItemIndex) {
                             return { ...item, quantity: item.quantity + quantity };
-                        } else if (item.id === productId) {
+                        } else if (index === currentItemIndex) {
                             return null; // Đánh dấu để xóa
                         } else {
                             return item;
                         }
                     }).filter(item => item !== null);
                 } else {
-                    // Chỉ cập nhật size của sản phẩm hiện tại
-                    updatedCart = state.map(item =>
-                        item.id === productId
+                    // Chưa có item với size mới - cập nhật size của item hiện tại
+                    updatedCart = state.map((item, index) => 
+                        index === currentItemIndex
                             ? { ...item, quantity, size }
                             : item
                     );
@@ -78,13 +114,16 @@ const cartReducer = (state = initialState, action) => {
             }
             saveCartToLocalStorage(updatedCart);
             return updatedCart;
+            
         case CLEAR_CART:
             saveCartToLocalStorage([]);
             return [];
+            
         case 'cart/load':
             updatedCart = action.payload;
             saveCartToLocalStorage(updatedCart);
             return updatedCart;
+            
         default:
             // Đảm bảo lưu trạng thái ban đầu vào localStorage
             if (state !== initialState) {

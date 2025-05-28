@@ -144,7 +144,7 @@ public class FacebookAuthController {
                         }
 
                         // Generate JWT token
-                        String token = jwtUtil.generateToken(user.getUsername());
+                        String token = jwtUtil.generateToken(user);
                         System.out.println("Generated token for user: " + user.getUsername());
 
                         Map<String, Object> responseBody = new HashMap<>();
@@ -154,7 +154,11 @@ public class FacebookAuthController {
 
                         return ResponseEntity.ok(responseBody);
                     }
+                } else {
+                    System.out.println("Token validation failed. Valid: " + data.get("is_valid") + ", UserID match: " + userId.equals(data.get("user_id")));
                 }
+            } else {
+                System.out.println("Invalid token response: " + tokenResponse);
             }
 
             return ResponseEntity.badRequest().body(Map.of(

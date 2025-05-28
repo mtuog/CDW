@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { BACKEND_URL_HTTP } from '../../config';
 import { useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
+import Swal from 'sweetalert2';
 
 const FacebookLogin = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
@@ -31,6 +32,12 @@ const FacebookLogin = ({ onLoginSuccess }) => {
   const handleFacebookLogin = () => {
     if (!window.FB) {
       console.error("Facebook SDK not loaded yet");
+      Swal.fire({
+        title: 'Lỗi kết nối',
+        text: 'Không thể kết nối với Facebook, vui lòng thử lại sau',
+        icon: 'error',
+        confirmButtonColor: "#3085d6",
+      });
       return;
     }
 
@@ -38,7 +45,19 @@ const FacebookLogin = ({ onLoginSuccess }) => {
       if (response.authResponse) {
         console.log('Facebook login successful:', response);
         // Get user info
-        window.FB.api('/me', { fields: 'id,name,email,picture' }, function(userInfo) {
+        window.FB.api('/me', { fields: 'id,name,email,picture' }, async function(userInfo) {
+          console.log('Facebook user info:', userInfo);
+
+          if (!userInfo.email) {
+            Swal.fire({
+              title: 'Thiếu thông tin email',
+              text: 'Facebook không cung cấp email của bạn. Vui lòng sử dụng phương thức đăng nhập khác.',
+              icon: 'error',
+              confirmButtonColor: "#3085d6",
+            });
+            return;
+          }
+          
           const userData = {
             accessToken: response.authResponse.accessToken,
             userId: response.authResponse.userID,
@@ -47,36 +66,34 @@ const FacebookLogin = ({ onLoginSuccess }) => {
             picture: userInfo.picture?.data?.url
           };
           
-          // Send to backend
-          fetch(`${BACKEND_URL_HTTP}/api/auth/facebook`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData),
-            credentials: 'include'
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.token) {
-              // Save token
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.user));
-              
-              // Notify parent component
-              if (onLoginSuccess) {
-                onLoginSuccess(data);
-              }
-              
-              // Redirect to home page
-              navigate('/');
-            } else {
-              console.error('Login failed:', data.message);
+          try {
+            // Use authService for consistent API calls
+            const data = await authService.loginWithFacebook(userData);
+            
+            // Notify parent component
+            if (onLoginSuccess) {
+              onLoginSuccess(data);
             }
-          })
-          .catch(error => {
-            console.error('Error during login:', error);
-          });
+            
+            // Show success message
+            Swal.fire({
+              title: 'Đăng nhập Facebook thành công!',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            }).then(() => {
+              navigate('/');
+            });
+            
+          } catch (error) {
+            console.error('Error during Facebook login:', error);
+            Swal.fire({
+              title: 'Đăng nhập thất bại',
+              text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
+              icon: 'error',
+              confirmButtonColor: "#3085d6",
+            });
+          }
         });
       } else {
         console.log('Facebook login cancelled or failed');

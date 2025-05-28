@@ -4,7 +4,7 @@ import { BACKEND_URL_HTTP } from '../../../../config';
 import Swal from 'sweetalert2';
 import { getUserById, updateUser } from '../../../../api/userApi';
 
-const ProfileInfo = ({ user, setUser }) => {
+const ProfileInfo = ({ user, setUser, refreshUserProfile }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
         fullName: user.fullName || '',
@@ -39,7 +39,26 @@ const ProfileInfo = ({ user, setUser }) => {
         try {
             const token = localStorage.getItem('token');
             
-            // Lấy danh sách địa chỉ từ API có sẵn
+            console.log('Starting address sync for user:', user.id);
+            
+            // Test API endpoint trước
+            const testResponse = await axios.get(
+                `${BACKEND_URL_HTTP}/api/address-book/debug/${user.id}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            ).catch(err => {
+                console.log('Debug endpoint not available, proceeding with main endpoint');
+                return null;
+            });
+            
+            if (testResponse) {
+                console.log('Debug response:', testResponse.data);
+            }
+            
+            // Gọi API chính để lấy danh sách địa chỉ
             const response = await axios.get(
                 `${BACKEND_URL_HTTP}/api/address-book/user/${user.id}`,
                 {
@@ -49,9 +68,13 @@ const ProfileInfo = ({ user, setUser }) => {
                 }
             );
             
-            if (response.status === 200 && response.data.length > 0) {
+            console.log('Address API response:', response.data);
+            
+            if (response.status === 200 && response.data && Array.isArray(response.data) && response.data.length > 0) {
                 // Tìm địa chỉ mặc định hoặc lấy địa chỉ đầu tiên
                 const defaultAddress = response.data.find(addr => addr.isDefault) || response.data[0];
+                
+                console.log('Selected address for sync:', defaultAddress);
                 
                 // Tạo địa chỉ đầy đủ
                 const fullAddress = [
@@ -63,10 +86,19 @@ const ProfileInfo = ({ user, setUser }) => {
                     defaultAddress.country
                 ].filter(Boolean).join(', ');
                 
+                console.log('Generated full address:', fullAddress);
+                
                 // Cập nhật user profile với địa chỉ mới
                 const updateResponse = await axios.put(
                     `${BACKEND_URL_HTTP}/api/users/${user.id}`,
-                    { ...user, address: fullAddress },
+                    {
+                        username: user.username,
+                        email: user.email,
+                        fullName: user.fullName,
+                        phone: user.phone,
+                        address: fullAddress,
+                        verified: user.verified || user.isVerified || true
+                    },
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -76,10 +108,15 @@ const ProfileInfo = ({ user, setUser }) => {
                 );
                 
                 if (updateResponse.status === 200) {
-                    // Cập nhật state user và formData
-                    const updatedUser = { ...user, address: fullAddress };
-                    setUser(updatedUser);
-                    setFormData(prev => ({ ...prev, address: fullAddress }));
+                    // Refresh toàn bộ thông tin user từ server
+                    if (refreshUserProfile) {
+                        await refreshUserProfile();
+                    } else {
+                        // Fallback nếu không có refreshUserProfile
+                        const updatedUser = { ...user, address: fullAddress };
+                        setUser(updatedUser);
+                        setFormData(prev => ({ ...prev, address: fullAddress }));
+                    }
                     
                     Swal.fire({
                         title: 'Thành công!',
@@ -91,19 +128,60 @@ const ProfileInfo = ({ user, setUser }) => {
             } else {
                 Swal.fire({
                     title: 'Thông báo',
-                    text: 'Không tìm thấy địa chỉ trong sổ địa chỉ',
+                    text: 'Không tìm thấy địa chỉ trong sổ địa chỉ. Hãy thêm địa chỉ mới trong tab "Sổ địa chỉ".',
                     icon: 'info',
                     confirmButtonText: 'Đóng'
                 });
             }
         } catch (error) {
             console.error('Error syncing address:', error);
-            Swal.fire({
-                title: 'Lỗi!',
-                text: 'Không thể đồng bộ địa chỉ từ sổ địa chỉ',
-                icon: 'error',
-                confirmButtonText: 'Đóng'
+            console.error('Error details:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message,
+                url: error.config?.url
             });
+            
+            let errorMessage = 'Không thể đồng bộ địa chỉ từ sổ địa chỉ';
+            let showCreateTableOption = false;
+            
+            if (error.response?.status === 404) {
+                errorMessage = 'Không tìm thấy sổ địa chỉ. Hãy thêm địa chỉ mới trước.';
+            } else if (error.response?.status === 500) {
+                const errorData = error.response?.data;
+                if (errorData?.message && (
+                    errorData.message.includes('Table') && errorData.message.includes('doesn\'t exist') ||
+                    errorData.message.includes('address_book')
+                )) {
+                    errorMessage = 'Bảng sổ địa chỉ chưa được tạo trong cơ sở dữ liệu. Vui lòng liên hệ quản trị viên để tạo bảng.';
+                    showCreateTableOption = true;
+                } else {
+                    errorMessage = 'Lỗi server khi truy xuất sổ địa chỉ. Vui lòng thử lại sau.';
+                }
+            } else if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+            }
+            
+            if (showCreateTableOption) {
+                Swal.fire({
+                    title: 'Cơ sở dữ liệu chưa sẵn sàng',
+                    html: `
+                        <p>${errorMessage}</p>
+                        <br>
+                        <p><strong>Giải pháp tạm thời:</strong> Bạn có thể nhập địa chỉ trực tiếp trong ô "Địa chỉ" bên dưới.</p>
+                    `,
+                    icon: 'warning',
+                    confirmButtonText: 'Hiểu rồi'
+                });
+            } else {
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: errorMessage,
+                    icon: 'error',
+                    confirmButtonText: 'Đóng'
+                });
+            }
         }
     };
 
@@ -125,18 +203,23 @@ const ProfileInfo = ({ user, setUser }) => {
             );
             
             if (response.status === 200) {
-                // Cập nhật state user
-                setUser(prev => ({
-                    ...prev,
-                    fullName: formData.fullName,
-                    email: formData.email,
-                    phone: formData.phone,
-                    phoneNumber: formData.phone,
-                    address: formData.address,
-                    gender: formData.gender,
-                    dateOfBirth: formData.dateOfBirth,
-                    dob: formData.dateOfBirth
-                }));
+                // Refresh toàn bộ thông tin user từ server để đảm bảo đồng bộ
+                if (refreshUserProfile) {
+                    await refreshUserProfile();
+                } else {
+                    // Fallback nếu không có refreshUserProfile
+                    setUser(prev => ({
+                        ...prev,
+                        fullName: formData.fullName,
+                        email: formData.email,
+                        phone: formData.phone,
+                        phoneNumber: formData.phone,
+                        address: formData.address,
+                        gender: formData.gender,
+                        dateOfBirth: formData.dateOfBirth,
+                        dob: formData.dateOfBirth
+                    }));
+                }
                 
                 setIsEditing(false);
                 

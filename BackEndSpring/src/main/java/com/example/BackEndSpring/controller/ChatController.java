@@ -221,26 +221,39 @@ public class ChatController {
     // Helper method để lấy user ID từ JWT token
     private Long getCurrentUserId(HttpServletRequest request) {
         try {
+            System.out.println("🔍 ChatController.getCurrentUserId() - START");
+            
             String authHeader = request.getHeader("Authorization");
+            System.out.println("   - Authorization header: " + (authHeader != null ? authHeader.substring(0, Math.min(authHeader.length(), 20)) + "..." : "null"));
+            
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                System.err.println("   - ERROR: No valid JWT token found in Authorization header");
                 throw new RuntimeException("No JWT token found");
             }
             
             String jwt = authHeader.substring(7);
+            System.out.println("   - JWT token extracted (first 20 chars): " + jwt.substring(0, Math.min(jwt.length(), 20)) + "...");
+            
             Object userIdObj = jwtUtil.extractAllClaims(jwt).get("id");
+            System.out.println("   - User ID object from token: " + userIdObj + " (type: " + (userIdObj != null ? userIdObj.getClass().getSimpleName() : "null") + ")");
             
             if (userIdObj == null) {
+                System.err.println("   - ERROR: User ID not found in token claims");
                 throw new RuntimeException("User ID not found in token");
             }
             
             // Convert to Long (có thể là Integer hoặc Long)
             if (userIdObj instanceof Number) {
-                return ((Number) userIdObj).longValue();
+                Long userId = ((Number) userIdObj).longValue();
+                System.out.println("   - ✅ Successfully extracted user ID: " + userId);
+                return userId;
             }
             
+            System.err.println("   - ERROR: Invalid user ID format: " + userIdObj.getClass().getSimpleName());
             throw new RuntimeException("Invalid user ID format in token");
         } catch (Exception e) {
-            System.err.println("Error extracting user ID: " + e.getMessage());
+            System.err.println("🚨 Error extracting user ID: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Failed to get user ID: " + e.getMessage());
         }
     }

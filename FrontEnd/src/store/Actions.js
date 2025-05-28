@@ -3,19 +3,27 @@ export const ADD_TO_CART = 'ADD_TO_CART';
 export const REMOVE_FROM_CART = 'REMOVE_FROM_CART';
 export const UPDATE_QUANTITY = 'UPDATE_QUANTITY';
 export const CLEAR_CART = 'CLEAR_CART';
+
 export const addToCart = (product) => ({
     type: ADD_TO_CART,
     payload: product,
 });
 
-export const removeFromCart = (productId) => ({
-    type: REMOVE_FROM_CART,
-    payload: productId,
-});
+// Updated removeFromCart to support removing by id and size
+export const removeFromCart = (productId, size = null) => {
+    const payload = size ? { id: productId, size } : { id: productId };
+    console.log('removeFromCart action created with payload:', payload);
+    
+    return {
+        type: REMOVE_FROM_CART,
+        payload: payload,
+    };
+};
 
-export const updateQuantity = (productId, quantity, size, color) => ({
+// Updated updateQuantity to support currentSize parameter
+export const updateQuantity = (productId, quantity, size, color, currentSize = null) => ({
     type: UPDATE_QUANTITY,
-    payload: { productId, quantity, size, color },
+    payload: { productId, quantity, size, color, currentSize },
 });
 
 export const loadCart = () => {

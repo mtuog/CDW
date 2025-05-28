@@ -66,8 +66,8 @@ const ShoppingCart = () => {
 		}
 	}, [cart]);
 
-	const handleIncreaseQuantity = (id) => {
-		const item = cart.find(item => item.id === id);
+	const handleIncreaseQuantity = (id, size) => {
+		const item = cart.find(item => item.id === id && item.size === size);
 		const product = productDetails[id];
 		
 		if (item && product) {
@@ -82,19 +82,44 @@ const ShoppingCart = () => {
 				return;
 			}
 			
-			dispatch(updateQuantity(id, item.quantity + 1, item.size, item.color));
+			dispatch(updateQuantity(id, item.quantity + 1, item.size, item.color, item.size));
 		}
 	};
 
-	const handleDecreaseQuantity = (id) => {
-		const item = cart.find(item => item.id === id);
+	const handleDecreaseQuantity = (id, size) => {
+		const item = cart.find(item => item.id === id && item.size === size);
 		if (item && item.quantity > 1) {
-			dispatch(updateQuantity(id, item.quantity - 1, item.size, item.color));
+			dispatch(updateQuantity(id, item.quantity - 1, item.size, item.color, item.size));
 		}
 	};
 
-	const handleRemoveItem = (id) => {
-		dispatch(removeFromCart(id));
+	const handleRemoveItem = (id, size) => {
+		console.log('handleRemoveItem called with:', { id, size });
+		console.log('Current cart:', cart);
+		
+		Swal.fire({
+			title: 'Xác nhận xóa',
+			text: 'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
+			icon: 'question',
+			showCancelButton: true,
+			confirmButtonText: 'Xóa',
+			cancelButtonText: 'Hủy',
+			confirmButtonColor: '#dc3545',
+			cancelButtonColor: '#6c757d'
+		}).then((result) => {
+			if (result.isConfirmed) {
+				console.log('User confirmed removal, dispatching removeFromCart with:', { id, size });
+				dispatch(removeFromCart(id, size));
+				
+				Swal.fire({
+					title: 'Đã xóa!',
+					text: 'Sản phẩm đã được xóa khỏi giỏ hàng.',
+					icon: 'success',
+					timer: 1500,
+					showConfirmButton: false
+				});
+			}
+		});
 	};
 
 	const calculateSubtotal = () => {
@@ -128,68 +153,30 @@ const ShoppingCart = () => {
 			setCouponError('');
 			setCouponSuccess('');
 			
-			// First, check if the discount code is valid
-			console.log(`Checking validity of discount code: ${couponCode}`);
-			const validityCheck = await discountCodeApi.validateDiscountCode(
-				couponCode,
-				localStorage.getItem('userId')
-			);
-			
-			console.log('Validity check response:', validityCheck);
-			
-			// If the code is not valid, show an error message
-			if (!validityCheck.valid) {
-				setDiscount(0);
-				setValidDiscountCode(null);
-				setCouponError(validityCheck.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn');
-				setProcessing(false);
-				return;
-			}
-			
-			// Calculate subtotal for validation
+			// Calculate subtotal first
 			const subtotal = calculateSubtotal();
 			console.log(`Attempting to validate discount code: ${couponCode} for subtotal: ${subtotal}`);
 			
-			// Check if the order meets the minimum purchase amount
-			if (validityCheck.minimumPurchaseAmount && 
-				subtotal < validityCheck.minimumPurchaseAmount) {
-				setDiscount(0);
-				setValidDiscountCode(null);
-				setCouponError(`Giá trị đơn hàng phải từ ${validityCheck.minimumPurchaseAmount.toLocaleString()} VND trở lên để sử dụng mã giảm giá này`);
-				setProcessing(false);
-				return;
-			}
+			// Call the validate API directly with orderTotal
+			const discountAmount = await discountCodeApi.validateDiscountCode(
+				couponCode,
+				subtotal.toString(), // orderTotal as string
+				localStorage.getItem('userId') // userId (optional)
+			);
 			
-			// If the code is valid and meets minimum purchase, calculate the discount
-			let discountAmount = 0;
+			console.log('Discount validation response:', discountAmount);
 			
-			// Use the discountType and value from the validity check
-			if (validityCheck.discountType === 'PERCENTAGE') {
-				// Calculate percentage discount
-				discountAmount = subtotal * (validityCheck.value / 100);
+			// The API returns the calculated discount amount directly
+			if (typeof discountAmount === 'number' || typeof discountAmount === 'string') {
+				const finalDiscountAmount = parseFloat(discountAmount);
+				console.log(`Final discount amount: ${finalDiscountAmount}`);
 				
-				// Apply maximum discount if set
-				if (validityCheck.maximumDiscountAmount && 
-					validityCheck.maximumDiscountAmount > 0 && 
-					discountAmount > validityCheck.maximumDiscountAmount) {
-					discountAmount = validityCheck.maximumDiscountAmount;
-				}
+				setDiscount(finalDiscountAmount);
+				setValidDiscountCode(couponCode);
+				setCouponSuccess('Áp dụng mã giảm giá thành công!');
 			} else {
-				// Fixed amount discount
-				discountAmount = validityCheck.value;
-				
-				// Ensure discount doesn't exceed subtotal
-				if (discountAmount > subtotal) {
-					discountAmount = subtotal;
-				}
+				throw new Error('Invalid discount amount returned');
 			}
-			
-			console.log(`Calculated discount amount: ${discountAmount}`);
-			
-			// Set discount amount and success message
-			setDiscount(discountAmount);
-			setValidDiscountCode(couponCode);
-			setCouponSuccess('Áp dụng mã giảm giá thành công!');
 			
 		} catch (error) {
 			console.error('Error applying discount code:', error);
@@ -210,9 +197,9 @@ const ShoppingCart = () => {
 						errorMessage = error.response.data.message;
 						
 						// Use specific error code handling for better UX
-						if (error.response.data.reason) {
-							console.log('Error reason:', error.response.data.reason);
-							switch(error.response.data.reason) {
+						if (error.response.data.code) {
+							console.log('Error code:', error.response.data.code);
+							switch(error.response.data.code) {
 								case 'CODE_NOT_FOUND':
 									errorMessage = 'Mã giảm giá không tồn tại.';
 									break;
@@ -252,15 +239,23 @@ const ShoppingCart = () => {
 	};
 
 	// Xử lý thay đổi size sản phẩm
-	const handleStartEditSize = (itemId) => {
-		setEditingSizeItemId(itemId);
+	const handleStartEditSize = (itemId, currentSize) => {
+		setEditingSizeItemId(`${itemId}-${currentSize}`);
 	};
 
-	const handleSizeChange = (id, newSize) => {
-		const item = cart.find(item => item.id === id);
-		if (item) {
-			dispatch(updateQuantity(id, item.quantity, newSize, item.color));
+	const handleSizeChange = (id, newSize, currentSize) => {
+		const item = cart.find(item => item.id === id && item.size === currentSize);
+		if (item && newSize) {
+			dispatch(updateQuantity(id, item.quantity, newSize, item.color, currentSize));
 			setEditingSizeItemId(null);
+			
+			Swal.fire({
+				title: 'Cập nhật thành công!',
+				text: `Đã thay đổi size thành ${newSize}`,
+				icon: 'success',
+				timer: 1500,
+				showConfirmButton: false
+			});
 		}
 	};
 
@@ -313,10 +308,13 @@ const ShoppingCart = () => {
 											if (!product) return null;
 											
 											// Lấy danh sách size có sẵn cho sản phẩm
-											const availableSizes = findProductSizesById(item.id) || [];
+											const rawSizes = findProductSizesById(item.id);
+											const availableSizes = Array.isArray(rawSizes) ? rawSizes : ['S', 'M', 'L', 'XL'];
+											
+											console.log('Product ID:', item.id, 'Raw sizes:', rawSizes, 'Available sizes:', availableSizes);
 											
 											return (
-												<tr className="table_row" key={item.id}>
+												<tr className="table_row" key={`${item.id}-${item.size}`}>
 													<td className="column-1">
 														<div className="how-itemcart1">
 															<img src={product.img} alt={product.name} />
@@ -326,12 +324,12 @@ const ShoppingCart = () => {
 														<div>
 															<Link to={`/product/${item.id}`} className="product-name">{product.name}</Link>
 															<div className="product-options">
-																{editingSizeItemId === item.id ? (
+																{editingSizeItemId === `${item.id}-${item.size}` ? (
 																	<div className="size-selector">
 																		<select 
 																			className="form-select size-select"
 																			value={item.size || ''}
-																			onChange={(e) => handleSizeChange(item.id, e.target.value)}
+																			onChange={(e) => handleSizeChange(item.id, e.target.value, item.size)}
 																		>
 																			<option value="">Chọn size</option>
 																			{availableSizes.map(size => (
@@ -350,7 +348,7 @@ const ShoppingCart = () => {
 																		Size: {item.size || 'Standard'}
 																		<button 
 																			className="edit-size-btn"
-																			onClick={() => handleStartEditSize(item.id)}
+																			onClick={() => handleStartEditSize(item.id, item.size)}
 																		>
 																			<i className="zmdi zmdi-edit"></i>
 																		</button>
@@ -366,7 +364,7 @@ const ShoppingCart = () => {
 														<div className="wrap-num-product flex-w">
 															<div 
 																className="btn-num-product-down cl8 hov-btn3 trans-04 flex-c-m"
-																onClick={() => handleDecreaseQuantity(item.id)}
+																onClick={() => handleDecreaseQuantity(item.id, item.size)}
 															>
 																<i className="fs-16 zmdi zmdi-minus"></i>
 															</div>
@@ -375,7 +373,7 @@ const ShoppingCart = () => {
 
 															<div 
 																className="btn-num-product-up cl8 hov-btn3 trans-04 flex-c-m"
-																onClick={() => handleIncreaseQuantity(item.id)}
+																onClick={() => handleIncreaseQuantity(item.id, item.size)}
 															>
 																<i className="fs-16 zmdi zmdi-plus"></i>
 															</div>
@@ -387,7 +385,7 @@ const ShoppingCart = () => {
 													<td className="column-6">
 														<button 
 															className="remove-item-btn"
-															onClick={() => handleRemoveItem(item.id)}
+															onClick={() => handleRemoveItem(item.id, item.size)}
 														>
 															<i className="zmdi zmdi-close"></i>
 														</button>
@@ -617,5 +615,103 @@ const ShoppingCart = () => {
 		</div>
 	);
 };
+
+// Add inline styles for cart components
+const cartStyles = `
+	.size-selector {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 8px;
+	}
+	
+	.size-select {
+		padding: 4px 8px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 14px;
+		min-width: 100px;
+	}
+	
+	.cancel-edit-btn {
+		background-color: #dc3545;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		font-size: 12px;
+	}
+	
+	.cancel-edit-btn:hover {
+		background-color: #c82333;
+	}
+	
+	.product-size {
+		margin-top: 8px;
+		font-size: 14px;
+		color: #666;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	
+	.edit-size-btn {
+		background: none;
+		border: none;
+		color: #007bff;
+		cursor: pointer;
+		padding: 2px;
+		font-size: 14px;
+	}
+	
+	.edit-size-btn:hover {
+		color: #0056b3;
+	}
+	
+	.remove-item-btn {
+		background-color: #dc3545;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		width: 32px;
+		height: 32px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		font-size: 14px;
+	}
+	
+	.remove-item-btn:hover {
+		background-color: #c82333;
+	}
+	
+	.product-options {
+		margin-top: 8px;
+	}
+	
+	.product-name {
+		font-weight: 500;
+		color: #333;
+		text-decoration: none;
+	}
+	
+	.product-name:hover {
+		color: #007bff;
+		text-decoration: none;
+	}
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+	const styleSheet = document.createElement("style");
+	styleSheet.innerText = cartStyles;
+	document.head.appendChild(styleSheet);
+}
 
 export default ShoppingCart;

@@ -21,6 +21,7 @@ import EditDiscount from '../pages/discount/edit';
 import LoyaltyManagement from '../pages/loyalty/LoyaltyManagement';
 import NotificationPage from '../pages/notifications/NotificationPage';
 import AdminAccount from '../pages/account/AdminAccount';
+import AdminManagement from '../pages/account/AdminManagement';
 import ChatManagement from '../pages/chat/ChatManagement';
 
 const AdminRoutes = () => {
@@ -150,6 +151,13 @@ const AdminRoutes = () => {
       <Route path="account" element={
         <PrivateRoute>
           <AdminAccount />
+        </PrivateRoute>
+      } />
+      
+      {/* Admin Management */}
+      <Route path="admins" element={
+        <PrivateRoute>
+          <AdminManagement />
         </PrivateRoute>
       } />
       

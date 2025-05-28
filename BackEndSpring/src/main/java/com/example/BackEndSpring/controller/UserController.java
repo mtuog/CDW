@@ -178,6 +178,47 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
+    @Operation(summary = "Lấy thông tin người dùng hiện tại từ token")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "401", description = "Không có quyền truy cập", content = @Content)
+    })
+    @GetMapping("/users/profile")
+    public ResponseEntity<?> getCurrentUserProfile(Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not authenticated"));
+            }
+            
+            String username = authentication.getName();
+            Optional<User> userOpt = userService.getUserByUsername(username);
+            
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+            
+            User user = userOpt.get();
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", user.getId());
+            userMap.put("username", user.getUsername());
+            userMap.put("fullName", user.getFullName());
+            userMap.put("email", user.getEmail());
+            userMap.put("phone", user.getPhone());
+            userMap.put("address", user.getAddress());
+            userMap.put("createdAt", user.getCreatedAt());
+            userMap.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+            userMap.put("enabled", user.isVerified());
+            userMap.put("loyaltyPoints", user.getLoyaltyPoints());
+            
+            return ResponseEntity.ok(userMap);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @Operation(summary = "Lấy thông tin người dùng theo tên người dùng")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tìm thấy người dùng"),

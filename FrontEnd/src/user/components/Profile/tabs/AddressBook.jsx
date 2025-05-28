@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../../config';
 import Swal from 'sweetalert2';
 
-const AddressBook = ({ user }) => {
+const AddressBook = ({ user, refreshUserProfile }) => {
     const [addresses, setAddresses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -190,6 +190,7 @@ const AddressBook = ({ user }) => {
                 setIsAddingAddress(false);
                 setIsEditingAddress(null);
                 fetchAddresses();
+                refreshUserProfile();
             }
         } catch (error) {
             console.error('Error saving address:', error);
@@ -271,6 +272,7 @@ const AddressBook = ({ user }) => {
                     
                     // Cập nhật lại danh sách địa chỉ
                     fetchAddresses();
+                    refreshUserProfile();
                 }
             }
         } catch (error) {
@@ -310,6 +312,7 @@ const AddressBook = ({ user }) => {
                 
                 // Cập nhật lại danh sách địa chỉ
                 fetchAddresses();
+                refreshUserProfile();
             }
         } catch (error) {
             console.error('Error setting default address:', error);

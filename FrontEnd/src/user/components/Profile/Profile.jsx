@@ -77,6 +77,16 @@ const Profile = () => {
         }
     };
     
+    // Function to refresh user profile data
+    const refreshUserProfile = async () => {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+        
+        if (token && userId) {
+            await fetchUserProfile(token, userId);
+        }
+    };
+    
     const handleLogout = () => {
         // Xóa thông tin đăng nhập
         localStorage.removeItem('token');
@@ -97,11 +107,11 @@ const Profile = () => {
         
         switch (activeTab) {
             case 'profile':
-                return <ProfileInfo user={user} setUser={setUser} />;
+                return <ProfileInfo user={user} setUser={setUser} refreshUserProfile={refreshUserProfile} />;
             case 'orders':
                 return <OrderHistory user={user} />;
             case 'addresses':
-                return <AddressBook user={user} />;
+                return <AddressBook user={user} refreshUserProfile={refreshUserProfile} />;
             case 'password':
                 return <ChangePassword user={user} />;
             case 'points':
@@ -111,7 +121,7 @@ const Profile = () => {
             case 'reviews':
                 return <Reviews user={user} />;
             default:
-                return <ProfileInfo user={user} setUser={setUser} />;
+                return <ProfileInfo user={user} setUser={setUser} refreshUserProfile={refreshUserProfile} />;
         }
     };
     

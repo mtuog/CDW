@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';import axios from 'axios';import { BACKEND_URL_HTTP } from '../../../../config';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { BACKEND_URL_HTTP } from '../../../../config';
 
 const LoyaltyPoints = ({ user }) => {
     const [loyaltyData, setLoyaltyData] = useState({
@@ -20,6 +22,9 @@ const LoyaltyPoints = ({ user }) => {
             setLoading(true);
             const token = localStorage.getItem('token');
             
+            console.log('Fetching loyalty data for user:', user.id);
+            console.log('Token exists:', !!token);
+            
             const response = await axios.get(
                 `${BACKEND_URL_HTTP}/api/loyalty/${user.id}`,
                 {
@@ -29,52 +34,40 @@ const LoyaltyPoints = ({ user }) => {
                 }
             );
             
+            console.log('Loyalty API response:', response);
+            
             if (response.status === 200) {
                 setLoyaltyData(response.data);
+                setError(null);
             }
-            
-            setError(null);
         } catch (error) {
             console.error('Error fetching loyalty data:', error);
-            setError('Không thể tải dữ liệu điểm tích lũy. Vui lòng thử lại sau.');
-            
-            // Mock data nếu không có API
-            setLoyaltyData({
-                points: 125,
-                rank: 'Silver',
-                nextRank: 'Gold',
-                pointsToNextRank: 175,
-                transactions: [
-                    {
-                        id: 1,
-                        date: '2023-11-15T10:30:00',
-                        description: 'Đơn hàng #1234',
-                        points: 25,
-                        type: 'EARN'
-                    },
-                    {
-                        id: 2,
-                        date: '2023-11-20T14:45:00',
-                        description: 'Đơn hàng #1235',
-                        points: 50,
-                        type: 'EARN'
-                    },
-                    {
-                        id: 3,
-                        date: '2023-12-05T09:15:00',
-                        description: 'Đổi voucher giảm giá 50k',
-                        points: -20,
-                        type: 'REDEEM'
-                    },
-                    {
-                        id: 4,
-                        date: '2023-12-18T16:20:00',
-                        description: 'Đơn hàng #1240',
-                        points: 70,
-                        type: 'EARN'
-                    }
-                ]
+            console.error('Error details:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message,
+                url: error.config?.url
             });
+            
+            let errorMessage = 'Không thể tải dữ liệu điểm tích lũy.';
+            
+            if (error.response?.status === 401) {
+                errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+            } else if (error.response?.status === 404) {
+                errorMessage = 'Không tìm thấy thông tin người dùng.';
+            } else if (error.response?.status === 500) {
+                const errorData = error.response?.data;
+                if (errorData?.error) {
+                    errorMessage = `Lỗi server: ${errorData.error}`;
+                } else {
+                    errorMessage = 'Lỗi server nội bộ. Vui lòng thử lại sau.';
+                }
+            } else if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+            }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -178,7 +171,14 @@ const LoyaltyPoints = ({ user }) => {
                 </div>
             ) : error ? (
                 <div className="alert alert-danger" role="alert">
-                    {error}
+                    <h6><i className="fa fa-exclamation-triangle"></i> Không thể tải dữ liệu</h6>
+                    <p className="mb-2">{error}</p>
+                    <button 
+                        className="btn btn-sm btn-outline-primary" 
+                        onClick={() => fetchLoyaltyData()}
+                    >
+                        <i className="fa fa-refresh"></i> Thử lại
+                    </button>
                 </div>
             ) : (
                 <>
@@ -336,58 +336,58 @@ const LoyaltyPoints = ({ user }) => {
                             </div>
                         </div>
                     </div>
-
-                    <style jsx>{`
-                        .loyalty-rank-badge {
-                            width: 40px;
-                            height: 40px;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-weight: bold;
-                            font-size: 20px;
-                        }
-                        
-                        .loyalty-points-circle {
-                            width: 120px;
-                            height: 120px;
-                            border-radius: 50%;
-                            background-color: #f8f9fa;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            margin: 0 auto;
-                            border: 5px solid #e9ecef;
-                        }
-                        
-                        .points-number {
-                            font-size: 32px;
-                            font-weight: bold;
-                            color: #28a745;
-                        }
-                        
-                        .points-label {
-                            font-size: 14px;
-                            color: #6c757d;
-                        }
-                        
-                        .original-price {
-                            text-decoration: line-through;
-                            color: #6c757d;
-                            font-size: 0.9em;
-                            margin-right: 8px;
-                        }
-                        
-                        .discounted-price {
-                            color: #28a745;
-                            font-weight: 600;
-                        }
-                    `}</style>
                 </>
             )}
+            
+            <style jsx>{`
+                .loyalty-rank-badge {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 20px;
+                }
+                
+                .loyalty-points-circle {
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 50%;
+                    background-color: #f8f9fa;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto;
+                    border: 5px solid #e9ecef;
+                }
+                
+                .points-number {
+                    font-size: 32px;
+                    font-weight: bold;
+                    color: #28a745;
+                }
+                
+                .points-label {
+                    font-size: 14px;
+                    color: #6c757d;
+                }
+                
+                .original-price {
+                    text-decoration: line-through;
+                    color: #6c757d;
+                    font-size: 0.9em;
+                    margin-right: 8px;
+                }
+                
+                .discounted-price {
+                    color: #28a745;
+                    font-weight: 600;
+                }
+            `}</style>
         </div>
     );
 };

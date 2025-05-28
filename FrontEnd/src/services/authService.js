@@ -181,17 +181,21 @@ const authService = {
     // Login with Facebook (for regular users)
     loginWithFacebook: async (facebookData) => {
         try {
-            const response = await apiClient.post('/auth/facebook', facebookData);
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/auth/facebook`, facebookData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                withCredentials: true
+            });
 
-            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
+            const { token, user } = response.data;
 
             // Store auth data
             localStorage.setItem('token', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            localStorage.setItem('userId', userId);
-            localStorage.setItem('userName', userName);
-            localStorage.setItem('userRole', userRole);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles));
+            localStorage.setItem('userId', user.id);
+            localStorage.setItem('userName', user.username);
+            localStorage.setItem('userRole', user.role);
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
