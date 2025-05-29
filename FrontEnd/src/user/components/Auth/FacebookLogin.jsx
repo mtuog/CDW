@@ -67,8 +67,9 @@ const FacebookLogin = ({ onLoginSuccess }) => {
           };
           
           try {
-            // Use authService for consistent API calls
+            // Use authService for consistent API calls (returns AuthResponse now)
             const data = await authService.loginWithFacebook(userData);
+            console.log('Facebook login successful, received data:', data);
             
             // Notify parent component
             if (onLoginSuccess) {

@@ -138,11 +138,11 @@ function Login() {
 
         setIsLoading(true);
 
-        window.FB.login(function(response) {
+        window.FB.login(async function(response) {
             if (response.authResponse) {
                 console.log('Facebook login successful:', response);
                 // Get user info
-                window.FB.api('/me', { fields: 'id,name,email,picture' }, function(userInfo) {
+                window.FB.api('/me', { fields: 'id,name,email,picture' }, async function(userInfo) {
                     console.log('Facebook user info:', userInfo);
 
                     // Check if email is returned
@@ -167,47 +167,22 @@ function Login() {
 
                     console.log('Sending data to backend:', userData);
 
-                    // Send to backend using consistent HTTP URL
-                    axios.post(`${BACKEND_URL_HTTP}/api/auth/facebook`, userData, {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        withCredentials: true
-                    })
-                    .then(response => {
-                        console.log('Backend response:', response.data);
+                    // Send to backend using authService (consistent with Google login)
+                    try {
+                        const response = await authService.loginWithFacebook(userData);
+                        console.log('Backend response:', response);
                         setIsLoading(false);
 
-                        if (response.data.token) {
-                            // Save authentication data
-                            localStorage.setItem('token', response.data.token);
-                            localStorage.setItem('userId', response.data.user.id);
-                            localStorage.setItem('userName', response.data.user.username);
-                            localStorage.setItem('userRole', response.data.user.role);
-
-                            // Trigger event để cập nhật header
-                            window.dispatchEvent(new Event('auth-change'));
-
-                            // Show success message and redirect
-                            Swal.fire({
-                                title: 'Đăng nhập Facebook thành công!',
-                                icon: 'success',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                navigate('/');
-                            });
-                        } else {
-                            Swal.fire({
-                                title: 'Đăng nhập thất bại',
-                                text: response.data.message || 'Có lỗi xảy ra khi đăng nhập',
-                                icon: 'error',
-                                confirmButtonColor: "#3085d6",
-                            });
-                        }
-                    })
-                    .catch(error => {
+                        // Show success message and redirect
+                        Swal.fire({
+                            title: 'Đăng nhập Facebook thành công!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            navigate('/');
+                        });
+                    } catch (error) {
                         console.error('Error during Facebook login:', error);
                         console.error('Error details:', error.response?.data || error.message);
                         setIsLoading(false);
@@ -218,7 +193,7 @@ function Login() {
                             icon: 'error',
                             confirmButtonColor: "#3085d6",
                         });
-                    });
+                    }
                 });
             } else {
                 setIsLoading(false);

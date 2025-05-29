@@ -1,6 +1,8 @@
 package com.example.BackEndSpring.controller;
 
 import com.example.BackEndSpring.model.User;
+import com.example.BackEndSpring.model.Role;
+import com.example.BackEndSpring.model.AuthResponse;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -38,6 +41,9 @@ public class FacebookAuthController {
     
     @Autowired
     private RestTemplate restTemplate;
+
+    // Add refreshTokens map like in UserController
+    private Map<String, String> refreshTokens = new HashMap<>();
 
     @PostMapping("/facebook")
     public ResponseEntity<?> facebookLogin(@RequestBody Map<String, String> body) {
@@ -143,16 +149,21 @@ public class FacebookAuthController {
                             }
                         }
 
-                        // Generate JWT token
-                        String token = jwtUtil.generateToken(user);
+                        // Generate JWT token and refresh token
+                        String token = generateToken(user);
+                        String refreshToken = generateRefreshToken(user);
                         System.out.println("Generated token for user: " + user.getUsername());
 
-                        Map<String, Object> responseBody = new HashMap<>();
-                        responseBody.put("success", true);
-                        responseBody.put("token", token);
-                        responseBody.put("user", user);
+                        // Return AuthResponse like Google login
+                        AuthResponse response = new AuthResponse(
+                            token,
+                            refreshToken,
+                            user.getId(),
+                            user.getUsername(),
+                            user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
+                        );
 
-                        return ResponseEntity.ok(responseBody);
+                        return ResponseEntity.ok(response);
                     }
                 } else {
                     System.out.println("Token validation failed. Valid: " + data.get("is_valid") + ", UserID match: " + userId.equals(data.get("user_id")));
@@ -183,5 +194,17 @@ public class FacebookAuthController {
         info.put("appId", facebookAppId);
         
         return ResponseEntity.ok(info);
+    }
+
+    // Helper methods for token generation (like in UserController)
+    private String generateToken(User user) {
+        return jwtUtil.generateToken(user);
+    }
+    
+    private String generateRefreshToken(User user) {
+        // Generate refresh token like in UserController
+        String refreshToken = UUID.randomUUID().toString();
+        refreshTokens.put(refreshToken, user.getId().toString());
+        return refreshToken;
     }
 } 

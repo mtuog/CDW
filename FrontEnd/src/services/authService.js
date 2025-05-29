@@ -189,13 +189,15 @@ const authService = {
                 withCredentials: true
             });
 
-            const { token, user } = response.data;
+            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
 
-            // Store auth data
+            // Store auth data (consistent with Google login)
             localStorage.setItem('token', token);
-            localStorage.setItem('userId', user.id);
-            localStorage.setItem('userName', user.username);
-            localStorage.setItem('userRole', user.role);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('userId', userId);
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('userRole', userRole);
+            localStorage.setItem('userRoles', JSON.stringify(userRoles));
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
