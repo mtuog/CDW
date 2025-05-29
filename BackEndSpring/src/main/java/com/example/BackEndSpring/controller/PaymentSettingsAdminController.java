@@ -14,7 +14,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/admin/payment-settings")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 public class PaymentSettingsAdminController {
 
     private final PaymentSettingsService paymentSettingsService;
@@ -46,23 +46,9 @@ public class PaymentSettingsAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaymentSettings> saveSettings(@RequestBody PaymentSettings settings) {
         try {
-            // Debug authentication
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            System.out.println("=== DEBUG SAVE SETTINGS ===");
-            System.out.println("Authentication: " + auth);
-            if (auth != null) {
-                System.out.println("Principal: " + auth.getPrincipal());
-                System.out.println("Authorities: " + auth.getAuthorities());
-                System.out.println("Is authenticated: " + auth.isAuthenticated());
-            }
-            
-            System.out.println("=== DEBUG: Nhận request lưu cài đặt thanh toán ===");
-            System.out.println("Settings object: " + settings);
-            System.out.println("Payment methods: " + settings.getPaymentMethods());
-            System.out.println("Default payment method: " + settings.getDefaultPaymentMethod());
-            System.out.println("Show payment icons: " + settings.isShowPaymentIcons());
-            System.out.println("VNP Tmn Code: " + settings.getVnpTmnCode());
-            System.out.println("Secret Key length: " + (settings.getSecretKey() != null ? settings.getSecretKey().length() : "null"));
+            System.out.println("=== ADMIN SAVE PAYMENT SETTINGS ===");
+            System.out.println("Received settings: " + settings.getDefaultPaymentMethod());
+            System.out.println("Payment methods count: " + (settings.getPaymentMethods() != null ? settings.getPaymentMethods().size() : "null"));
             
             // Xóa trường secretKey nếu nó là chuỗi rỗng để không ghi đè lên giá trị đã lưu
             if (settings.getSecretKey() != null && settings.getSecretKey().trim().isEmpty()) {
@@ -79,11 +65,11 @@ public class PaymentSettingsAdminController {
             }
             
             PaymentSettings savedSettings = paymentSettingsService.saveSettings(settings);
-            System.out.println("Settings saved successfully: " + savedSettings.getId());
+            System.out.println("✅ PAYMENT SETTINGS SAVED SUCCESSFULLY - ID: " + savedSettings.getId());
             
             return ResponseEntity.ok(savedSettings);
         } catch (Exception e) {
-            System.err.println("Error saving payment settings: " + e.getMessage());
+            System.err.println("❌ ERROR SAVING PAYMENT SETTINGS: " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

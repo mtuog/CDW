@@ -7,71 +7,48 @@ import { BACKEND_URL_HTTP } from '../config';
 const API_URL = `${BACKEND_URL_HTTP}/api`;
 
 /**
- * Lấy danh sách phương thức thanh toán khả dụng từ API hoặc localStorage
+ * Lấy danh sách phương thức thanh toán khả dụng từ API
  * @returns {Promise<Array>} Danh sách phương thức thanh toán đã được bật
  */
 export const getAvailablePaymentMethods = async () => {
   try {
-    // Thử lấy từ API trước
     const response = await axios.get(`${API_URL}/payment-settings/available-methods`);
+    
     if (response.data && Array.isArray(response.data)) {
-      console.log('Đã tải phương thức thanh toán từ API:', response.data);
+      console.log('✅ Loaded payment methods from API:', response.data);
       return response.data;
-    }
-    
-    // Nếu API không trả về dữ liệu hợp lệ, thử lấy từ localStorage
-    return getPaymentMethodsFromLocalStorage();
-  } catch (error) {
-    console.error('Lỗi khi lấy phương thức thanh toán từ API:', error);
-    // Fallback về localStorage nếu API lỗi
-    return getPaymentMethodsFromLocalStorage();
-  }
-};
-
-// Hàm helper để lấy từ localStorage
-const getPaymentMethodsFromLocalStorage = () => {
-  try {
-    const storedMethods = localStorage.getItem('paymentMethods');
-    
-    if (storedMethods) {
-      const methods = JSON.parse(storedMethods);
-      // Chỉ trả về các phương thức đã được bật
-      return methods.filter(method => method.enabled);
+    } else {
+      console.warn('⚠️ API returned empty data');
+      return [];
     }
   } catch (error) {
-    console.error('Lỗi khi đọc phương thức thanh toán từ localStorage:', error);
+    console.error('❌ API call failed:', error);
+    
+    // Trả về default methods nếu API fail
+    return [
+      {
+        id: 'cod',
+        name: 'Thanh toán khi nhận hàng (COD)',
+        description: 'Khách hàng thanh toán cho người giao hàng khi nhận hàng',
+        fee: 0,
+        icon: 'fa-money-bill'
+      },
+      {
+        id: 'bank_transfer',
+        name: 'Chuyển khoản ngân hàng',
+        description: 'Chuyển khoản trực tiếp vào tài khoản ngân hàng của cửa hàng',
+        fee: 0,
+        icon: 'fa-university'
+      },
+      {
+        id: 'vnpay',
+        name: 'Thanh toán qua VNPAY',
+        description: 'Thanh toán an toàn với VNPAY (ATM/QRCode/Ví điện tử)',
+        fee: 0,
+        icon: 'fa-credit-card'
+      }
+    ];
   }
-  
-  // Trả về phương thức mặc định nếu không có trong localStorage
-  return [
-    {
-      id: 'cod',
-      name: 'Thanh toán khi nhận hàng (COD)',
-      enabled: true,
-      description: 'Khách hàng thanh toán cho người giao hàng khi nhận hàng',
-      fee: 0,
-      icon: 'fa-money-bill',
-      position: 1
-    },
-    {
-      id: 'bank_transfer',
-      name: 'Chuyển khoản ngân hàng',
-      enabled: true,
-      description: 'Chuyển khoản trực tiếp vào tài khoản ngân hàng của cửa hàng',
-      fee: 0,
-      icon: 'fa-university',
-      position: 2
-    },
-    {
-      id: 'vnpay',
-      name: 'Thanh toán qua VNPAY',
-      enabled: true,
-      description: 'Thanh toán an toàn với VNPAY (ATM/QRCode/Ví điện tử)',
-      fee: 0,
-      icon: 'fa-credit-card',
-      position: 3
-    }
-  ];
 };
 
 /**

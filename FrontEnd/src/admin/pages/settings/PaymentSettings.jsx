@@ -587,35 +587,24 @@ const PaymentSettings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     
     try {
+      setSaving(true);
+      setAlert(null);
+      
       console.log('🚀 Starting payment settings save process...');
       
-      // Check if user is authenticated and has admin role
-      const isTokenValid = await checkToken();
-      if (!isTokenValid) {
-        console.warn('❌ Token validation failed, aborting save');
-        return;
-      }
-      
-      console.log('✅ Token validation passed, proceeding with save...');
-      
-      // Lấy token từ localStorage
-      const token = authApi.getToken();
-      console.log('Token for API call:', token ? `${token.substring(0, 20)}...` : 'null');
-      
-      // Chuẩn bị dữ liệu paymentMethods với cấu trúc chính xác
+      // Format payment methods data
       const formattedPaymentMethods = paymentMethods.map(method => ({
         id: method.id,
         name: method.name,
         enabled: method.enabled,
-        description: method.description || '',
-        fee: method.fee || 0,
-        icon: method.icon || '',
-        position: method.position || 1
+        description: method.description,
+        fee: parseFloat(method.fee) || 0,
+        icon: method.icon,
+        position: method.position
       }));
-
+      
       const formData = {
         defaultPaymentMethod: generalSettings.defaultPaymentMethod,
         showPaymentIcons: generalSettings.showPaymentIcons,
@@ -641,59 +630,37 @@ const PaymentSettings = () => {
         bankBranch: bankDetails.bankBranch || 'Hồ Chí Minh',
         qrCode: newAccount.qrCodeUrl || ''
       };
-
-      console.log('📤 Sending payment settings data:', JSON.stringify(formData, null, 2));
-      console.log('📤 Payment methods count:', formattedPaymentMethods.length);
       
+      console.log('💾 Sending data to API:', formData);
+      
+      // Gửi dữ liệu đến API
       const result = await paymentSettingsApi.saveSettings(formData);
       
-      console.log('✅ Save successful, result:', result);
+      console.log('✅ Payment settings saved successfully!', result);
       
-      if (result) {
-        setAlert({
-          type: 'success',
-          message: 'Cài đặt thanh toán đã được lưu thành công!'
-        });
-        
-        // Tự động ẩn thông báo sau 3 giây
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('❌ Error saving payment settings:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response?.data
+      // Hiển thị thông báo thành công
+      setAlert({
+        type: 'success',
+        message: '✅ Cài đặt thanh toán đã được lưu thành công!'
       });
       
-      let errorMessage = 'Có lỗi xảy ra khi lưu cài đặt thanh toán';
+      toast.success('✅ Cài đặt thanh toán đã được lưu thành công!');
       
-      if (error.message) {
-        if (error.message.includes('401')) {
-          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
-        } else if (error.message.includes('403')) {
-          errorMessage = 'Bạn không có quyền thực hiện thao tác này.';
-        } else if (error.message.includes('500')) {
-          errorMessage = 'Lỗi server nội bộ. Vui lòng thử lại sau.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
+    } catch (error) {
+      console.error('❌ Error saving payment settings:', error);
+      
+      // Hiển thị thông báo lỗi
+      const errorMessage = error.message || 'Không thể lưu cài đặt thanh toán';
       
       setAlert({
         type: 'error',
-        message: errorMessage
+        message: `❌ Lỗi: ${errorMessage}`
       });
       
-      // Tự động ẩn thông báo lỗi sau 5 giây
-      setTimeout(() => {
-        setAlert(null);
-      }, 5000);
+      toast.error(`❌ Lỗi: ${errorMessage}`);
+      
     } finally {
       setSaving(false);
-      console.log('🏁 Payment settings save process completed');
     }
   };
 

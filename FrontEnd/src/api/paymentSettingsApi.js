@@ -72,15 +72,15 @@ const paymentSettingsApi = {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Save API Error Response:', errorText);
+        console.error('❌ Save API Error Response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('Settings saved successfully:', data);
+      console.log('✅ Settings saved successfully:', data);
       return data;
     } catch (error) {
-      console.error('Error saving payment settings:', error);
+      console.error('❌ Error saving payment settings:', error);
       throw error;
     }
   },

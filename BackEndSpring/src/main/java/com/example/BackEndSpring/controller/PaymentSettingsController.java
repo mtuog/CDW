@@ -9,13 +9,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment-settings")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true", maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 public class PaymentSettingsController {
 
     private final PaymentSettingsService paymentSettingsService;
@@ -100,7 +101,7 @@ public class PaymentSettingsController {
     }
 
     /**
-     * Lấy cấu hình chung về thanh toán (cho người dùng)
+     * Endpoint để lấy cài đặt chung về thanh toán (cho người dùng)
      */
     @GetMapping("/general-config")
     public ResponseEntity<?> getGeneralConfig() {
@@ -109,7 +110,7 @@ public class PaymentSettingsController {
             return ResponseEntity.ok(config);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Không thể lấy cấu hình chung", "message", e.getMessage()));
+                .body(Map.of("error", "Không thể lấy cài đặt chung", "message", e.getMessage()));
         }
     }
 } 
