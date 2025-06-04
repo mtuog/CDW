@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import './Home.css'; // Ensure you have a CSS file for additional styles
+import './Home.css';
 import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../api/productApi';
 
 const Home = () => {
@@ -25,18 +25,18 @@ const Home = () => {
 		const fetchProducts = async () => {
 			try {
 				setLoading(true);
-				
+
 				// Fetch all product categories in parallel for better performance
 				const [bestSellers, newProds, favorites] = await Promise.all([
 					getTopSellingProducts(),
 					getFeaturedProducts(),
 					getFeaturedProducts()
 				]);
-				
+
 				setBestSellerProducts(bestSellers);
 				setNewProducts(newProds);
 				setFavoriteProducts(favorites);
-				
+
 				setLoading(false);
 			} catch (error) {
 				setError("Không thể tải sản phẩm. Vui lòng thử lại sau.");
@@ -114,14 +114,23 @@ const Home = () => {
 	if (error) {
 		return <div className="container text-center p-t-80 p-b-80">{error}</div>;
 	}
-	
+
 	// Function to handle click on product
 	const handleProductClick = (id) => {
 		navigate(`/product/${id}`);
 	};
 
 	return (
-		<>
+		<div className="home-page">
+			<section className="hero-contact-section"
+					 style={{backgroundImage: `url('assets/images/banner-10.jpg')`}}>
+				<div className="hero-contact-content">
+					<h1 className="hero-contact-title">Chào Mừng Bạn Đến</h1>
+					<p className="hero-contact-subtitle">Khám phá bộ sưu tập độc đáo của VTX Store</p>
+				</div>
+			</section>
+
+
 			{/* Banner Section */}
 			<div className="sec-banner bg0 p-t-80 p-b-50">
 				<div className="container">
@@ -146,7 +155,7 @@ const Home = () => {
 								<div key={product.id} className="item-slick2 p-l-15 p-r-15 p-t-15 p-b-15">
 									<div className="block2">
 										<div className="block2-pic hov-img0">
-											<img src={product.img} alt={product.name} />
+											<img src={product.img} alt={product.name}/>
 											<button
 												onClick={() => handleProductClick(product.id)}
 												className="block2-btn flex-c-m stext-103 cl2 size-102 bg0 bor2 hov-btn1 p-lr-15 trans-04"
@@ -187,7 +196,7 @@ const Home = () => {
 								<div key={product.id} className="item-slick2 p-l-15 p-r-15 p-t-15 p-b-15">
 									<div className="block2">
 										<div className="block2-pic hov-img0">
-											<img src={product.img} alt={product.name} />
+											<img src={product.img} alt={product.name}/>
 											<button
 												onClick={() => handleProductClick(product.id)}
 												className="block2-btn flex-c-m stext-103 cl2 size-102 bg0 bor2 hov-btn1 p-lr-15 trans-04"
@@ -228,7 +237,7 @@ const Home = () => {
 								<div key={product.id} className="item-slick2 p-l-15 p-r-15 p-t-15 p-b-15">
 									<div className="block2">
 										<div className="block2-pic hov-img0">
-											<img src={product.img} alt={product.name} />
+											<img src={product.img} alt={product.name}/>
 											<button
 												onClick={() => handleProductClick(product.id)}
 												className="block2-btn flex-c-m stext-103 cl2 size-102 bg0 bor2 hov-btn1 p-lr-15 trans-04"
@@ -257,7 +266,7 @@ const Home = () => {
 					</div>
 				</div>
 			</section>
-		</>
+		</div>
 	);
 };
 

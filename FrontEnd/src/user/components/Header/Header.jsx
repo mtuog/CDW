@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearCartLocalStorage } from "../../../store/Actions.js";
 import axios from 'axios';
@@ -22,9 +22,9 @@ const Header = () => {
 			const token = localStorage.getItem('token');
 			const userName = localStorage.getItem('userName');
 			const userId = localStorage.getItem('userId');
-			
+
 			console.log("Login check - UserId:", userId);
-			
+
 			if (token && userName) {
 				setLoggedIn(true);
 				setUsername(userName);
@@ -59,7 +59,7 @@ const Header = () => {
 			const token = localStorage.getItem('token');
 			const userName = localStorage.getItem('userName');
 			const userId = localStorage.getItem('userId');
-			
+
 			if (token && userName) {
 				setLoggedIn(true);
 				setUsername(userName);
@@ -72,7 +72,7 @@ const Header = () => {
 		};
 
 		window.addEventListener('auth-change', handleAuthChange);
-		
+
 		return () => {
 			window.removeEventListener('auth-change', handleAuthChange);
 		};
@@ -96,7 +96,7 @@ const Header = () => {
 		};
 
 		window.addEventListener('wishlist-update', handleWishlistUpdate);
-		
+
 		return () => {
 			window.removeEventListener('wishlist-update', handleWishlistUpdate);
 		};
@@ -132,15 +132,15 @@ const Header = () => {
 		localStorage.removeItem('userId');
 		localStorage.removeItem('userName');
 		localStorage.removeItem('userRole');
-		
+
 		// Cập nhật state
 		setLoggedIn(false);
 		setUsername('');
 		setId('');
-		
+
 		// Trigger event để cập nhật header
 		window.dispatchEvent(new Event('auth-change'));
-		
+
 		// Chuyển hướng về trang chủ
 		navigate('/');
 	};
@@ -170,59 +170,60 @@ const Header = () => {
 				<div className="top-bar">
 					<div className="content-topbar flex-sb-m h-full container">
 						<div className="left-top-bar">
-						Miễn phí vận chuyển cho đơn hàng tiêu chuẩn trên $100
+							Miễn phí vận chuyển cho đơn hàng tiêu chuẩn trên $100
 						</div>
 						<div className="right-top-bar flex-w h-full">
-							<a href="/home" className="flex-c-m trans-04 p-lr-25">
+							<Link to="/home" className="flex-c-m trans-04 p-lr-25">
 								Trợ giúp và câu hỏi thường gặp
-							</a>
-							
+							</Link>
+
 							{loggedIn ? (
-								<a href="/account" className="flex-c-m trans-04 p-lr-25" style={{
+								<Link to="/account" className="flex-c-m trans-04 p-lr-25" style={{
 									maxWidth: '150px',
 									overflow: 'hidden',
 									textOverflow: 'ellipsis',
 									whiteSpace: 'nowrap'
 								}}>
 									<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</span>
-								</a>
+								</Link>
 							) : (
-								<a href="/login" className="flex-c-m trans-04 p-lr-25">
+								<Link to="/login" className="flex-c-m trans-04 p-lr-25">
 									<span>Đăng nhập</span>
-								</a>
+								</Link>
 							)}
-			
-							<a href="/home" className="flex-c-m trans-04 p-lr-25">
+
+							<Link to="/home" className="flex-c-m trans-04 p-lr-25">
 								EN
-							</a>
-							<a href="/home" className="flex-c-m trans-04 p-lr-25">
+							</Link>
+							<Link to="/home" className="flex-c-m trans-04 p-lr-25">
 								VNĐ
-							</a>
+							</Link>
 						</div>
 					</div>
 				</div>
 				<div className="wrap-menu-desktop how-shadow1">
 					<nav className="limiter-menu-desktop container">
-						<a href="/home" className="logo">
+						<Link to="/home" className="logo">
 							<img src={`${process.env.PUBLIC_URL}/assets/images/icons/logo-01.png`} alt="IMG-LOGO" />
-						</a>
+						</Link>
 						<div className="menu-desktop">
 							<ul className="main-menu">
-								<li><a href="/home">Trang chủ</a></li>
-								<li className="active-menu"><a href="/product">
-								Cửa hàng</a></li>
-								<li className="label1" data-label1="hot"><a href="/shoppingCart">Giỏ hàng</a></li>
-								<li><a href="/aboutUs">Giới Thiệu</a></li>
-								<li><a href="/contact">Liên Hệ</a></li>
+								<li><Link to="/home">Trang chủ</Link></li>
+								<li className="active-menu"><Link to="/product">Cửa hàng</Link></li>
+								<li className="label1" data-label1="hot"><Link to="/shoppingCart">Giỏ hàng</Link></li>
+								<li><Link to="/aboutUs">Giới Thiệu</Link></li>
+								<li><Link to="/contact">Liên Hệ</Link></li>
 							</ul>
 						</div>
 						<div className="wrap-icon-header flex-w flex-r-m">
 							<div className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti js-show-cart" data-notify={cart.length}>
-								<a href="/shoppingCart"><i className="zmdi zmdi-shopping-cart"></i></a>
+								{/* ✅ Thay <a> thành <Link> */}
+								<Link to="/shoppingCart"><i className="zmdi zmdi-shopping-cart"></i></Link>
 							</div>
-							<a href="/account?tab=wishlist" className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti" data-notify={wishlistCount}>
+							{/* ✅ Thay <a> thành <Link> */}
+							<Link to="/account?tab=wishlist" className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti" data-notify={wishlistCount}>
 								<i className="zmdi zmdi-favorite-outline"></i>
-							</a>
+							</Link>
 							<div style={{ display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
 								<i className="zmdi zmdi-search" style={{ color: 'red' }} onClick={handleSearchButtonClick}></i>
 								<input
@@ -237,10 +238,10 @@ const Header = () => {
 								/>
 							</div>
 							{loggedIn ? (
-								<div 
-									style={{ 
-										display: 'flex', 
-										alignItems: 'center', 
+								<div
+									style={{
+										display: 'flex',
+										alignItems: 'center',
 										marginLeft: '15px',
 										cursor: 'pointer',
 										maxWidth: '150px',
@@ -251,9 +252,9 @@ const Header = () => {
 								>
 									<i className="zmdi zmdi-account" style={{ marginRight: '8px', flexShrink: 0 }}></i>
 									<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</span>
-									
-									<i 
-										className="zmdi zmdi-power" 
+
+									<i
+										className="zmdi zmdi-power"
 										style={{ marginLeft: '10px', fontSize: '16px', color: '#666', flexShrink: 0 }}
 										onClick={(e) => {
 											e.stopPropagation();
@@ -262,12 +263,12 @@ const Header = () => {
 									></i>
 								</div>
 							) : (
-								<div 
-									style={{ 
-										display: 'flex', 
-										alignItems: 'center', 
+								<div
+									style={{
+										display: 'flex',
+										alignItems: 'center',
 										marginLeft: '15px',
-										cursor: 'pointer' 
+										cursor: 'pointer'
 									}}
 									onClick={() => navigate('/login')}
 								>
@@ -281,7 +282,7 @@ const Header = () => {
 			</div>
 			<div className="wrap-header-mobile">
 				<div className="logo-mobile">
-					<a href="/home"><img src={`${process.env.PUBLIC_URL}/assets/images/icons/logo-01.png`} alt="IMG-LOGO" /></a>
+					<Link to="/home"><img src={`${process.env.PUBLIC_URL}/assets/images/icons/logo-01.png`} alt="IMG-LOGO" /></Link>
 				</div>
 				<div className="wrap-icon-header flex-w flex-r-m m-r-15">
 					<button className="icon-header-item cl2 hov-cl1 trans-04 p-r-11 js-show-modal-search" aria-label="Search">
@@ -290,11 +291,11 @@ const Header = () => {
 					<div className="icon-header-item cl2 hov-cl1 trans-04 p-r-11 p-l-10 icon-header-noti js-show-cart" data-notify={cart.length}>
 						<i className="zmdi zmdi-shopping-cart"></i>
 					</div>
-					<a href="/account?tab=wishlist" className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti" data-notify={wishlistCount}>
+					<Link to="/account?tab=wishlist" className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti" data-notify={wishlistCount}>
 						<i className="zmdi zmdi-favorite-outline"></i>
-					</a>
-					<div 
-						className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11" 
+					</Link>
+					<div
+						className="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11"
 						onClick={() => navigate('/login')}
 					>
 						<i className="zmdi zmdi-account"></i>
@@ -310,48 +311,48 @@ const Header = () => {
 				<ul className="topbar-mobile">
 					<li>
 						<div className="left-top-bar">
-						Miễn phí vận chuyển cho tiêu chuẩn đơn hàng trên $100						</div>
+							Miễn phí vận chuyển cho tiêu chuẩn đơn hàng trên $100						</div>
 					</li>
 					<li>
 						<div className="right-top-bar flex-w h-full">
-							<a href="/home" className="flex-c-m p-lr-10 trans-04">Help & FAQs</a>
-							
+							<Link to="/home" className="flex-c-m p-lr-10 trans-04">Help & FAQs</Link>
+
 							{loggedIn ? (
-								<a href="/account" className="flex-c-m p-lr-10 trans-04" style={{
+								<Link to="/account" className="flex-c-m p-lr-10 trans-04" style={{
 									maxWidth: '150px',
 									overflow: 'hidden',
 									textOverflow: 'ellipsis',
 									whiteSpace: 'nowrap'
 								}}>
 									<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</span>
-								</a>
+								</Link>
 							) : (
-								<a href="/login" className="flex-c-m p-lr-10 trans-04">
+								<Link to="/login" className="flex-c-m p-lr-10 trans-04">
 									<span>Đăng nhập</span>
-								</a>
+								</Link>
 							)}
-							
-							<a href="/home" className="flex-c-m p-lr-10 trans-04">EN</a>
-							<a href="/home" className="flex-c-m p-lr-10 trans-04">VNĐ</a>
+
+							<Link to="/home" className="flex-c-m p-lr-10 trans-04">EN</Link>
+							<Link to="/home" className="flex-c-m p-lr-10 trans-04">VNĐ</Link>
 						</div>
 					</li>
 				</ul>
 				<ul className="main-menu-m">
-					<li><a href="/home">Trang Chủ</a></li>
-					<li><a href="/product">Cửa hàng</a></li>
-					<li><a href="/shoppingCart" className="label1 rs1" data-label1="hot">Giỏ hàng</a></li>
-					<li><a href="/aboutUs">Giới Thiệu</a></li>
-					<li><a href="/contact">Liên Hệ</a></li>
-					
+					<li><Link to="/home">Trang Chủ</Link></li>
+					<li><Link to="/product">Cửa hàng</Link></li>
+					<li><Link to="/shoppingCart" className="label1 rs1" data-label1="hot">Giỏ hàng</Link></li>
+					<li><Link to="/aboutUs">Giới Thiệu</Link></li>
+					<li><Link to="/contact">Liên Hệ</Link></li>
+
 					{loggedIn ? (
 						<>
-							<li><div 
+							<li><div
 								style={{cursor: 'pointer', padding: '10px 20px'}}
 								onClick={() => navigate('/account')}
 							>
 								<i className="zmdi zmdi-account mr-2"></i> Hồ sơ
 							</div></li>
-							<li><div 
+							<li><div
 								style={{cursor: 'pointer', padding: '10px 20px'}}
 								onClick={(e) => {
 									e.preventDefault();
@@ -362,7 +363,7 @@ const Header = () => {
 						</>
 					) : (
 						<>
-							<li><div 
+							<li><div
 								style={{cursor: 'pointer', padding: '10px 20px'}}
 								onClick={() => navigate('/login')}>
 								<i className="zmdi zmdi-account-circle mr-2"></i> Đăng nhập
@@ -376,4 +377,3 @@ const Header = () => {
 };
 
 export default Header;
-

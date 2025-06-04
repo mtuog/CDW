@@ -1,5 +1,10 @@
 /* Home.css */
-
+.home-page,
+.home-page *:not([class*="fa"]):not([class*="icon"]):not([class*="material"]):not([class*="glyphicon"]) {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif !important;
+}
 .product-item {
     margin: 0 10px;
 }
@@ -41,4 +46,57 @@
 
 .slick-next:before {
     content: '→'; /* Use the appropriate character or image */
+}
+.hero-contact-section {
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: white;
+    text-align: center;
+}
+
+.hero-contact-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+}
+
+.hero-contact-content {
+    position: relative;
+    z-index: 2;
+    max-width: 600px;
+    padding: 0 20px;
+}
+
+.hero-contact-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.hero-contact-subtitle {
+    font-size: 1.3rem;
+    opacity: 0.9;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .hero-contact-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-contact-subtitle {
+        font-size: 1.1rem;
+    }
 }
