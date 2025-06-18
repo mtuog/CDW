@@ -16,7 +16,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         // Check if this is an admin request
-        const isAdminRequest = config.url?.includes('/admin/') || config.url?.includes('/UserServices/');
+        const isAdminRequest = config.url?.includes('/admin/');
         const token = isAdminRequest 
             ? localStorage.getItem('adminToken') 
             : localStorage.getItem('token');
@@ -24,6 +24,14 @@ apiClient.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        console.log('API Request:', {
+            url: config.url,
+            isAdminRequest,
+            hasToken: !!token,
+            tokenType: isAdminRequest ? 'admin' : 'user'
+        });
+        
         return config;
     },
     (error) => {
@@ -43,7 +51,7 @@ apiClient.interceptors.response.use(
 
             try {
                 // Check if this is an admin request
-                const isAdminRequest = originalRequest.url?.includes('/admin/') || originalRequest.url?.includes('/UserServices/');
+                const isAdminRequest = originalRequest.url?.includes('/admin/');
                 const refreshToken = isAdminRequest 
                     ? localStorage.getItem('adminRefreshToken') 
                     : localStorage.getItem('refreshToken');
@@ -75,7 +83,7 @@ apiClient.interceptors.response.use(
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 // If refresh token fails, logout user
-                if (originalRequest.url?.includes('/admin/') || originalRequest.url?.includes('/UserServices/')) {
+                if (originalRequest.url?.includes('/admin/')) {
                     authService.adminLogout();
                 } else {
                     authService.logout();
@@ -158,15 +166,26 @@ const authService = {
                 userName: userInfo.name
             });
 
-            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
+            const { token, refreshToken, userId, userName, userRoles } = response.data;
 
-            // Store auth data
+            // Store auth data with proper handling of userRoles
             localStorage.setItem('token', token);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('userId', userId);
             localStorage.setItem('userName', userName);
-            localStorage.setItem('userRole', userRole);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles));
+            localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
+            
+            // Set primary role from userRoles for backward compatibility
+            const primaryRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'USER';
+            localStorage.setItem('userRole', primaryRole);
+
+            console.log('Google login - stored data:', {
+                token: token ? 'present' : 'missing',
+                userId,
+                userName,
+                userRoles,
+                primaryRole
+            });
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
@@ -189,15 +208,26 @@ const authService = {
                 withCredentials: true
             });
 
-            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
+            const { token, refreshToken, userId, userName, userRoles } = response.data;
 
-            // Store auth data (consistent with Google login)
+            // Store auth data with proper handling of userRoles
             localStorage.setItem('token', token);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('userId', userId);
             localStorage.setItem('userName', userName);
-            localStorage.setItem('userRole', userRole);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles));
+            localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
+            
+            // Set primary role from userRoles for backward compatibility
+            const primaryRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'USER';
+            localStorage.setItem('userRole', primaryRole);
+
+            console.log('Facebook login - stored data:', {
+                token: token ? 'present' : 'missing',
+                userId,
+                userName,
+                userRoles,
+                primaryRole
+            });
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
@@ -277,4 +307,7 @@ const authService = {
     }
 };
 
-export default authService; 
+export default authService;
+
+// Export apiClient for use in other services
+export { apiClient }; 

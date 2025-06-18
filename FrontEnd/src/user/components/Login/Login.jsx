@@ -138,11 +138,11 @@ function Login() {
 
         setIsLoading(true);
 
-        window.FB.login(async function(response) {
+        window.FB.login(function(response) {
             if (response.authResponse) {
                 console.log('Facebook login successful:', response);
                 // Get user info
-                window.FB.api('/me', { fields: 'id,name,email,picture' }, async function(userInfo) {
+                window.FB.api('/me', { fields: 'id,name,email,picture' }, function(userInfo) {
                     console.log('Facebook user info:', userInfo);
 
                     // Check if email is returned
@@ -167,39 +167,44 @@ function Login() {
 
                     console.log('Sending data to backend:', userData);
 
-                    // Send to backend using authService (consistent with Google login)
-                    try {
-                        const response = await authService.loginWithFacebook(userData);
-                        console.log('Backend response:', response);
-                        setIsLoading(false);
-
-                        // Show success message and redirect
-                        Swal.fire({
-                            title: 'Đăng nhập Facebook thành công!',
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            navigate('/');
-                        });
-                    } catch (error) {
-                        console.error('Error during Facebook login:', error);
-                        console.error('Error details:', error.response?.data || error.message);
-                        setIsLoading(false);
-
-                        Swal.fire({
-                            title: 'Đăng nhập thất bại',
-                            text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
-                            icon: 'error',
-                            confirmButtonColor: "#3085d6",
-                        });
-                    }
+                    // Process Facebook login in a separate async function
+                    processFacebookLogin(userData);
                 });
             } else {
                 setIsLoading(false);
                 console.log('Facebook login cancelled or failed');
             }
         }, { scope: 'public_profile,email' });
+    };
+
+    // Separate async function to handle Facebook login processing
+    const processFacebookLogin = async (userData) => {
+        try {
+            const response = await authService.loginWithFacebook(userData);
+            console.log('Backend response:', response);
+            setIsLoading(false);
+
+            // Show success message and redirect
+            Swal.fire({
+                title: 'Đăng nhập Facebook thành công!',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                navigate('/');
+            });
+        } catch (error) {
+            console.error('Error during Facebook login:', error);
+            console.error('Error details:', error.response?.data || error.message);
+            setIsLoading(false);
+
+            Swal.fire({
+                title: 'Đăng nhập thất bại',
+                text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
+                icon: 'error',
+                confirmButtonColor: "#3085d6",
+            });
+        }
     };
 
     const loginHandler = async (e) => {

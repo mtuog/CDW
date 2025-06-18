@@ -22,14 +22,13 @@ const Profile = () => {
     
     useEffect(() => {
         const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
         
-        if (!token || !userId) {
+        if (!token) {
             navigate('/login');
             return;
         }
         
-        fetchUserProfile(token, userId);
+        fetchUserProfile(token);
         
         // Kiểm tra URL để xác định tab active
         const urlParams = new URLSearchParams(window.location.search);
@@ -39,12 +38,13 @@ const Profile = () => {
         }
     }, [navigate]);
     
-    const fetchUserProfile = async (token, userId) => {
+    const fetchUserProfile = async (token) => {
         try {
             setLoading(true);
             
+            // Sử dụng endpoint /api/users/profile để lấy thông tin người dùng hiện tại
             const response = await axios.get(
-                `${BACKEND_URL_HTTP}/api/users/${userId}`,
+                `${BACKEND_URL_HTTP}/api/users/profile`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -63,13 +63,16 @@ const Profile = () => {
             
             if (error.response && error.response.status === 401) {
                 // Token hết hạn hoặc không hợp lệ
+                console.log("Token hết hạn, redirect về login");
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('userName');
                 localStorage.removeItem('userRole');
+                localStorage.removeItem('userRoles');
                 navigate('/login');
             } else {
+                console.error('Error response:', error.response?.data);
                 setError('Không thể tải thông tin người dùng. Vui lòng thử lại sau.');
             }
         } finally {
@@ -80,10 +83,9 @@ const Profile = () => {
     // Function to refresh user profile data
     const refreshUserProfile = async () => {
         const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
         
-        if (token && userId) {
-            await fetchUserProfile(token, userId);
+        if (token) {
+            await fetchUserProfile(token);
         }
     };
     

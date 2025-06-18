@@ -68,47 +68,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.info("Security context was null, creating authentication for: " + username);
             
             try {
-                // Instead of loading from database, create UserDetails from JWT claims
+                // Handle both cases: roles exist or roles are empty/null
+                List<SimpleGrantedAuthority> authorities;
+                
                 if (roles != null && !roles.isEmpty()) {
                     // Convert roles to authorities with ROLE_ prefix
-                    List<SimpleGrantedAuthority> authorities = roles.stream()
+                    authorities = roles.stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                         .collect(Collectors.toList());
+                    logger.info("Created authorities from JWT roles: " + authorities);
+                } else {
+                    // Fallback: assign default USER role for users with empty roles (social login users)
+                    authorities = java.util.Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
+                    logger.info("No roles in JWT, assigned default USER role for: " + username);
+                }
+                
+                // Create a simple UserDetails object
+                UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                    .username(username)
+                    .password("") // Not used for JWT validation
+                    .authorities(authorities)
+                    .build();
+                
+                // Validate token
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, authorities);
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                     
-                    logger.info("Created authorities from JWT: " + authorities);
+                    logger.info("Authentication successful, set security context for: " + username);
+                    logger.info("Final authorities: " + authorities);
                     
-                    // Create a simple UserDetails object
-                    UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
-                        .username(username)
-                        .password("") // Not used for JWT validation
-                        .authorities(authorities)
-                        .build();
-                    
-                    // Validate token
-                    if (jwtUtil.validateToken(jwt, userDetails)) {
-                        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                                userDetails, null, authorities);
-                        authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                        
-                        logger.info("Authentication successful, set security context for: " + username);
-                        logger.info("Final authorities: " + authorities);
-                        
-                        // Check if it's an admin endpoint and the user has admin role
-                        if (request.getRequestURI().contains("/api/admin/")) {
-                            boolean hasAdminRole = authorities.stream()
-                                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
-                            if (!hasAdminRole) {
-                                logger.warn("User " + username + " attempted to access admin endpoint without ROLE_ADMIN");
-                            } else {
-                                logger.info("ADMIN access granted for: " + username);
-                            }
+                    // Check if it's an admin endpoint and the user has admin role
+                    if (request.getRequestURI().contains("/api/admin/")) {
+                        boolean hasAdminRole = authorities.stream()
+                            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+                        if (!hasAdminRole) {
+                            logger.warn("User " + username + " attempted to access admin endpoint without ROLE_ADMIN");
+                        } else {
+                            logger.info("ADMIN access granted for: " + username);
                         }
-                    } else {
-                        logger.warn("Token is not valid for user: " + username);
                     }
                 } else {
-                    logger.warn("No roles found in JWT token for user: " + username);
+                    logger.warn("Token is not valid for user: " + username);
                 }
             } catch (Exception e) {
                 logger.error("Failed to create authentication for user: " + username, e);

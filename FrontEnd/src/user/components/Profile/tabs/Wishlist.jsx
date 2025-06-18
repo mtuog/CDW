@@ -18,7 +18,6 @@ const Wishlist = ({ user }) => {
     const fetchWishlist = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const userId = user?.id;
             
             console.log("Fetching wishlist for user:", userId);
@@ -30,14 +29,11 @@ const Wishlist = ({ user }) => {
                 return;
             }
             
-            const response = await axios.get(
-                `${BACKEND_URL_HTTP}/api/wishlist/user/${userId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+            const response = await axios.get(`${BACKEND_URL_HTTP}/api/wishlist/user/${userId}`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
-            );
+            });
             
             console.log("Wishlist API response:", response.data);
             
@@ -70,7 +66,6 @@ const Wishlist = ({ user }) => {
 
     const removeFromWishlist = async (productId) => {
         try {
-            const token = localStorage.getItem('token');
             const userId = user?.id;
             
             if (!userId) {
@@ -86,14 +81,11 @@ const Wishlist = ({ user }) => {
             
             console.log(`Removing product ${productId} from wishlist for user ${userId}`);
             
-            const response = await axios.delete(
-                `${BACKEND_URL_HTTP}/api/wishlist/remove/${productId}?userId=${userId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+            const response = await axios.delete(`${BACKEND_URL_HTTP}/api/wishlist/remove/${productId}?userId=${userId}`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
-            );
+            });
             
             console.log("Remove from wishlist response:", response.data);
             
@@ -127,20 +119,14 @@ const Wishlist = ({ user }) => {
 
     const addToCart = async (productId) => {
         try {
-            const token = localStorage.getItem('token');
-            
-            const response = await axios.post(
-                `${BACKEND_URL_HTTP}/api/cart/add`,
-                {
-                    productId,
-                    quantity: 1
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+            const response = await axios.post(`${BACKEND_URL_HTTP}/api/cart/add`, {
+                productId,
+                quantity: 1
+            }, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
-            );
+            });
             
             if (response.status === 200) {
                 Swal.fire({
@@ -192,7 +178,7 @@ const Wishlist = ({ user }) => {
                     <i className="fa fa-heart fa-3x text-muted mb-3"></i>
                     <h5>Danh sách yêu thích trống</h5>
                     <p className="text-muted">Hãy thêm sản phẩm yêu thích để xem tại đây</p>
-                    <Link to="/shop" className="btn btn-primary mt-3">
+                    <Link to="/product" className="btn btn-primary mt-3">
                         Tiếp tục mua sắm
                     </Link>
                 </div>
@@ -262,4 +248,4 @@ const Wishlist = ({ user }) => {
     );
 };
 
-export default Wishlist; 
+export default Wishlist;

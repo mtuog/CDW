@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearCartLocalStorage } from "../../../store/Actions.js";
-import axios from 'axios';
 import { BACKEND_URL_HTTP } from '../../../config.js';
+import authService from '../../../services/authService';
+import axios from 'axios';
 
 const Header = () => {
 	const [loggedIn, setLoggedIn] = useState(false);

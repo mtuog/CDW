@@ -1,13 +1,17 @@
 package com.example.BackEndSpring.service;
 
 import com.example.BackEndSpring.model.User;
+import com.example.BackEndSpring.model.Role;
 import com.example.BackEndSpring.repository.UserRepository;
+import com.example.BackEndSpring.repository.RoleRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Date;
 import java.util.Random;
+import java.util.HashSet;
+import java.util.stream.Collectors;
 
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,7 @@ import java.io.UnsupportedEncodingException;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
@@ -36,8 +41,9 @@ public class UserService {
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     @Autowired
-    public UserService(UserRepository userRepository, EmailService emailService, PasswordEncoder passwordEncoder, NotificationService notificationService) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, EmailService emailService, PasswordEncoder passwordEncoder, NotificationService notificationService) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.notificationService = notificationService;
@@ -95,8 +101,22 @@ public class UserService {
             if (userRepository.existsByEmail(user.getEmail())) {
                 throw new RuntimeException("Email already exists");
             }
+            
             // Set up user data
             user.setCreatedAt(LocalDateTime.now());
+            
+            // Assign default USER role if no roles are set
+            if (user.getRoles() == null || user.getRoles().isEmpty()) {
+                Optional<Role> userRole = roleRepository.findByName("USER");
+                if (userRole.isPresent()) {
+                    user.setRoles(new HashSet<>());
+                    user.getRoles().add(userRole.get());
+                    System.out.println("Assigned USER role to new user: " + user.getUsername());
+                } else {
+                    System.err.println("Warning: USER role not found in database!");
+                }
+            }
+            
             // Nếu user chưa xác thực (tức là đăng ký thường), tạo OTP và gửi mail xác thực
             if (!user.isVerified()) {
             String otp = generateOTP();
@@ -168,6 +188,7 @@ public class UserService {
         
         // Xác thực thành công
         user.setVerified(true);
+        user.setEnabled(true);  // Kích hoạt tài khoản sau khi xác thực thành công
         user.setOtp(null);
         user.setOtpExpiryTime(null);
         userRepository.save(user);
@@ -342,6 +363,19 @@ public class UserService {
         user.setPhone(userDetails.getPhone());
         user.setAddress(userDetails.getAddress());
         user.setVerified(userDetails.isVerified()); // Cập nhật trạng thái xác thực
+        user.setEnabled(userDetails.isEnabled()); // Cập nhật trạng thái kích hoạt
+        
+        // Update social login specific fields if provided
+        if (userDetails.getAvatar() != null) {
+            user.setAvatar(userDetails.getAvatar());
+        }
+        if (userDetails.getProvider() != null) {
+            user.setProvider(userDetails.getProvider());
+        }
+        if (userDetails.getProviderId() != null) {
+            user.setProviderId(userDetails.getProviderId());
+        }
+        
         // Don't update password here, should be done in a separate method with proper validation
         return userRepository.save(user);
     }
@@ -435,8 +469,21 @@ public class UserService {
                 user.setCreatedAt(LocalDateTime.now());
             }
             
-            // Đảm bảo user đã được xác thực
+            // Assign default USER role if no roles are set
+            if (user.getRoles() == null || user.getRoles().isEmpty()) {
+                Optional<Role> userRole = roleRepository.findByName("USER");
+                if (userRole.isPresent()) {
+                    user.setRoles(new HashSet<>());
+                    user.getRoles().add(userRole.get());
+                    System.out.println("Assigned USER role to social login user: " + user.getUsername());
+                } else {
+                    System.err.println("Warning: USER role not found in database!");
+                }
+            }
+            
+            // Đảm bảo user đã được xác thực và kích hoạt cho social login
             user.setVerified(true);
+            user.setEnabled(true);  // Quan trọng: Set enabled = true cho social login users
             
             // Lưu user vào database
             User savedUser = userRepository.save(user);

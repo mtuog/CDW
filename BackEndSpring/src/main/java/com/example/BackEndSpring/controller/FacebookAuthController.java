@@ -1,8 +1,8 @@
 package com.example.BackEndSpring.controller;
 
-import com.example.BackEndSpring.model.User;
-import com.example.BackEndSpring.model.Role;
 import com.example.BackEndSpring.model.AuthResponse;
+import com.example.BackEndSpring.model.Role;
+import com.example.BackEndSpring.model.User;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -129,21 +129,48 @@ public class FacebookAuthController {
                             System.out.println("Created new user: " + user.getId() + ", " + user.getUsername());
                         } else {
                             user = existingUser.get();
-                            System.out.println("Using existing user: " + user.getId() + ", " + user.getUsername());
+                            System.out.println("Using existing user: " + user.getId() + ", username: " + user.getUsername() + ", email: " + user.getEmail());
                             
-                            // Đảm bảo user được xác thực
+                            // Đảm bảo user được xác thực và kích hoạt
+                            boolean needsUpdate = false;
                             if (!user.isVerified()) {
                                 user.setVerified(true);
+                                needsUpdate = true;
+                                System.out.println("Setting user as verified");
+                            }
+                            if (!user.isEnabled()) {
+                                user.setEnabled(true);
+                                needsUpdate = true;
+                                System.out.println("Setting user as enabled");
+                            }
+                            
+                            // Update fullName from Facebook if it's empty
+                            if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
+                                user.setFullName(name);
+                                needsUpdate = true;
+                                System.out.println("Updated fullName from Facebook: " + name);
                             }
 
                             // Update Facebook info if needed
                             try {
-                                if (pictureUrl != null) {
+                                if (pictureUrl != null && !pictureUrl.equals(user.getAvatar())) {
                                     user.setAvatar(pictureUrl);
+                                    needsUpdate = true;
+                                    System.out.println("Updated avatar from Facebook");
                                 }
-                                user.setProvider("facebook");
-                                user.setProviderId(userId);
-                                userService.updateUser(user.getId(), user);
+                                if (!"facebook".equals(user.getProvider())) {
+                                    user.setProvider("facebook");
+                                    needsUpdate = true;
+                                }
+                                if (!userId.equals(user.getProviderId())) {
+                                    user.setProviderId(userId);
+                                    needsUpdate = true;
+                                }
+                                
+                                if (needsUpdate) {
+                                    userService.updateUser(user.getId(), user);
+                                    System.out.println("Updated existing user with Facebook info");
+                                }
                             } catch (Exception e) {
                                 System.out.println("Could not update Facebook-specific fields: " + e.getMessage());
                             }

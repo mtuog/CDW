@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createBrowserRouter, RouterProvider, Route, Outlet } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -29,6 +29,7 @@ import PaymentResult from './user/components/Payment/PaymentResult';
 import OrderSuccess from './user/components/Payment/OrderSuccess';
 import UserOrderDetail from './user/components/Profile/tabs/OrderDetail';
 import ChatWidget from './user/components/Chat/ChatWidget';
+import axios from 'axios';
 
 const Layout = () => {
     return (
@@ -78,6 +79,33 @@ const router = createBrowserRouter([
         element: <AdminLayout />
     },
 ]);
+
+// Setup axios interceptors globally
+axios.interceptors.request.use(
+    (config) => {
+        // Check if this is an admin request
+        const isAdminRequest = config.url?.includes('/admin/');
+        const token = isAdminRequest 
+            ? localStorage.getItem('adminToken') 
+            : localStorage.getItem('token');
+
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        console.log('Global Axios Request:', {
+            url: config.url,
+            isAdminRequest,
+            hasToken: !!token,
+            tokenType: isAdminRequest ? 'admin' : 'user'
+        });
+        
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 function App() {
     return (

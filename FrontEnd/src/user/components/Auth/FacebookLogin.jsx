@@ -45,7 +45,7 @@ const FacebookLogin = ({ onLoginSuccess }) => {
       if (response.authResponse) {
         console.log('Facebook login successful:', response);
         // Get user info
-        window.FB.api('/me', { fields: 'id,name,email,picture' }, async function(userInfo) {
+        window.FB.api('/me', { fields: 'id,name,email,picture' }, function(userInfo) {
           console.log('Facebook user info:', userInfo);
 
           if (!userInfo.email) {
@@ -66,40 +66,46 @@ const FacebookLogin = ({ onLoginSuccess }) => {
             picture: userInfo.picture?.data?.url
           };
           
-          try {
-            // Use authService for consistent API calls (returns AuthResponse now)
-            const data = await authService.loginWithFacebook(userData);
-            console.log('Facebook login successful, received data:', data);
-            
-            // Notify parent component
-            if (onLoginSuccess) {
-              onLoginSuccess(data);
-            }
-            
-            // Show success message
-            Swal.fire({
-              title: 'Đăng nhập Facebook thành công!',
-              icon: 'success',
-              timer: 1500,
-              showConfirmButton: false
-            }).then(() => {
-              navigate('/');
-            });
-            
-          } catch (error) {
-            console.error('Error during Facebook login:', error);
-            Swal.fire({
-              title: 'Đăng nhập thất bại',
-              text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
-              icon: 'error',
-              confirmButtonColor: "#3085d6",
-            });
-          }
+          // Process Facebook login in a separate async function
+          processFacebookLogin(userData);
         });
       } else {
         console.log('Facebook login cancelled or failed');
       }
     }, { scope: 'public_profile,email' });
+  };
+
+  // Separate async function to handle Facebook login processing
+  const processFacebookLogin = async (userData) => {
+    try {
+      // Use authService for consistent API calls (returns AuthResponse now)
+      const data = await authService.loginWithFacebook(userData);
+      console.log('Facebook login successful, received data:', data);
+      
+      // Notify parent component
+      if (onLoginSuccess) {
+        onLoginSuccess(data);
+      }
+      
+      // Show success message
+      Swal.fire({
+        title: 'Đăng nhập Facebook thành công!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      }).then(() => {
+        navigate('/');
+      });
+      
+    } catch (error) {
+      console.error('Error during Facebook login:', error);
+      Swal.fire({
+        title: 'Đăng nhập thất bại',
+        text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
+        icon: 'error',
+        confirmButtonColor: "#3085d6",
+      });
+    }
   };
 
   return (

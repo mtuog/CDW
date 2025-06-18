@@ -13,6 +13,7 @@ import com.example.BackEndSpring.model.Order;
 import com.example.BackEndSpring.model.Role;
 import com.example.BackEndSpring.service.UserService;
 import com.example.BackEndSpring.service.OrderService;
+import com.example.BackEndSpring.repository.RoleRepository;
 import com.example.BackEndSpring.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +63,7 @@ public class UserController {
 
     private final UserService userService;
     private final OrderService orderService;
+    private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     // Temporary storage for tokens (in production, use a database or Redis)
@@ -71,9 +74,10 @@ public class UserController {
     private JwtUtil jwtUtil;
 
     @Autowired
-    public UserController(UserService userService, OrderService orderService) {
+    public UserController(UserService userService, OrderService orderService, RoleRepository roleRepository) {
         this.userService = userService;
         this.orderService = orderService;
+        this.roleRepository = roleRepository;
     }
 
     @Operation(summary = "Lấy danh sách tất cả người dùng")
@@ -339,6 +343,13 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
             
+            // Check if user is enabled
+            if (!user.isEnabled()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ với quản trị viên.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            }
+            
             // Create tokens
             String token = generateToken(user);
             String refreshToken = generateRefreshToken(user);
@@ -511,17 +522,61 @@ public class UserController {
                 String randomPassword = UUID.randomUUID().toString();
                 user.setPassword(passwordEncoder.encode(randomPassword));
                 user.setVerified(true); // Users from Google are automatically verified
-                user = userService.createUser(user);
+                user.setEnabled(true); // Users from Google are automatically enabled
+                user.setProvider("google");
+                user = userService.createUserFromSocialLogin(user);
+                System.out.println("Created new Google user: " + user.getId() + ", " + user.getUsername());
             } else {
                 user = existingUser.get();
-                // Ensure Google users are always verified
+                System.out.println("Using existing user: " + user.getId() + ", username: " + user.getUsername() + ", email: " + user.getEmail());
+                
+                // Ensure Google users are always verified and enabled
+                boolean needsUpdate = false;
                 if (!user.isVerified()) {
                     user.setVerified(true);
+                    needsUpdate = true;
+                    System.out.println("Setting user as verified");
+                }
+                if (!user.isEnabled()) {
+                    user.setEnabled(true);
+                    needsUpdate = true;
+                    System.out.println("Setting user as enabled");
+                }
+                
+                // Update fullName from Google if it's empty or different
+                if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
+                    user.setFullName(userName);
+                    needsUpdate = true;
+                    System.out.println("Updated fullName from Google: " + userName);
+                }
+                
+                // Update provider info
+                if (!"google".equals(user.getProvider())) {
+                    user.setProvider("google");
+                    needsUpdate = true;
+                }
+                
+                // Ensure user has USER role (important for existing users without roles)
+                if (user.getRoles() == null || user.getRoles().isEmpty()) {
+                    Optional<Role> userRole = roleRepository.findByName("USER");
+                    if (userRole.isPresent()) {
+                        user.setRoles(new HashSet<>());
+                        user.getRoles().add(userRole.get());
+                        needsUpdate = true;
+                        System.out.println("Assigned USER role to existing Google user: " + user.getUsername());
+                    } else {
+                        System.err.println("Warning: USER role not found in database!");
+                    }
+                }
+                
+                if (needsUpdate) {
                     user = userService.updateUser(user.getId(), user);
+                    System.out.println("Updated existing user with Google info");
                 }
             }
             
             // Create tokens
+            System.out.println("Creating JWT for user: " + user.getUsername() + ", roles: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             String token = generateToken(user);
             String refreshToken = generateRefreshToken(user);
             
@@ -533,6 +588,7 @@ public class UserController {
                 user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
             );
             
+            System.out.println("Google login successful for user: " + user.getUsername() + " with roles: " + response.getUserRoles());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -662,7 +718,7 @@ public class UserController {
         response.put("message", "Mật khẩu đã được thay đổi thành công.");
         return ResponseEntity.ok(response);
     }
-    
+
     // Helper methods for token generation
     private String generateToken(User user) {
         return jwtUtil.generateToken(user);

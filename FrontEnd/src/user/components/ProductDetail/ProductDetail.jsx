@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../../store/Actions';
 import { findProductSizesById } from '../../../sizeColorHelpers';
 import { getProductById } from '../../../api/productApi';
-import { BACKEND_URL_HTTP } from '../../../config';
+import { API_BASE_URL } from '../../../config';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import ProductReviews from './ProductReviews';
@@ -61,7 +61,7 @@ const ProductDetail = () => {
 			console.log("Checking wishlist status for product:", productId, "and user:", userId);
 			
 			const response = await axios.get(
-				`${BACKEND_URL_HTTP}/api/wishlist/check?userId=${userId}&productId=${productId}`,
+				`${API_BASE_URL}/wishlist/check?userId=${userId}&productId=${productId}`,
 				{
 					headers: {
 						'Authorization': `Bearer ${token}`
@@ -117,11 +117,10 @@ const ProductDetail = () => {
 			if (isInWishlist) {
 				// Xóa khỏi wishlist
 				response = await axios.delete(
-					`${BACKEND_URL_HTTP}/api/wishlist/remove/${product.id}?userId=${userId}`,
+					`${API_BASE_URL}/wishlist/remove/${product.id}?userId=${userId}`,
 					{
 						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
+							'Authorization': `Bearer ${token}`
 						}
 					}
 				);
@@ -143,21 +142,19 @@ const ProductDetail = () => {
 				console.log("Sending request to add to wishlist:", {
 					productId: product.id,
 					userId: parseInt(userId),
-					endpoint: `${BACKEND_URL_HTTP}/api/wishlist/add`
+					endpoint: `${API_BASE_URL}/wishlist/add`
 				});
 				
 				response = await axios.post(
-					`${BACKEND_URL_HTTP}/api/wishlist/add`,
+					`${API_BASE_URL}/wishlist/add`,
 					{
 						productId: product.id,
 						userId: parseInt(userId)
 					},
 					{
 						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						},
-						withCredentials: true
+							'Authorization': `Bearer ${token}`
+						}
 					}
 				);
 				
