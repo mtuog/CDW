@@ -29,7 +29,8 @@ import PaymentResult from './user/components/Payment/PaymentResult';
 import OrderSuccess from './user/components/Payment/OrderSuccess';
 import UserOrderDetail from './user/components/Profile/tabs/OrderDetail';
 import ChatWidget from './user/components/Chat/ChatWidget';
-
+import { LanguageProvider } from './i18n/LanguageContext'; // Import Context
+import './i18n'; // Import cấu hình i18n
 const Layout = () => {
     return (
         <div>

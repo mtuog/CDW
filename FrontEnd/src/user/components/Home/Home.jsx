@@ -54,9 +54,9 @@ const Home = () => {
 		speed: 500,
 		slidesToShow: 4,
 		slidesToScroll: 1,
-		draggable: true, // Enable dragging with the mouse
-		autoplay: true, // Enable autoplay
-		autoplaySpeed: 2000, // Autoplay speed in milliseconds
+		draggable: true,
+		autoplay: true,
+		autoplaySpeed: 2000,
 		responsive: [
 			{
 				breakpoint: 1024,
@@ -65,7 +65,7 @@ const Home = () => {
 					slidesToScroll: 1,
 					infinite: true,
 					dots: true,
-					autoplay: true, // Ensure autoplay is enabled on all breakpoints
+					autoplay: true,
 					autoplaySpeed: 3000,
 				}
 			},
@@ -74,7 +74,7 @@ const Home = () => {
 				settings: {
 					slidesToShow: 1,
 					slidesToScroll: 1,
-					autoplay: true, // Ensure autoplay is enabled on all breakpoints
+					autoplay: true,
 					autoplaySpeed: 3000,
 				}
 			}
@@ -122,23 +122,142 @@ const Home = () => {
 
 	return (
 		<div className="home-page">
-			<section className="hero-contact-section"
-					 style={{backgroundImage: `url('assets/images/banner-10.jpg')`}}>
-				<div className="hero-contact-content">
-					<h1 className="hero-contact-title">Chào Mừng Bạn Đến</h1>
-					<p className="hero-contact-subtitle">Khám phá bộ sưu tập độc đáo của VTX Store</p>
+			{/* Main Banner Section */}
+			<section className="main-banner-section">
+				<div className="container-fluid px-4">
+					<div className="row g-4">
+						{/* Banner chính bên trái */}
+						<div className="col-lg-8 col-md-12">
+							<div className="hero-main-banner" style={{backgroundImage: `url('assets/images/banner-10.jpg')`}}>
+								<div className="banner-overlay">
+									<div className="banner-content">
+										<h1 className="main-banner-title">ATLANTIS COLLECTION</h1>
+										<p className="main-banner-text">
+											Khám phá bộ sưu tập đồng phục sang trọng với thiết kế tinh tế
+										</p>
+										<button className="main-banner-btn" onClick={() => navigate('/products')}>Mua Ngay</button>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Banner phụ bên phải */}
+						<div className="col-lg-4 col-md-12">
+							<div className="side-banner-container">
+								<div className="side-banner-item">
+									<div className="side-banner" style={{backgroundImage: `url('assets/images/img.png')`}}>
+										<div className="side-banner-overlay">
+											<div className="side-banner-content">
+												<span className="side-discount">GIẢM THIỆU 20%</span>
+												<h3 className="side-banner-title">KHÁM PHÁ</h3>
+												<button className="side-banner-btn" onClick={() => navigate('/products')}>Đến Shop</button>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className="side-banner-item">
+									<div className="side-banner" style={{backgroundImage: `url('assets/images/img_1.png')`}}>
+										<div className="side-banner-overlay">
+											<div className="side-banner-content">
+												<h3 className="side-banner-title">KHÁM PHÁ</h3>
+												<button className="side-banner-btn"onClick={() => navigate('/products')}>Đến Shop</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</section>
 
-
-			{/* Banner Section */}
-			<div className="sec-banner bg0 p-t-80 p-b-50">
+			{/* Features Section */}
+			<section className="features-section">
 				<div className="container">
-					<div className="row">
-						{/* Display banners or featured categories here */}
+					<div className="row justify-content-center g-4">
+						<div className="col-lg-3 col-md-6">
+							<div className="feature-box">
+								<div className="feature-icon">
+									<i className="fa fa-trophy"></i>
+								</div>
+								<h5 className="feature-title">Quality Product</h5>
+								<p className="feature-desc">Sản phẩm chất lượng cao</p>
+							</div>
+						</div>
+						<div className="col-lg-3 col-md-6">
+							<div className="feature-box">
+								<div className="feature-icon">
+									<i className="fa fa-shipping-fast"></i>
+								</div>
+								<h5 className="feature-title">Free Shipping</h5>
+								<p className="feature-desc">Miễn phí vận chuyển</p>
+							</div>
+						</div>
+						<div className="col-lg-3 col-md-6">
+							<div className="feature-box">
+								<div className="feature-icon">
+									<i className="fa fa-undo"></i>
+								</div>
+								<h5 className="feature-title">14-Day Return</h5>
+								<p className="feature-desc">Đổi trả trong 14 ngày</p>
+							</div>
+						</div>
+						<div className="col-lg-3 col-md-6">
+							<div className="feature-box">
+								<div className="feature-icon">
+									<i className="fa fa-headset"></i>
+								</div>
+								<h5 className="feature-title">24/7 Support</h5>
+								<p className="feature-desc">Hỗ trợ 24/7</p>
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
+			</section>
+
+			{/* Featured Products Grid */}
+			<section className="featured-grid-section">
+				<div className="container">
+					<div className="section-header text-center">
+						<h2 className="section-title">SẢN PHẨM TIÊU BIỂU</h2>
+						<p className="section-subtitle">Khám phá những sản phẩm trang sức được yêu thích nhất</p>
+					</div>
+					<div className="row justify-content-center g-4">
+						{favoriteProducts.slice(0, 8).map((product, index) => (
+							<div key={product.id} className="col-xl-3 col-lg-4 col-md-6">
+								<div className="featured-product-card">
+									{index < 4 && (
+										<div className="discount-label">
+											GIẢM {Math.floor(Math.random() * 20 + 10)}%
+										</div>
+									)}
+									<div className="product-img-container">
+										<img src={product.img} alt={product.name} className="product-img"/>
+										<div className="product-hover-overlay">
+											<button
+												onClick={() => handleProductClick(product.id)}
+												className="quick-view-btn"
+											>
+												<i className="fa fa-eye"></i>
+												Xem chi tiết
+											</button>
+										</div>
+									</div>
+									<div className="product-details">
+										<h5 className="product-title">{product.name}</h5>
+										<div className="product-pricing">
+											<span className="current-price">{product.price.toLocaleString()} ₫</span>
+											{index < 4 && (
+												<span className="old-price">{(product.price * 1.2).toLocaleString()} ₫</span>
+											)}
+										</div>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			</section>
 
 			{/* Best Seller Section */}
 			<section className="bg0 p-t-23 p-b-140">
