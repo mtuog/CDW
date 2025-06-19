@@ -1,4 +1,4 @@
-// Địa chỉ backend cho HTTP requests  
+// Địa chỉ backend cho HTTP requests
 export const BACKEND_URL_HTTP = 'http://localhost:8080';
 export const BACKEND_URL_HTTPS = 'https://localhost:8080';
 

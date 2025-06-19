@@ -105,7 +105,13 @@ const authService = {
                 password
             });
 
-            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
+            const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = response.data;
+
+            // Convert userRoles to array if it's a Set or other format
+            let rolesArray = userRoles || [];
+            if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
+                rolesArray = Object.values(rolesArray);
+            }
 
             // Store auth data
             localStorage.setItem('token', token);
@@ -113,7 +119,8 @@ const authService = {
             localStorage.setItem('userId', userId);
             localStorage.setItem('userName', userName);
             localStorage.setItem('userRole', userRole);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles));
+            localStorage.setItem('userRoles', JSON.stringify(rolesArray));
+            localStorage.setItem('isSuperAdmin', isSuperAdmin);
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
@@ -133,10 +140,16 @@ const authService = {
                 password
             });
 
-            const { token, refreshToken, userId, userName, userRole, userRoles } = response.data;
+            const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = response.data;
 
+            // Convert userRoles to array if it's a Set or other format
+            let rolesArray = userRoles || [];
+            if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
+                rolesArray = Object.values(rolesArray);
+            }
+            
             // Verify admin role
-            if (!userRoles || !userRoles.includes('ADMIN')) {
+            if (!rolesArray || !rolesArray.includes('ADMIN')) {
                 throw new Error('Tài khoản không có quyền quản trị');
             }
 
@@ -146,7 +159,8 @@ const authService = {
             localStorage.setItem('adminId', userId);
             localStorage.setItem('adminName', userName);
             localStorage.setItem('adminRole', userRole);
-            localStorage.setItem('adminRoles', JSON.stringify(userRoles));
+            localStorage.setItem('adminRoles', JSON.stringify(rolesArray));
+            localStorage.setItem('adminIsSuperAdmin', isSuperAdmin);
 
             // Trigger auth change event
             window.dispatchEvent(new Event('auth-change'));
@@ -166,24 +180,31 @@ const authService = {
                 userName: userInfo.name
             });
 
-            const { token, refreshToken, userId, userName, userRoles } = response.data;
+            const { token, refreshToken, userId, userName, userRoles, isSuperAdmin } = response.data;
+
+            // Convert userRoles to array if it's a Set or other format
+            let rolesArray = userRoles || [];
+            if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
+                rolesArray = Object.values(rolesArray);
+            }
 
             // Store auth data with proper handling of userRoles
             localStorage.setItem('token', token);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('userId', userId);
             localStorage.setItem('userName', userName);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
+            localStorage.setItem('userRoles', JSON.stringify(rolesArray));
+            localStorage.setItem('isSuperAdmin', isSuperAdmin);
             
             // Set primary role from userRoles for backward compatibility
-            const primaryRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'USER';
+            const primaryRole = rolesArray && rolesArray.length > 0 ? rolesArray[0] : 'USER';
             localStorage.setItem('userRole', primaryRole);
 
             console.log('Google login - stored data:', {
                 token: token ? 'present' : 'missing',
                 userId,
                 userName,
-                userRoles,
+                userRoles: rolesArray,
                 primaryRole
             });
 
@@ -210,22 +231,28 @@ const authService = {
 
             const { token, refreshToken, userId, userName, userRoles } = response.data;
 
+            // Convert userRoles to array if it's a Set or other format
+            let rolesArray = userRoles || [];
+            if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
+                rolesArray = Object.values(rolesArray);
+            }
+
             // Store auth data with proper handling of userRoles
             localStorage.setItem('token', token);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('userId', userId);
             localStorage.setItem('userName', userName);
-            localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
+            localStorage.setItem('userRoles', JSON.stringify(rolesArray));
             
             // Set primary role from userRoles for backward compatibility
-            const primaryRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'USER';
+            const primaryRole = rolesArray && rolesArray.length > 0 ? rolesArray[0] : 'USER';
             localStorage.setItem('userRole', primaryRole);
 
             console.log('Facebook login - stored data:', {
                 token: token ? 'present' : 'missing',
                 userId,
                 userName,
-                userRoles,
+                userRoles: rolesArray,
                 primaryRole
             });
 
@@ -301,6 +328,7 @@ const authService = {
         localStorage.removeItem('adminName');
         localStorage.removeItem('adminRole');
         localStorage.removeItem('adminRoles');
+        localStorage.removeItem('adminIsSuperAdmin');
 
         // Trigger auth change event
         window.dispatchEvent(new Event('auth-change'));

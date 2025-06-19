@@ -31,15 +31,22 @@ const authApi = {
                 throw new Error('Không nhận được dữ liệu phản hồi từ server');
             }
             
-            // Kiểm tra userRoles (mảng)
-            if (!response.data.userRoles || !Array.isArray(response.data.userRoles) || response.data.userRoles.length === 0) {
+            // Convert userRoles to array if it's a Set or other format
+            let userRoles = response.data.userRoles || [];
+            if (typeof userRoles === 'object' && !Array.isArray(userRoles)) {
+                // If it's a Set or similar object, convert to array
+                userRoles = Object.values(userRoles);
+            }
+            
+            // Kiểm tra userRoles
+            if (!userRoles || userRoles.length === 0) {
                 console.error('Không tìm thấy thông tin role trong response:', response.data);
                 throw new Error('Thông tin xác thực không hợp lệ');
             }
             
             // Kiểm tra quyền ADMIN
-            if (!response.data.userRoles.includes('ADMIN')) {
-                console.error('Tài khoản không có quyền admin, roles:', response.data.userRoles);
+            if (!userRoles.includes('ADMIN')) {
+                console.error('Tài khoản không có quyền admin, roles:', userRoles);
                 throw new Error('Bạn không có quyền truy cập trang quản trị');
             }
             
@@ -48,6 +55,7 @@ const authApi = {
             localStorage.setItem('adminUsername', response.data.userName);
             localStorage.setItem('adminId', response.data.userId);
             localStorage.setItem('adminRole', 'ADMIN');
+            localStorage.setItem('adminIsSuperAdmin', response.data.isSuperAdmin);
             
             console.log('Đăng nhập thành công với roles:', response.data.userRoles);
             
@@ -88,6 +96,7 @@ const authApi = {
         localStorage.removeItem('adminUsername');
         localStorage.removeItem('adminId');
         localStorage.removeItem('adminRole');
+        localStorage.removeItem('adminIsSuperAdmin');
     },
     
     // Get admin dashboard data

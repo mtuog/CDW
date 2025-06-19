@@ -1,7 +1,6 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import PrivateRoute from '../components/PrivateRoute';
-import AdminLogin from '../pages/login/AdminLogin';
 
 // Admin pages
 import Dashboard from '../pages/dashboard/Dashboard';
@@ -13,6 +12,8 @@ import OrderList from '../pages/orders/OrderList';
 import OrderDetail from '../pages/orders/OrderDetail';
 import CategoryList from '../pages/categories/CategoryList';
 import CustomerAnalytics from '../pages/customers/CustomerAnalytics';
+import CustomerList from '../pages/customers/CustomerList';
+import CustomerDetail from '../pages/customers/CustomerDetail';
 import StoreSettings from '../pages/settings/StoreSettings';
 import PaymentSettings from '../pages/settings/PaymentSettings';
 import DiscountList from '../pages/discount';
@@ -27,8 +28,8 @@ import ChatManagement from '../pages/chat/ChatManagement';
 const AdminRoutes = () => {
   return (
     <Routes>
-      {/* Public Admin Routes */}
-      <Route path="login" element={<AdminLogin />} />
+      {/* Redirect admin login to unified login with admin mode */}
+      <Route path="login" element={<Navigate to="/login?admin=true" replace />} />
       
       {/* Protected Admin Routes */}
       <Route path="/" element={
@@ -98,6 +99,20 @@ const AdminRoutes = () => {
       <Route path="customers" element={
         <PrivateRoute>
           <CustomerAnalytics />
+        </PrivateRoute>
+      } />
+      
+      {/* Customer List (CRUD) */}
+      <Route path="customers/list" element={
+        <PrivateRoute>
+          <CustomerList />
+        </PrivateRoute>
+      } />
+      
+      {/* Customer Detail */}
+      <Route path="customers/:id" element={
+        <PrivateRoute>
+          <CustomerDetail />
         </PrivateRoute>
       } />
       

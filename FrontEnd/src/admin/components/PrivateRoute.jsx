@@ -22,7 +22,7 @@ const PrivateRoute = ({ children }) => {
         setIsAuthenticated(isAdmin);
         
         if (!isAdmin) {
-          console.log('Not authenticated as admin, redirecting to login');
+          console.log('Not authenticated as admin, redirecting to unified login');
           toast.error('Vui lòng đăng nhập với tài khoản admin để tiếp tục');
         }
       } catch (error) {
@@ -73,9 +73,10 @@ const PrivateRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page with the return url
-    console.log('Redirecting to login from:', location.pathname);
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    // Redirect to unified login with admin parameter and return url
+    console.log('Redirecting to unified login from:', location.pathname);
+    const redirectUrl = `/login?admin=true&returnUrl=${encodeURIComponent(location.pathname)}`;
+    return <Navigate to={redirectUrl} state={{ from: location }} replace />;
   }
 
   return children;

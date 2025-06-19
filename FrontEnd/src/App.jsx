@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, RouterProvider, Route, Outlet } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ToastContainer } from 'react-toastify';
@@ -86,7 +86,7 @@ function App() {
             <GoogleOAuthProvider clientId="142819065684-4ulb5ra203pjp7vuop3m2sl0fcdmov5m.apps.googleusercontent.com">
                 <div className="App">
                     <RouterProvider router={router} />
-                    <ToastContainer 
+                    <ToastContainer
                         position="top-right"
                         autoClose={3000}
                         hideProgressBar={false}

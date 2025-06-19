@@ -60,7 +60,24 @@ const CustomerAnalytics = () => {
     <div className="customer-analytics-container">
       {/* Page Header */}
       <div className="page-header">
-        <h1>Phân tích khách hàng</h1>
+        <div className="header-content">
+          <h1>Phân tích khách hàng</h1>
+          <a 
+            href="/admin/customers/list" 
+            className="btn btn-primary"
+            style={{
+              backgroundColor: '#007bff',
+              color: 'white',
+              padding: '10px 20px',
+              textDecoration: 'none',
+              borderRadius: '6px',
+              fontWeight: '500'
+            }}
+          >
+            <i className="fas fa-list me-2"></i>
+            Quản lý khách hàng
+          </a>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -293,6 +310,12 @@ const CustomerAnalytics = () => {
         
         .page-header {
           margin-bottom: 24px;
+        }
+        
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
         
         .page-header h1 {

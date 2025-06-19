@@ -215,7 +215,7 @@ const Header = ({ toggleSidebar }) => {
   const handleLogout = () => {
     authApi.logout();
     toast.success('Đăng xuất thành công');
-    navigate('/admin/login');
+                     navigate('/login?admin=true');
   };
 
   const handleChatNavigation = () => {

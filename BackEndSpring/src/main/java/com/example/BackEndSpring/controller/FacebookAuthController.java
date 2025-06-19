@@ -187,7 +187,8 @@ public class FacebookAuthController {
                             refreshToken,
                             user.getId(),
                             user.getUsername(),
-                            user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
+                            user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
+                            user.isSuperAdmin()
                         );
 
                         return ResponseEntity.ok(response);

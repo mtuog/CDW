@@ -30,7 +30,7 @@ const Wishlist = ({ user }) => {
             }
             
             const response = await axios.get(`${BACKEND_URL_HTTP}/api/wishlist/user/${userId}`, {
-                headers: {
+                    headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
             });
@@ -82,7 +82,7 @@ const Wishlist = ({ user }) => {
             console.log(`Removing product ${productId} from wishlist for user ${userId}`);
             
             const response = await axios.delete(`${BACKEND_URL_HTTP}/api/wishlist/remove/${productId}?userId=${userId}`, {
-                headers: {
+                    headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
             });
@@ -120,10 +120,10 @@ const Wishlist = ({ user }) => {
     const addToCart = async (productId) => {
         try {
             const response = await axios.post(`${BACKEND_URL_HTTP}/api/cart/add`, {
-                productId,
-                quantity: 1
+                    productId,
+                    quantity: 1
             }, {
-                headers: {
+                    headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
             });
@@ -248,4 +248,4 @@ const Wishlist = ({ user }) => {
     );
 };
 
-export default Wishlist;
+export default Wishlist; 

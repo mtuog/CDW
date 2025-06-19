@@ -415,4 +415,72 @@ input:focus::placeholder {
 
 .resend-btn:hover {
     color: #0056b3;
+}
+
+/* Admin Mode Styling */
+.admin-mode-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.admin-notice {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    color: #155724;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 13px;
+}
+
+.admin-notice p {
+    margin: 0;
+    margin-bottom: 4px;
+}
+
+.admin-notice p:last-child {
+    margin-bottom: 0;
+}
+
+.admin-demo-hint {
+    font-weight: 600;
+    color: #28a745 !important;
+}
+
+.login-btn.admin-btn {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+.login-btn.admin-btn:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    box-shadow: 0 6px 15px rgba(40, 167, 69, 0.4);
+}
+
+.back-to-user {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.back-link {
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s ease;
+}
+
+.back-link:hover {
+    color: #007bff;
+    text-decoration: underline;
 } 

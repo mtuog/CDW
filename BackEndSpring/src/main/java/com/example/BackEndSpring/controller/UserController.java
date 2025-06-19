@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -42,6 +43,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -107,6 +109,7 @@ public class UserController {
             userMap.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             userMap.put("enabled", user.isVerified());
             userMap.put("loyaltyPoints", user.getLoyaltyPoints());
+            userMap.put("isSuperAdmin", user.isSuperAdmin()); // Add this field!
             
             // Lấy thông tin đơn hàng của người dùng
             List<Order> userOrders = orderService.getOrdersByUser(user);
@@ -156,6 +159,7 @@ public class UserController {
             userMap.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
             userMap.put("enabled", user.isVerified());
             userMap.put("loyaltyPoints", user.getLoyaltyPoints());
+            userMap.put("isSuperAdmin", user.isSuperAdmin()); // Add this field!
             
             // Lấy thông tin đơn hàng của người dùng
             List<Order> userOrders = orderService.getOrdersByUser(user);
@@ -249,55 +253,337 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Tạo người dùng mới")
+    @Operation(summary = "Tạo người dùng mới (Admin only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Người dùng được tạo thành công"),
-        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ")
+        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ"),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập")
     })
-    @PostMapping("/users")
+    @PostMapping("/admin/users")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createUser(
-            @Parameter(description = "Thông tin người dùng cần tạo") @RequestBody User user) {
+            @Parameter(description = "Thông tin người dùng cần tạo") @RequestBody Map<String, Object> userRequest) {
         try {
-            // Ensure password is hashed before saving
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            User createdUser = userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+            // Extract data from request
+            String username = (String) userRequest.get("username");
+            String email = (String) userRequest.get("email");
+            String password = (String) userRequest.get("password");
+            String fullName = (String) userRequest.get("fullName");
+            String phone = (String) userRequest.get("phone");
+            String address = (String) userRequest.get("address");
+            @SuppressWarnings("unchecked")
+            List<String> roleNames = (List<String>) userRequest.get("roles");
+            Boolean enabled = (Boolean) userRequest.getOrDefault("enabled", true);
+
+            // Validate required fields
+            if (username == null || email == null || password == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Username, email và password là bắt buộc"));
+            }
+
+            // Check if username or email already exists
+            if (userService.isUsernameExists(username)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Username đã tồn tại"));
+            }
+            
+            if (userService.getUserByEmail(email).isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Email đã tồn tại"));
+            }
+
+            // Create new user
+            User newUser = new User();
+            newUser.setUsername(username);
+            newUser.setEmail(email);
+            newUser.setPassword(passwordEncoder.encode(password));
+            newUser.setFullName(fullName);
+            newUser.setPhone(phone);
+            newUser.setAddress(address);
+            newUser.setVerified(true); // Admin-created users are pre-verified
+            newUser.setEnabled(enabled);
+
+            // Assign roles
+            if (roleNames != null && !roleNames.isEmpty()) {
+                Set<Role> roles = new HashSet<>();
+                for (String roleName : roleNames) {
+                    Optional<Role> role = roleRepository.findByName(roleName);
+                    if (role.isPresent()) {
+                        roles.add(role.get());
+                    }
+                }
+                newUser.setRoles(roles);
+            }
+
+            User createdUser = userService.createUser(newUser);
+            
+            // Return user info without password
+            Map<String, Object> responseUser = formatUserResponse(createdUser);
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "message", "Tạo người dùng thành công",
+                "user", responseUser
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
         }
     }
 
-    @Operation(summary = "Cập nhật thông tin người dùng")
+    @Operation(summary = "Cập nhật thông tin người dùng (Admin only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Người dùng được cập nhật thành công"),
         @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ"),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập"),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng", content = @Content)
     })
-    @PutMapping("/users/{id}")
+    @PutMapping("/admin/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(
             @Parameter(description = "ID của người dùng") @PathVariable Long id,
-            @Parameter(description = "Thông tin người dùng cần cập nhật") @RequestBody User userDetails) {
+            @Parameter(description = "Thông tin người dùng cần cập nhật") @RequestBody Map<String, Object> userRequest) {
         try {
-            User updatedUser = userService.updateUser(id, userDetails);
-            return ResponseEntity.ok(updatedUser);
+            Optional<User> userOptional = userService.getUserById(id);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy người dùng"));
+            }
+
+            User existingUser = userOptional.get();
+
+            // Update basic info
+            if (userRequest.containsKey("username")) {
+                String newUsername = (String) userRequest.get("username");
+                if (!newUsername.equals(existingUser.getUsername()) && userService.isUsernameExists(newUsername)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Username đã tồn tại"));
+                }
+                existingUser.setUsername(newUsername);
+            }
+
+            if (userRequest.containsKey("email")) {
+                String newEmail = (String) userRequest.get("email");
+                if (!newEmail.equals(existingUser.getEmail()) && userService.getUserByEmail(newEmail).isPresent()) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Email đã tồn tại"));
+                }
+                existingUser.setEmail(newEmail);
+            }
+
+            if (userRequest.containsKey("fullName")) {
+                existingUser.setFullName((String) userRequest.get("fullName"));
+            }
+
+            if (userRequest.containsKey("phone")) {
+                existingUser.setPhone((String) userRequest.get("phone"));
+            }
+
+            if (userRequest.containsKey("address")) {
+                existingUser.setAddress((String) userRequest.get("address"));
+            }
+
+            if (userRequest.containsKey("enabled")) {
+                existingUser.setEnabled((Boolean) userRequest.get("enabled"));
+            }
+
+            // Update password if provided
+            if (userRequest.containsKey("password")) {
+                String newPassword = (String) userRequest.get("password");
+                if (newPassword != null && !newPassword.isEmpty()) {
+                    existingUser.setPassword(passwordEncoder.encode(newPassword));
+                }
+            }
+
+            // Update roles if provided
+            if (userRequest.containsKey("roles")) {
+                @SuppressWarnings("unchecked")
+                List<String> roleNames = (List<String>) userRequest.get("roles");
+                if (roleNames != null) {
+                    Set<Role> roles = new HashSet<>();
+                    for (String roleName : roleNames) {
+                        Optional<Role> role = roleRepository.findByName(roleName);
+                        if (role.isPresent()) {
+                            roles.add(role.get());
+                        }
+                    }
+                    existingUser.setRoles(roles);
+                }
+            }
+
+            User updatedUser = userService.updateUser(id, existingUser);
+            Map<String, Object> responseUser = formatUserResponse(updatedUser);
+
+            return ResponseEntity.ok(Map.of(
+                "message", "Cập nhật thông tin người dùng thành công",
+                "user", responseUser
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
         }
     }
 
-    @Operation(summary = "Xóa người dùng")
+    @Operation(summary = "Xóa người dùng (Super Admin only)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Người dùng được xóa thành công"),
+        @ApiResponse(responseCode = "200", description = "Người dùng được xóa thành công"),
+        @ApiResponse(responseCode = "403", description = "Chỉ Super Admin mới có quyền xóa người dùng"),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng", content = @Content)
     })
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> deleteUser(
-            @Parameter(description = "ID của người dùng") @PathVariable Long id) {
-        if (userService.getUserById(id).isPresent()) {
+    @DeleteMapping("/admin/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(
+            @Parameter(description = "ID của người dùng") @PathVariable Long id,
+            Authentication authentication) {
+        try {
+            // Check if user exists
+            Optional<User> userOptional = userService.getUserById(id);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy người dùng"));
+            }
+
+            User userToDelete = userOptional.get();
+            
+            // Get current admin user
+            String currentUsername = authentication.getName();
+            System.out.println("🔍 Authentication name: " + currentUsername);
+            
+            // Try to find user by email first, then by username
+            Optional<User> currentUserOptional = userService.getUserByEmail(currentUsername);
+            if (currentUserOptional.isEmpty()) {
+                currentUserOptional = userService.getUserByUsername(currentUsername);
+            }
+            
+            if (currentUserOptional.isEmpty()) {
+                System.out.println("❌ Cannot find user with email/username: " + currentUsername);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Không thể xác thực người dùng hiện tại"));
+            }
+            
+            User currentUser = currentUserOptional.get();
+            
+            // Check if current user is Super Admin using database field
+            boolean isSuperAdmin = currentUser.isSuperAdmin();
+                
+            if (!isSuperAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Chỉ Super Admin mới có quyền xóa người dùng"));
+            }
+            
+            // Prevent self-deletion
+            if (currentUser.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Không thể xóa chính mình"));
+            }
+            
+            // Prevent deleting other super admins
+            boolean isTargetSuperAdmin = userToDelete.isSuperAdmin();
+                
+            if (isTargetSuperAdmin && !currentUser.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Không thể xóa Super Admin khác"));
+            }
+
             userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Xóa người dùng thành công",
+                "deletedUser", formatUserResponse(userToDelete)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
         }
-        return ResponseEntity.notFound().build();
+    }
+
+    @Operation(summary = "Kích hoạt/Vô hiệu hóa tài khoản người dùng (Admin only)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trạng thái tài khoản được cập nhật thành công"),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng")
+    })
+    @PatchMapping("/admin/users/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> toggleUserStatus(
+            @Parameter(description = "ID của người dùng") @PathVariable Long id,
+            @Parameter(description = "Trạng thái mới") @RequestBody Map<String, Boolean> statusRequest) {
+        try {
+            Optional<User> userOptional = userService.getUserById(id);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy người dùng"));
+            }
+
+            User user = userOptional.get();
+            Boolean enabled = statusRequest.get("enabled");
+            
+            if (enabled == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Trạng thái 'enabled' là bắt buộc"));
+            }
+
+            user.setEnabled(enabled);
+            User updatedUser = userService.updateUser(id, user);
+            
+            String action = enabled ? "kích hoạt" : "vô hiệu hóa";
+            return ResponseEntity.ok(Map.of(
+                "message", "Đã " + action + " tài khoản thành công",
+                "user", formatUserResponse(updatedUser)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Cập nhật role cho người dùng (Admin only)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Role được cập nhật thành công"),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng")
+    })
+    @PatchMapping("/admin/users/{id}/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserRoles(
+            @Parameter(description = "ID của người dùng") @PathVariable Long id,
+            @Parameter(description = "Danh sách roles mới") @RequestBody Map<String, List<String>> rolesRequest) {
+        try {
+            Optional<User> userOptional = userService.getUserById(id);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy người dùng"));
+            }
+
+            User user = userOptional.get();
+            List<String> roleNames = rolesRequest.get("roles");
+            
+            if (roleNames == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Danh sách 'roles' là bắt buộc"));
+            }
+
+            Set<Role> roles = new HashSet<>();
+            for (String roleName : roleNames) {
+                Optional<Role> role = roleRepository.findByName(roleName);
+                if (role.isPresent()) {
+                    roles.add(role.get());
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Role '" + roleName + "' không tồn tại"));
+                }
+            }
+
+            user.setRoles(roles);
+            User updatedUser = userService.updateUser(id, user);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Cập nhật roles thành công",
+                "user", formatUserResponse(updatedUser)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        }
     }
 
     // UserServices endpoints
@@ -354,15 +640,34 @@ public class UserController {
             String token = generateToken(user);
             String refreshToken = generateRefreshToken(user);
             
+            // Convert roles to list for frontend compatibility
+            Set<String> roleNames = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+            
             AuthResponse response = new AuthResponse(
                 token,
                 refreshToken,
                 user.getId(),
                 user.getUsername(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
+                roleNames,
+                user.isSuperAdmin()
             );
             
-            System.out.println("Đăng nhập thành công cho user: " + user.getUsername() + " với roles: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+            System.out.println("🔍 LOGIN RESPONSE DEBUG:");
+            System.out.println("  - User: " + user.getUsername());
+            System.out.println("  - Roles: " + roleNames);
+            System.out.println("  - isSuperAdmin from DB: " + user.isSuperAdmin());
+            System.out.println("  - AuthResponse isSuperAdmin: " + response.isSuperAdmin());
+            System.out.println("  - AuthResponse toString: " + response.toString());
+            
+            // Test manual JSON serialization
+            Map<String, Object> testResponse = new HashMap<>();
+            testResponse.put("token", token);
+            testResponse.put("userId", user.getId());
+            testResponse.put("userName", user.getUsername());
+            testResponse.put("userRoles", roleNames);
+            testResponse.put("isSuperAdmin", user.isSuperAdmin());
+            System.out.println("🔍 Manual JSON test: " + testResponse);
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
@@ -576,7 +881,8 @@ public class UserController {
             }
             
             // Create tokens
-            System.out.println("Creating JWT for user: " + user.getUsername() + ", roles: " + user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+            Set<String> roleNames = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+            System.out.println("Creating JWT for user: " + user.getUsername() + ", roles: " + roleNames);
             String token = generateToken(user);
             String refreshToken = generateRefreshToken(user);
             
@@ -585,7 +891,8 @@ public class UserController {
                 refreshToken,
                 user.getId(),
                 user.getUsername(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
+                roleNames,
+                user.isSuperAdmin()
             );
             
             System.out.println("Google login successful for user: " + user.getUsername() + " with roles: " + response.getUserRoles());
@@ -729,6 +1036,24 @@ public class UserController {
         String refreshToken = UUID.randomUUID().toString();
         refreshTokens.put(refreshToken, user.getId().toString());
         return refreshToken;
+    }
+
+    // Helper method to format user response without sensitive data
+    private Map<String, Object> formatUserResponse(User user) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", user.getId());
+        response.put("username", user.getUsername());
+        response.put("email", user.getEmail());
+        response.put("fullName", user.getFullName());
+        response.put("phone", user.getPhone());
+        response.put("address", user.getAddress());
+        response.put("enabled", user.isEnabled());
+        response.put("verified", user.isVerified());
+        response.put("createdAt", user.getCreatedAt());
+        response.put("loyaltyPoints", user.getLoyaltyPoints());
+        response.put("isSuperAdmin", user.isSuperAdmin()); // Add this field!
+        response.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+        return response;
     }
 
     @GetMapping("/users/statistics")
@@ -991,6 +1316,98 @@ public class UserController {
         statistics.put("topCustomers", topCustomers);
         
         return ResponseEntity.ok(statistics);
+    }
+
+    @Operation(summary = "Quick set current user as Super Admin (for testing)")
+    @PostMapping("/admin/make-me-super")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> makeMeSuperAdmin(Authentication authentication) {
+        try {
+            System.out.println("🔍 makeMeSuperAdmin - Authentication object: " + authentication);
+            System.out.println("🔍 makeMeSuperAdmin - Authentication class: " + (authentication != null ? authentication.getClass().getName() : "null"));
+            System.out.println("🔍 makeMeSuperAdmin - Is authenticated: " + (authentication != null ? authentication.isAuthenticated() : "null"));
+            System.out.println("🔍 makeMeSuperAdmin - Principal: " + (authentication != null ? authentication.getPrincipal() : "null"));
+            System.out.println("🔍 makeMeSuperAdmin - Authorities: " + (authentication != null ? authentication.getAuthorities() : "null"));
+            
+            if (authentication == null || !authentication.isAuthenticated()) {
+                System.out.println("❌ Authentication is null or not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Không có xác thực"));
+            }
+            
+            String currentUsername = authentication.getName();
+            System.out.println("🔍 makeMeSuperAdmin - Authentication name: " + currentUsername);
+            
+            // Try to find user by email first, then by username
+            Optional<User> currentUserOptional = userService.getUserByEmail(currentUsername);
+            System.out.println("🔍 Found user by email: " + currentUserOptional.isPresent());
+            
+            if (currentUserOptional.isEmpty()) {
+                currentUserOptional = userService.getUserByUsername(currentUsername);
+                System.out.println("🔍 Found user by username: " + currentUserOptional.isPresent());
+            }
+            
+            if (currentUserOptional.isEmpty()) {
+                System.out.println("❌ Cannot find user with email/username: " + currentUsername);
+                
+                // Additional debug: List all users
+                List<User> allUsers = userService.getAllUsers();
+                System.out.println("🔍 Total users in database: " + allUsers.size());
+                allUsers.forEach(user -> {
+                    System.out.println("   - User: " + user.getUsername() + " / " + user.getEmail());
+                });
+                
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Không thể xác thực người dùng hiện tại"));
+            }
+            
+            User currentUser = currentUserOptional.get();
+            currentUser.setSuperAdmin(true);
+            User updatedUser = userService.updateUser(currentUser.getId(), currentUser);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Đã bổ nhiệm bạn thành Super Admin!",
+                "user", formatUserResponse(updatedUser)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Set/Unset Super Admin status for a user (Admin only)")
+    @PostMapping("/admin/users/{id}/super-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> setSuperAdminStatus(
+            @Parameter(description = "ID của người dùng") @PathVariable Long id,
+            @Parameter(description = "Super Admin status") @RequestBody Map<String, Boolean> request) {
+        try {
+            Optional<User> userOptional = userService.getUserById(id);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy người dùng"));
+            }
+
+            User user = userOptional.get();
+            Boolean isSuperAdmin = request.get("isSuperAdmin");
+            
+            if (isSuperAdmin == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Trường 'isSuperAdmin' là bắt buộc"));
+            }
+
+            user.setSuperAdmin(isSuperAdmin);
+            User updatedUser = userService.updateUser(id, user);
+            
+            String action = isSuperAdmin ? "bổ nhiệm" : "hủy bỏ";
+            return ResponseEntity.ok(Map.of(
+                "message", "Đã " + action + " Super Admin thành công",
+                "user", formatUserResponse(updatedUser)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PutMapping("/admin/me")

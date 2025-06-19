@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getAllUsers } from '../../../admin/api/userApi';
+import Swal from 'sweetalert2';
+import { 
+  getAllUsers, 
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  toggleUserStatus,
+  checkSuperAdminRole 
+} from '../../../api/userApi';
+import CustomerForm from '../../components/forms/CustomerForm';
 
 const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
@@ -13,6 +22,12 @@ const CustomerList = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   
+  // CRUD state
+  const [showForm, setShowForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  
   // Status options for the filter
   const statusOptions = [
     { value: 'all', label: 'Tất cả khách hàng' },
@@ -23,6 +38,10 @@ const CustomerList = () => {
   
   useEffect(() => {
     fetchCustomers();
+    
+    // Check Super Admin role from localStorage
+    const isSuperAdminResult = checkSuperAdminRole();
+    setIsSuperAdmin(isSuperAdminResult);
   }, []);
   
   const fetchCustomers = async () => {
@@ -234,6 +253,123 @@ const CustomerList = () => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
+
+  // ===== CRUD FUNCTIONS =====
+
+  // Handle create new customer
+  const handleCreateCustomer = () => {
+    setEditingCustomer(null);
+    setShowForm(true);
+  };
+
+  // Handle edit customer
+  const handleEditCustomer = (customer) => {
+    setEditingCustomer(customer);
+    setShowForm(true);
+  };
+
+  // Handle form submit (create or update)
+  const handleFormSubmit = async (formData) => {
+    setIsSubmitting(true);
+    
+    try {
+      if (editingCustomer) {
+        // Update existing customer
+        const response = await updateUser(editingCustomer.id, formData);
+        toast.success(response.message || 'Cập nhật khách hàng thành công!');
+      } else {
+        // Create new customer
+        const response = await createUser(formData);
+        toast.success(response.message || 'Tạo khách hàng mới thành công!');
+      }
+      
+      // Refresh the customer list
+      await fetchCustomers();
+      
+      // Hide form
+      setShowForm(false);
+      setEditingCustomer(null);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra';
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle form cancel
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingCustomer(null);
+  };
+
+  // Handle toggle user status
+  const handleToggleStatus = async (customer) => {
+    const newStatus = !customer.enabled;
+    const action = newStatus ? 'kích hoạt' : 'vô hiệu hóa';
+    
+    try {
+      const result = await Swal.fire({
+        title: `Xác nhận ${action} tài khoản`,
+        text: `Bạn có chắc chắn muốn ${action} tài khoản của ${customer.name}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: newStatus ? '#28a745' : '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `${action.charAt(0).toUpperCase() + action.slice(1)}`,
+        cancelButtonText: 'Hủy'
+      });
+
+      if (result.isConfirmed) {
+        const response = await toggleUserStatus(customer.id, newStatus);
+        toast.success(response.message || `${action.charAt(0).toUpperCase() + action.slice(1)} tài khoản thành công!`);
+        await fetchCustomers();
+      }
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra';
+      toast.error(errorMessage);
+    }
+  };
+
+  // Handle delete customer (Super Admin only)
+  const handleDeleteCustomer = async (customer) => {
+    if (!isSuperAdmin) {
+      toast.error('Chỉ Super Admin mới có quyền xóa khách hàng');
+      return;
+    }
+
+    try {
+      const result = await Swal.fire({
+        title: 'Xác nhận xóa khách hàng',
+        text: `Bạn có chắc chắn muốn xóa khách hàng ${customer.name}? Hành động này không thể hoàn tác!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        input: 'text',
+        inputPlaceholder: 'Nhập "XOA" để xác nhận',
+        inputValidator: (value) => {
+          if (value !== 'XOA') {
+            return 'Vui lòng nhập "XOA" để xác nhận';
+          }
+        }
+      });
+
+      if (result.isConfirmed) {
+        const response = await deleteUser(customer.id);
+        toast.success(response.message || 'Xóa khách hàng thành công!');
+        await fetchCustomers();
+      }
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra';
+      toast.error(errorMessage);
+    }
+  };
   
   if (loading) {
     return <div className="loading-container">Đang tải dữ liệu...</div>;
@@ -243,7 +379,16 @@ const CustomerList = () => {
     <div className="customer-list-container">
       {/* Header */}
       <div className="page-header">
-        <h1>Quản lý khách hàng</h1>
+        <div className="header-content">
+          <h1>Quản lý khách hàng</h1>
+          <button 
+            className="btn btn-primary create-customer-btn"
+            onClick={handleCreateCustomer}
+          >
+            <i className="fas fa-plus me-2"></i>
+            Thêm khách hàng
+          </button>
+        </div>
       </div>
       
       {/* Top Customers Section */}
@@ -432,12 +577,45 @@ const CustomerList = () => {
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <Link to={`/admin/customers/${customer.id}`} className="view-button">
-                        <i className="fa fa-eye"></i>
+                      <Link 
+                        to={`/admin/customers/${customer.id}`} 
+                        className="action-btn view-btn"
+                        title="Xem chi tiết"
+                      >
+                        <i className="fas fa-eye"></i>
                       </Link>
-                      <Link to={`/admin/customers/${customer.id}/orders`} className="orders-button">
-                        <i className="fa fa-shopping-cart"></i>
-                      </Link>
+                      <button
+                        className="action-btn edit-btn"
+                        onClick={() => handleEditCustomer(customer)}
+                        title="Chỉnh sửa"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button
+                        className={`action-btn status-btn ${customer.enabled ? 'disable-btn' : 'enable-btn'}`}
+                        onClick={() => handleToggleStatus(customer)}
+                        title={customer.enabled ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                      >
+                        <i className={`fas ${customer.enabled ? 'fa-ban' : 'fa-check'}`}></i>
+                      </button>
+                      {/* Debug delete button visibility */}
+                      {console.log('🔍 DELETE BUTTON CHECK:', {
+                        isSuperAdmin,
+                        customerName: customer.name,
+                        shouldShow: isSuperAdmin
+                      })}
+                      
+                      {isSuperAdmin && (
+                        <button
+                          className="action-btn delete-btn"
+                          onClick={() => handleDeleteCustomer(customer)}
+                          title="Xóa khách hàng"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      )}
+                      
+
                     </div>
                   </td>
                 </tr>
@@ -452,6 +630,21 @@ const CustomerList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Customer Form Modal */}
+      {showForm && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <CustomerForm
+              customer={editingCustomer}
+              onSubmit={handleFormSubmit}
+              onCancel={handleFormCancel}
+              isLoading={isSubmitting}
+              title={editingCustomer ? "Chỉnh sửa khách hàng" : "Thêm khách hàng mới"}
+            />
+          </div>
+        </div>
+      )}
       
       <style jsx>{`
         .customer-list-container {
@@ -465,10 +658,62 @@ const CustomerList = () => {
           margin-bottom: 24px;
         }
         
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
         .page-header h1 {
           font-size: 24px;
           margin: 0;
           color: #333;
+        }
+
+        .create-customer-btn {
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          padding: 12px 20px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .create-customer-btn:hover {
+          background-color: #0056b3;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal-container {
+          background-color: white;
+          border-radius: 8px;
+          max-width: 800px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
         
         /* Top Customers Section */
@@ -775,39 +1020,77 @@ const CustomerList = () => {
         
         .action-buttons {
           display: flex;
-          gap: 8px;
+          gap: 6px;
+          align-items: center;
         }
         
-        .view-button,
-        .orders-button {
+        .action-btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 30px;
-          height: 30px;
+          width: 32px;
+          height: 32px;
           color: white;
           border: none;
-          border-radius: 4px;
-          font-size: 14px;
+          border-radius: 6px;
+          font-size: 13px;
           text-decoration: none;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .action-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
-        .view-button {
+        .view-btn {
           background-color: #17a2b8;
         }
         
-        .view-button:hover {
+        .view-btn:hover {
           background-color: #138496;
         }
         
-        .orders-button {
+        .edit-btn {
           background-color: #28a745;
         }
         
-        .orders-button:hover {
+        .edit-btn:hover {
           background-color: #218838;
+        }
+
+        .status-btn {
+          background-color: #ffc107;
+        }
+
+        .status-btn:hover {
+          background-color: #e0a800;
+        }
+
+        .enable-btn {
+          background-color: #28a745;
+        }
+
+        .enable-btn:hover {
+          background-color: #218838;
+        }
+
+        .disable-btn {
+          background-color: #6c757d;
+        }
+
+        .disable-btn:hover {
+          background-color: #5a6268;
+        }
+
+        .delete-btn {
+          background-color: #dc3545;
+        }
+
+        .delete-btn:hover {
+          background-color: #c82333;
         }
         
         .no-data {

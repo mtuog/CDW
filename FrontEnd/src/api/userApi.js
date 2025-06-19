@@ -3,6 +3,26 @@ import { BACKEND_URL_HTTP } from '../config';
 
 const API_URL = `${BACKEND_URL_HTTP}/api`;
 
+// Create API client with interceptors
+const apiClient = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
+});
+
+// Add auth header interceptor
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Hàm lấy tất cả người dùng
 export const getAllUsers = async () => {
   try {
@@ -278,4 +298,91 @@ function generateCustomerGrowthData(users, period) {
       return { name, newCustomers, activeCustomers, potentialCustomers };
     });
   }
-} 
+}
+
+// ===== ADMIN CRUD OPERATIONS =====
+
+// Create new user (Admin only)
+export const createUser = async (userData) => {
+    try {
+        const response = await apiClient.post('/admin/users', userData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating user:', error);
+        throw error;
+    }
+};
+
+// Update user (Admin only)
+export const updateUser = async (userId, userData) => {
+    try {
+        const response = await apiClient.put(`/admin/users/${userId}`, userData);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating user:', error);
+        throw error;
+    }
+};
+
+// Delete user (Super Admin only)
+export const deleteUser = async (userId) => {
+    try {
+        const response = await apiClient.delete(`/admin/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        throw error;
+    }
+};
+
+// Toggle user status (Admin only)
+export const toggleUserStatus = async (userId, enabled) => {
+    try {
+        const response = await apiClient.patch(`/admin/users/${userId}/status`, { enabled });
+        return response.data;
+    } catch (error) {
+        console.error('Error toggling user status:', error);
+        throw error;
+    }
+};
+
+// Update user roles (Admin only)
+export const updateUserRoles = async (userId, roles) => {
+    try {
+        const response = await apiClient.patch(`/admin/users/${userId}/roles`, { roles });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating user roles:', error);
+        throw error;
+    }
+};
+
+// Check if current user has Super Admin role
+export const checkSuperAdminRole = () => {
+    try {
+        // Check both possible localStorage keys
+        let isSuperAdminValue = localStorage.getItem('adminIsSuperAdmin');
+        
+        // Fallback to regular user key if admin key not found
+        if (isSuperAdminValue === null) {
+            isSuperAdminValue = localStorage.getItem('isSuperAdmin');
+        }
+        
+        // Convert string to boolean
+        const isSuperAdmin = isSuperAdminValue === 'true';
+        
+        return isSuperAdmin;
+    } catch (error) {
+        console.error('Error checking super admin role:', error);
+        return false;
+    }
+};
+
+// Get available roles for assignment
+export const getAvailableRoles = () => {
+    return [
+        { value: 'USER', label: 'User - Khách hàng thường' },
+        { value: 'ADMIN', label: 'Admin - Quản trị viên' },
+        { value: 'SUPER_ADMIN', label: 'Super Admin - Siêu quản trị' }
+    ];
+};

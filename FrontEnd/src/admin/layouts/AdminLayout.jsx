@@ -62,7 +62,7 @@ const AdminLayout = () => {
       } catch (error) {
         console.error('Lỗi kiểm tra xác thực:', error);
         setIsAuthenticated(false);
-        navigate('/admin/login');
+        navigate('/login?admin=true');
       }
     };
 

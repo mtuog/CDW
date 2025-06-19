@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getUserById } from '../../../admin/api/userApi';
-import { getOrdersByUser } from '../../../admin/api/orderApi';
+import { getUserById } from '../../../api/userApi';
+import { getOrdersByUser } from '../../../api/orderApi';
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -22,6 +22,7 @@ const CustomerDetail = () => {
       
       // Fetch user details
       const userData = await getUserById(id);
+      console.log('Customer data from API:', userData);
       
       // Extract roles array from string if needed
       let roles = [];
@@ -32,7 +33,7 @@ const CustomerDetail = () => {
         roles = userData.roles.map(role => role.replace('ROLE_', ''));
       }
       
-      // Format customer data
+      // Format customer data with statistics from backend
       const formattedCustomer = {
         id: userData.id,
         username: userData.username,
@@ -43,17 +44,23 @@ const CustomerDetail = () => {
         createdAt: userData.createdAt ? new Date(userData.createdAt) : null,
         roles: roles,
         enabled: userData.enabled !== false,
-        loyaltyPoints: userData.loyaltyPoints || 0
+        loyaltyPoints: userData.loyaltyPoints || 0,
+        // Statistics from backend
+        orderCount: userData.orderCount || 0,
+        totalSpent: userData.totalSpent || 0,
+        lastOrderDate: userData.lastOrderDate ? new Date(userData.lastOrderDate) : null
       };
       
       setCustomer(formattedCustomer);
       
-      // Fetch user orders
+      // Fetch user orders for the detailed list
       const ordersData = await getOrdersByUser(id);
+      console.log('Orders data from API:', ordersData);
       
       // Format orders data
       const formattedOrders = ordersData.map(order => ({
         id: order.id,
+        orderCode: order.orderCode || `ORD-${order.id}`,
         date: new Date(order.createdAt),
         status: order.status,
         totalAmount: order.totalAmount,
@@ -90,9 +97,9 @@ const CustomerDetail = () => {
     }).format(price);
   };
   
-  // Calculate total spent
+  // Calculate total spent (fallback if not available from backend)
   const calculateTotalSpent = () => {
-    return orders.reduce((total, order) => total + order.totalAmount, 0);
+    return customer?.totalSpent || orders.reduce((total, order) => total + order.totalAmount, 0);
   };
   
   // Get status class
@@ -247,7 +254,7 @@ const CustomerDetail = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Tổng đơn hàng</div>
-                <div className="stat-value">{orders.length}</div>
+                <div className="stat-value">{customer?.orderCount || orders.length}</div>
               </div>
             </div>
             
@@ -268,9 +275,11 @@ const CustomerDetail = () => {
               <div className="stat-content">
                 <div className="stat-label">Đơn hàng gần nhất</div>
                 <div className="stat-value">
-                  {orders.length > 0 
-                    ? formatDate(orders.sort((a, b) => b.date - a.date)[0].date)
-                    : 'Chưa có đơn hàng nào'}
+                  {customer?.lastOrderDate 
+                    ? formatDate(customer.lastOrderDate)
+                    : orders.length > 0 
+                      ? formatDate(orders.sort((a, b) => b.date - a.date)[0].date)
+                      : 'Chưa có đơn hàng nào'}
                 </div>
               </div>
             </div>
@@ -315,7 +324,7 @@ const CustomerDetail = () => {
                     .slice(0, 5)
                     .map(order => (
                       <tr key={order.id}>
-                        <td>{order.id}</td>
+                        <td>{order.orderCode || order.id}</td>
                         <td>{formatDate(order.date)}</td>
                         <td>
                           <span className={`status-badge ${getStatusClass(order.status)}`}>

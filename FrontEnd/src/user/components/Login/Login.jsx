@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FaEnvelope, FaLock, FaUserShield } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { BsFacebook, BsTwitter } from 'react-icons/bs';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import '../css/login.css';
@@ -11,17 +11,195 @@ import {BACKEND_URL_HTTP, BACKEND_URL_HTTPS} from '../../../config';
 import imgHolder from '../img/login-holder.jpg';
 import Swal from 'sweetalert2';
 import authService from '../../../services/authService';
+
 function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isEmailFocused, setIsEmailFocused] = useState(false);
     const [isPasswordFocused, setIsPasswordFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Detect admin intent from URL or referrer
+    const isAdminIntent = useMemo(() => {
+        const params = new URLSearchParams(location.search);
+        const fromAdmin = location.state?.from?.pathname?.includes('/admin');
+        const adminParam = params.get('admin') === 'true';
+        const adminMode = params.get('mode') === 'admin';
+        
+        return fromAdmin || adminParam || adminMode;
+    }, [location]);
+
+    // Auto-fill admin credentials when admin intent is detected
+    useEffect(() => {
+        if (isAdminIntent) {
+            setEmail('admin@cdweb.com');
+            setPassword('admin123');
+        }
+    }, [isAdminIntent]);
+
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    };
+
+    // Smart redirect logic based on user roles and intent
+    const handleSuccessfulLogin = (userData) => {
+        console.log('🔍 DEBUG - Full userData:', JSON.stringify(userData, null, 2));
+        
+        const { userRoles } = userData;
+        console.log('🔍 DEBUG - userRoles raw:', userRoles, 'Type:', typeof userRoles, 'isArray:', Array.isArray(userRoles));
+        
+        // Convert userRoles to array if it's a Set or other format
+        let rolesArray = userRoles || [];
+        if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
+            // If it's a Set or similar object, convert to array
+            rolesArray = Object.values(rolesArray);
+        }
+        
+        console.log('🔍 DEBUG - rolesArray after conversion:', rolesArray);
+        
+        const hasAdminRole = rolesArray && rolesArray.includes('ADMIN');
+        const hasUserRole = rolesArray && rolesArray.includes('USER');
+
+        console.log('🔍 DEBUG - hasAdminRole:', hasAdminRole, 'hasUserRole:', hasUserRole, 'isAdminIntent:', isAdminIntent);
+
+        // If admin intent but no admin role
+        if (isAdminIntent && !hasAdminRole) {
+            Swal.fire({
+                title: 'Quyền truy cập bị từ chối',
+                text: 'Tài khoản này không có quyền truy cập trang quản trị',
+                icon: 'error',
+                confirmButtonColor: '#dc3545',
+            });
+            return;
+        }
+
+        // If admin intent and has admin role
+        if (isAdminIntent && hasAdminRole) {
+            storeAdminCredentials(userData);
+            const redirectPath = location.state?.from?.pathname || '/admin/dashboard';
+            navigate(redirectPath);
+            return;
+        }
+
+        // If user has both roles but no specific intent, ask them to choose
+        if (hasAdminRole && hasUserRole && !isAdminIntent) {
+            console.log('🎯 Showing role selection popup - user has both roles!');
+            Swal.fire({
+                title: 'Chọn chế độ đăng nhập',
+                text: 'Bạn có quyền truy cập cả User và Admin. Bạn muốn đăng nhập với vai trò nào?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '🔧 Admin Dashboard',
+                cancelButtonText: '🌐 User Website',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#007bff',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    storeAdminCredentials(userData);
+                    navigate('/admin/dashboard');
+                } else {
+                    storeUserCredentials(userData);
+                    navigate('/');
+                }
+            });
+            return;
+        }
+
+        // If user only has admin role (no user role), go directly to admin dashboard
+        if (hasAdminRole && !hasUserRole) {
+            console.log('🎯 User only has admin role - redirecting to admin dashboard');
+            storeAdminCredentials(userData);
+            navigate('/admin/dashboard');
+            return;
+        }
+
+        // If user has both roles but no specific intent, ask them to choose
+        if (false) { // This block is now handled above
+            console.log('🎯 Showing role selection popup!');
+            Swal.fire({
+                title: 'Chọn chế độ đăng nhập',
+                text: 'Bạn có quyền truy cập cả User và Admin. Bạn muốn đăng nhập với vai trò nào?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '🔧 Admin Dashboard',
+                cancelButtonText: '🌐 User Website',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#007bff',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    storeAdminCredentials(userData);
+                    navigate('/admin/dashboard');
+                } else {
+                    storeUserCredentials(userData);
+                    navigate('/');
+                }
+            });
+            return;
+        }
+
+        // Default: store as user and redirect
+        storeUserCredentials(userData);
+        const redirectPath = location.state?.from?.pathname || '/';
+        navigate(redirectPath);
+    };
+
+    const storeUserCredentials = (userData) => {
+        const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = userData;
+        
+        // Store user credentials
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('userName', userName);
+        localStorage.setItem('userRole', userRole);
+        localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
+        localStorage.setItem('isSuperAdmin', isSuperAdmin);
+        
+        // Clear admin credentials to avoid conflicts
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminRefreshToken');
+        localStorage.removeItem('adminId');
+        localStorage.removeItem('adminName');
+        localStorage.removeItem('adminRole');
+        localStorage.removeItem('adminRoles');
+        localStorage.removeItem('adminIsSuperAdmin');
+
+        // Trigger auth change event
+        window.dispatchEvent(new Event('auth-change'));
+        
+        console.log('Stored user credentials for:', userName, 'isSuperAdmin:', isSuperAdmin);
+    };
+
+    const storeAdminCredentials = (userData) => {
+        const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = userData;
+        
+        // Store admin credentials
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminRefreshToken', refreshToken);
+        localStorage.setItem('adminId', userId);
+        localStorage.setItem('adminName', userName);
+        localStorage.setItem('adminRole', userRole);
+        localStorage.setItem('adminRoles', JSON.stringify(userRoles || []));
+        localStorage.setItem('adminIsSuperAdmin', isSuperAdmin);
+
+        // Clear user credentials to avoid conflicts
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userRoles');
+        localStorage.removeItem('isSuperAdmin');
+
+        // Trigger auth change event
+        window.dispatchEvent(new Event('auth-change'));
+        
+        console.log('Stored admin credentials for:', userName, 'isSuperAdmin:', isSuperAdmin);
     };
 
     const googleLogin = useGoogleLogin({
@@ -38,60 +216,35 @@ function Login() {
                 const { email, name, picture } = userInfo.data;
                 console.log("Google login info:", email, name, picture);
 
-
                 // 2. Gửi thông tin đến backend thông qua authService
                 const response = await authService.loginWithGoogle(tokenResponse.access_token, userInfo.data);
+                console.log('Google login response:', response);
+                setIsLoading(false);
 
-                // 3. Xử lý phản hồi
+                // 3. Show success and smart redirect
                 Swal.fire({
                     title: 'Đăng nhập Google thành công!',
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
-                    navigate('/');
+                    handleSuccessfulLogin(response);
                 });
 
-                // 3. Xử lý phản hồi từ backend
-                if (response.status === 200) {
-                    const { token, refreshToken, userId, userName, userRole } = response.data;
-
-                    // Lưu thông tin vào localStorage
-                    localStorage.setItem('token', token);
-                    localStorage.setItem('refreshToken', refreshToken);
-                    localStorage.setItem('userId', userId);
-                    localStorage.setItem('userName', userName);
-                    localStorage.setItem('userRole', userRole);
-
-                    // Trigger event để cập nhật header
-                    window.dispatchEvent(new Event('auth-change'));
-
-                    // Thông báo thành công và chuyển hướng
-                    Swal.fire({
-                        title: 'Đăng nhập Google thành công!',
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        navigate('/');
-                    });
-                }
             } catch (error) {
-                console.error("Google login error:", error);
-
-                // Hiển thị thông báo lỗi
+                console.error('Google login error:', error);
+                setIsLoading(false);
                 Swal.fire({
                     title: 'Đăng nhập Google thất bại!',
                     text: error.response?.data?.message || 'Đã xảy ra lỗi khi đăng nhập bằng Google',
                     icon: 'error',
                     confirmButtonColor: "#3085d6",
                 });
-            } finally {
-                setIsLoading(false);
             }
         },
         onError: error => {
             console.error('Google Login Failed:', error);
+            setIsLoading(false);
             Swal.fire({
                 title: 'Không thể kết nối với Google',
                 text: 'Vui lòng thử lại sau',
@@ -167,7 +320,7 @@ function Login() {
 
                     console.log('Sending data to backend:', userData);
 
-                    // Process Facebook login in a separate async function
+                    // Process Facebook login
                     processFacebookLogin(userData);
                 });
             } else {
@@ -181,23 +334,21 @@ function Login() {
     const processFacebookLogin = async (userData) => {
         try {
             const response = await authService.loginWithFacebook(userData);
-            console.log('Backend response:', response);
+            console.log('Facebook login response:', response);
             setIsLoading(false);
 
-            // Show success message and redirect
+            // Show success message and smart redirect
             Swal.fire({
                 title: 'Đăng nhập Facebook thành công!',
                 icon: 'success',
                 timer: 1500,
                 showConfirmButton: false
             }).then(() => {
-                navigate('/');
+                handleSuccessfulLogin(response);
             });
         } catch (error) {
             console.error('Error during Facebook login:', error);
-            console.error('Error details:', error.response?.data || error.message);
             setIsLoading(false);
-
             Swal.fire({
                 title: 'Đăng nhập thất bại',
                 text: error.response?.data?.message || 'Có lỗi xảy ra khi đăng nhập',
@@ -212,7 +363,7 @@ function Login() {
 
         if (email.length === 0 || password.length === 0) {
             Swal.fire({
-                title: 'Please fill in all fields',
+                title: 'Vui lòng điền đầy đủ thông tin',
                 icon: 'warning',
                 confirmButtonColor: "#3085d6",
             });
@@ -221,7 +372,7 @@ function Login() {
 
         if (!validateEmail(email)) {
             Swal.fire({
-                title: 'Invalid email format',
+                title: 'Email không đúng định dạng',
                 icon: 'warning',
                 confirmButtonColor: "#3085d6",
             });
@@ -239,23 +390,16 @@ function Login() {
             setIsLoading(false);
 
             if (response.status === 200) {
-                const { token, refreshToken, userId, userName, userRole } = response.data;
-                localStorage.setItem('token', token);
-                localStorage.setItem('refreshToken', refreshToken);
-                localStorage.setItem('userId', userId);
-                localStorage.setItem('userName', userName);
-                localStorage.setItem('userRole', userRole);
-
-                // Trigger event để cập nhật header
-                window.dispatchEvent(new Event('auth-change'));
-
+                const userData = response.data;
+                console.log('Login response:', userData);
+                
                 Swal.fire({
-                    title: 'Login successful!',
+                    title: 'Đăng nhập thành công!',
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
-                    navigate('/');
+                    handleSuccessfulLogin(userData);
                 });
             }
         } catch (error) {
@@ -263,12 +407,12 @@ function Login() {
 
             if (error.response?.status === 400 && error.response?.data?.message === "Tài khoản của bạn chưa được xác minh") {
                 Swal.fire({
-                    title: 'Account not verified',
-                    text: 'Please verify your account before logging in',
+                    title: 'Tài khoản chưa được xác minh',
+                    text: 'Vui lòng xác minh tài khoản trước khi đăng nhập',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Verify now',
-                    cancelButtonText: 'Later',
+                    confirmButtonText: 'Xác minh ngay',
+                    cancelButtonText: 'Để sau',
                     confirmButtonColor: "#3085d6",
                     cancelButtonColor: "#d33",
                 }).then((result) => {
@@ -279,8 +423,8 @@ function Login() {
                 });
             } else {
                 Swal.fire({
-                    title: 'Login failed!',
-                    text: error.response?.data?.message || 'Invalid email or password',
+                    title: 'Đăng nhập thất bại!',
+                    text: error.response?.data?.message || 'Email hoặc mật khẩu không chính xác',
                     icon: 'error',
                     confirmButtonColor: "#3085d6",
                 });
@@ -296,13 +440,28 @@ function Login() {
                         <div className="loading-spinner">
                             <div className="spinner"></div>
                             <div className="loading-text">Đang xử lý...</div>
-                </div>
+                        </div>
                     )}
                     <div className='img-container'>
                         <img src={imgHolder} alt='Login img holder'></img>
-                      </div>
+                    </div>
                     <div className="login-container">
-                        <h2>Đăng nhập</h2>
+                        {isAdminIntent && (
+                            <div className="admin-mode-indicator">
+                                <FaUserShield size={20} />
+                                <span>Chế độ quản trị viên</span>
+                            </div>
+                        )}
+                        
+                        <h2>{isAdminIntent ? 'Đăng nhập quản trị' : 'Đăng nhập'}</h2>
+                        
+                        {isAdminIntent && (
+                            <div className="admin-notice">
+                                <p>🔐 Bạn đang truy cập khu vực quản trị</p>
+                                <p className="admin-demo-hint">Demo: admin@cdweb.com / admin123</p>
+                            </div>
+                        )}
+
                         <form onSubmit={loginHandler}>
                             <div className="form-inputs">
                                 <div className={`form-group ${isEmailFocused ? 'focused' : ''}`}>
@@ -311,8 +470,8 @@ function Login() {
                                     </label>
                                     <input
                                         type='text'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                         onFocus={() => setIsEmailFocused(true)}
                                         onBlur={() => setIsEmailFocused(false)}
                                         placeholder='Email'
@@ -321,11 +480,11 @@ function Login() {
                                 <div className={`form-group ${isPasswordFocused ? 'focused' : ''}`}>
                                     <label>
                                         <FaLock/>
-                        </label>
+                                    </label>
                                     <input
                                         type='password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         onFocus={() => setIsPasswordFocused(true)}
                                         onBlur={() => setIsPasswordFocused(false)}
                                         placeholder='Mật khẩu'
@@ -334,29 +493,43 @@ function Login() {
 
                                 <div className='forget-pass'>
                                     <Link to="/forgot-password">Quên mật khẩu?</Link>
-                      </div>
-
-                                <button className='login-btn' type='submit' disabled={isLoading}>
-                                    ĐĂNG NHẬP
-                        </button>
-                      </div>
-
-                            <div className="social-section">
-                                <div className='break-line'>hoặc đăng nhập với</div>
-
-                                <div className='icon-login'>
-                                    <FcGoogle size={32} onClick={() => googleLogin()} style={{cursor: 'pointer', margin: '10px'}}/>
-                                    <BsFacebook size={30} color="#1877F2" onClick={handleFacebookLogin} style={{cursor: 'pointer', margin: '10px'}}/>
-                                    <BsTwitter size={30} color="#1DA1F2" style={{cursor: 'pointer', margin: '10px'}}/>
                                 </div>
 
-                                <p className='register-here'>Bạn chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+                                <button 
+                                    className={`login-btn ${isAdminIntent ? 'admin-btn' : ''}`} 
+                                    type='submit' 
+                                    disabled={isLoading}
+                                >
+                                    {isAdminIntent ? 'ĐĂNG NHẬP QUẢN TRỊ' : 'ĐĂNG NHẬP'}
+                                </button>
                             </div>
-                    </form>
-                  </div>
+
+                            {!isAdminIntent && (
+                                <div className="social-section">
+                                    <div className='break-line'>hoặc đăng nhập với</div>
+
+                                    <div className='icon-login'>
+                                        <FcGoogle size={32} onClick={() => googleLogin()} style={{cursor: 'pointer', margin: '10px'}}/>
+                                        <BsFacebook size={30} color="#1877F2" onClick={handleFacebookLogin} style={{cursor: 'pointer', margin: '10px'}}/>
+                                        <BsTwitter size={30} color="#1DA1F2" style={{cursor: 'pointer', margin: '10px'}}/>
+                                    </div>
+
+                                    <p className='register-here'>Bạn chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+                                </div>
+                            )}
+
+                            {isAdminIntent && (
+                                <div className="back-to-user">
+                                    <Link to="/login" className="back-link">
+                                        ← Quay lại đăng nhập thường
+                                    </Link>
+                                </div>
+                            )}
+                        </form>
+                    </div>
                 </div>
-              </div>
-      </div>
+            </div>
+        </div>
     );
 }
 
