@@ -5,98 +5,260 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif !important;
 }
-.product-item {
-    margin: 0 10px;
+/* General Styles */
+.home-page {
+    font-family: 'Arial', sans-serif;
 }
 
-.slick-prev, .slick-next {
-    width: 40px;
-    height: 40px;
-    z-index: 2;
+/* Main Banner Section */
+.main-banner-section {
+    padding: 30px 0 60px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
-.slick-prev:before, .slick-next:before {
-    font-size: 40px;
-    opacity: 0.75;
-    color: black;
-}
-
-.slick-prev {
-    left: -25px;
-}
-
-.slick-next {
-    right: -25px;
-}
-
-.slick-slide {
-    padding: 0 10px;
-}
-
-.slick-list {
-    margin: 0 -10px;
-}
-
-/* Custom arrow styles to match section-slide */
-.slick-prev:before, .slick-next:before {
-    content: '←'; /* Use the appropriate character or image */
-    font-size: 30px;
-    color: #000; /* Adjust color as needed */
-}
-
-.slick-next:before {
-    content: '→'; /* Use the appropriate character or image */
-}
-.hero-contact-section {
+.hero-main-banner {
+    height: 500px;
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
-    min-height: 70vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: relative;
-    color: white;
-    text-align: center;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
 }
 
-.hero-contact-section::before {
-    content: '';
+.banner-overlay {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.4);
+    background: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
+    border-radius: 15px;
 }
 
-.hero-contact-content {
-    position: relative;
-    z-index: 2;
-    max-width: 600px;
-    padding: 0 20px;
+.banner-content {
+    position: absolute;
+    top: 50%;
+    left: 60px;
+    transform: translateY(-50%);
+    color: white;
+    max-width: 500px;
 }
 
-.hero-contact-title {
+.main-banner-title {
     font-size: 3.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+    font-weight: 800;
+    margin-bottom: 20px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    letter-spacing: 2px;
 }
 
-.hero-contact-subtitle {
+.main-banner-text {
     font-size: 1.3rem;
-    opacity: 0.9;
+    margin-bottom: 35px;
+    line-height: 1.6;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.main-banner-btn {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    color: white;
+    border: none;
+    padding: 18px 40px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+.main-banner-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(255, 107, 53, 0.4);
+}
+
+/* Side Banners */
+.side-banner-container {
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.side-banner-item {
+    flex: 1;
+}
+
+.side-banner {
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.side-banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 100%);
+    border-radius: 15px;
+}
+
+.side-banner-content {
+    position: absolute;
+    top: 50%;
+    left: 30px;
+    transform: translateY(-50%);
     color: white;
 }
 
-@media (max-width: 768px) {
-    .hero-contact-title {
-        font-size: 2.5rem;
-    }
-
-    .hero-contact-subtitle {
-        font-size: 1.1rem;
-    }
+.side-discount {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: inline-block;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
+
+.side-banner-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.side-banner-btn {
+    background-color: transparent;
+    color: white;
+    border: 2px solid white;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.side-banner-btn:hover {
+    background-color: white;
+    color: #333;
+    transform: translateY(-2px);
+}
+
+/* Features Section */
+.features-section {
+    padding: 80px 0;
+    background-color: #fff;
+}
+
+.feature-box {
+    text-align: center;
+    padding: 40px 20px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.feature-box:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.feature-icon {
+    font-size: 3.5rem;
+    color: #ff6b35;
+    margin-bottom: 25px;
+}
+
+.feature-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.feature-desc {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Section Headers */
+.section-header {
+    margin-bottom: 60px;
+}
+
+.section-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 15px;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    border-radius: 2px;
+}
+
+.section-subtitle {
+    font-size: 1.2rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Featured Products Grid */
+.featured-grid-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.featured-product-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    position: relative;
+    transition: all 0.4s ease;
+    height: 100%;
+}
+
+.featured-product-card:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+}
+
+.discount-label {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
