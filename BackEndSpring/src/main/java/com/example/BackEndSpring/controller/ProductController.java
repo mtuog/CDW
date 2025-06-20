@@ -5,6 +5,7 @@ import com.example.BackEndSpring.model.Product;
 import com.example.BackEndSpring.model.ProductSize;
 import com.example.BackEndSpring.service.CategoryService;
 import com.example.BackEndSpring.service.ProductService;
+import com.example.BackEndSpring.service.DatabaseTranslationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,17 +31,28 @@ public class ProductController {
 
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final DatabaseTranslationService translationService;
 
     @Autowired
-    public ProductController(ProductService productService, CategoryService categoryService) {
+    public ProductController(ProductService productService, CategoryService categoryService, 
+                           DatabaseTranslationService translationService) {
         this.productService = productService;
         this.categoryService = categoryService;
+        this.translationService = translationService;
     }
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
         List<Product> products = productService.getAllProducts();
         return ResponseEntity.ok(products);
+    }
+    
+    // GET all products with translation
+    @GetMapping("/translated")
+    public ResponseEntity<List<Product>> getAllProductsTranslated(@RequestParam(defaultValue = "vi") String lang) {
+        List<Product> products = productService.getAllProducts();
+        List<Product> translatedProducts = translationService.translateProducts(products, lang);
+        return ResponseEntity.ok(translatedProducts);
     }
 
     @GetMapping("/{id}")
@@ -49,17 +61,43 @@ public class ProductController {
         return product.map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+    
+    // GET product by ID with translation
+    @GetMapping("/{id}/translated")
+    public ResponseEntity<Product> getProductByIdTranslated(@PathVariable Long id, @RequestParam(defaultValue = "vi") String lang) {
+        Optional<Product> product = productService.getProductById(id);
+        if (product.isPresent()) {
+            Product translatedProduct = translationService.translateProduct(product.get(), lang);
+            return ResponseEntity.ok(translatedProduct);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     @GetMapping("/top-selling")
     public ResponseEntity<List<Product>> getTopSellingProducts() {
         List<Product> products = productService.getTopSellingProducts(10);
         return ResponseEntity.ok(products);
     }
+    
+    @GetMapping("/top-selling/translated")
+    public ResponseEntity<List<Product>> getTopSellingProductsTranslated(@RequestParam(defaultValue = "vi") String lang) {
+        List<Product> products = productService.getTopSellingProducts(10);
+        List<Product> translatedProducts = translationService.translateProducts(products, lang);
+        return ResponseEntity.ok(translatedProducts);
+    }
 
     @GetMapping("/featured")
     public ResponseEntity<List<Product>> getFeaturedProducts() {
         List<Product> products = productService.getFeaturedProducts();
         return ResponseEntity.ok(products);
+    }
+    
+    @GetMapping("/featured/translated")
+    public ResponseEntity<List<Product>> getFeaturedProductsTranslated(@RequestParam(defaultValue = "vi") String lang) {
+        List<Product> products = productService.getFeaturedProducts();
+        List<Product> translatedProducts = translationService.translateProducts(products, lang);
+        return ResponseEntity.ok(translatedProducts);
     }
 
     @GetMapping("/category/{category}")

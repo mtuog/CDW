@@ -5,7 +5,7 @@ const API_URL = 'http://localhost:8080/api';
 // Tạo axios instance
 const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000, // Tăng timeout lên 30 giây cho translation API
   headers: {
     'Content-Type': 'application/json'
   }
@@ -48,6 +48,17 @@ export const getAllProducts = async () => {
   }
 };
 
+// Hàm lấy tất cả sản phẩm với dịch
+export const getAllProductsTranslated = async (language = 'vi') => {
+  try {
+    const response = await apiClient.get(`/products/translated?lang=${language}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching translated products:', error);
+    throw error;
+  }
+};
+
 // Hàm lấy sản phẩm theo ID
 export const getProductById = async (id) => {
   try {
@@ -59,13 +70,24 @@ export const getProductById = async (id) => {
   }
 };
 
+// Hàm lấy sản phẩm theo ID với dịch
+export const getProductByIdTranslated = async (id, language = 'vi') => {
+  try {
+    const response = await apiClient.get(`/products/${id}/translated?lang=${language}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching translated product with ID ${id}:`, error);
+    throw error;
+  }
+};
+
 // Hàm lấy sản phẩm theo danh mục
 export const getProductsByCategory = async (categoryName) => {
   try {
     const response = await apiClient.get(`/products/category/${categoryName}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching products in category ${categoryName}:`, error);
+    console.error(`Error fetching products for category ${categoryName}:`, error);
     throw error;
   }
 };
@@ -76,7 +98,7 @@ export const getProductsByCategoryId = async (categoryId) => {
     const response = await apiClient.get(`/products/category-id/${categoryId}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching products with category ID ${categoryId}:`, error);
+    console.error(`Error fetching products for category ID ${categoryId}:`, error);
     throw error;
   }
 };
@@ -125,6 +147,17 @@ export const getTopSellingProducts = async () => {
   }
 };
 
+// Hàm lấy sản phẩm bán chạy với dịch
+export const getTopSellingProductsTranslated = async (language = 'vi') => {
+  try {
+    const response = await apiClient.get(`/products/top-selling/translated?lang=${language}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching translated top selling products:', error);
+    throw error;
+  }
+};
+
 // Hàm lấy sản phẩm nổi bật
 export const getFeaturedProducts = async () => {
   try {
@@ -132,6 +165,17 @@ export const getFeaturedProducts = async () => {
     return response.data;
   } catch (error) {
     console.error('Error fetching featured products:', error);
+    throw error;
+  }
+};
+
+// Hàm lấy sản phẩm nổi bật với dịch
+export const getFeaturedProductsTranslated = async (language = 'vi') => {
+  try {
+    const response = await apiClient.get(`/products/featured/translated?lang=${language}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching translated featured products:', error);
     throw error;
   }
 };
@@ -172,7 +216,7 @@ export const updateProductStock = async (id, inStock) => {
     const response = await apiClient.put(`/products/${id}/stock?inStock=${inStock}`, {});
     return response.data;
   } catch (error) {
-    console.error(`Error updating stock status for product with ID ${id}:`, error);
+    console.error(`Error updating stock for product ID ${id}:`, error);
     throw error;
   }
 };
@@ -183,7 +227,7 @@ export const updateProductQuantity = async (id, quantity) => {
     const response = await apiClient.put(`/products/${id}/quantity?quantity=${quantity}`, {});
     return response.data;
   } catch (error) {
-    console.error(`Error updating quantity for product with ID ${id}:`, error);
+    console.error(`Error updating quantity for product ID ${id}:`, error);
     throw error;
   }
 };
@@ -198,19 +242,38 @@ export const deleteProduct = async (id) => {
   }
 };
 
+// Hàm lấy sản phẩm với dịch dựa trên ngôn ngữ
+export const getProductsWithTranslation = async (language = 'vi') => {
+  try {
+    if (language === 'vi') {
+      return await getAllProducts();
+    } else {
+      return await getAllProductsTranslated(language);
+    }
+  } catch (error) {
+    console.error('Error fetching products with translation:', error);
+    throw error;
+  }
+};
+
 export default {
   getAllProducts,
+  getAllProductsTranslated,
   getProductById,
+  getProductByIdTranslated,
   getProductsByCategory,
   getProductsByCategoryId,
   getBestSellerProducts,
   getNewProducts,
   getFavoriteProducts,
   getTopSellingProducts,
+  getTopSellingProductsTranslated,
   getFeaturedProducts,
+  getFeaturedProductsTranslated,
   createProduct,
   updateProduct,
   updateProductStock,
   updateProductQuantity,
-  deleteProduct
+  deleteProduct,
+  getProductsWithTranslation
 };

@@ -10,7 +10,10 @@ export const i18nApi = {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            const data = await response.json();
+            console.log(`🔄 API Response for ${language}:`, data);
+            // Backend trả về {success: true, messages: {...}}
+            return data.messages || {};
         } catch (error) {
             console.error('❌ Error fetching i18n messages:', error);
             throw error;
@@ -20,11 +23,12 @@ export const i18nApi = {
     // Lấy danh sách ngôn ngữ có sẵn
     getAvailableLanguages: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/i18n/languages`);
+            const response = await fetch(`${API_BASE_URL}/api/i18n/supported-languages`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            const data = await response.json();
+            return data.languages || ['vi', 'en']; // fallback
         } catch (error) {
             console.error('❌ Error fetching available languages:', error);
             return ['vi', 'en']; // fallback

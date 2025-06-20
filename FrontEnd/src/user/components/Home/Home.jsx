@@ -4,7 +4,8 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import './Home.css';
-import { getAllProducts, getTopSellingProducts, getFeaturedProducts } from '../../../api/productApi';
+import { getAllProductsTranslated, getTopSellingProductsTranslated, getFeaturedProductsTranslated } from '../../../api/productApi';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const Home = () => {
 	const slideImages = [
@@ -13,6 +14,7 @@ const Home = () => {
 	];
 
 	const navigate = useNavigate();
+	const { t, currentLanguage } = useLanguage();
 
 	const [bestSellerProducts, setBestSellerProducts] = useState([]);
 	const [newProducts, setNewProducts] = useState([]);
@@ -26,11 +28,11 @@ const Home = () => {
 			try {
 				setLoading(true);
 
-				// Fetch all product categories in parallel for better performance
+				// Fetch all product categories with backend translation
 				const [bestSellers, newProds, favorites] = await Promise.all([
-					getTopSellingProducts(),
-					getFeaturedProducts(),
-					getFeaturedProducts()
+					getTopSellingProductsTranslated(currentLanguage),
+					getFeaturedProductsTranslated(currentLanguage),
+					getFeaturedProductsTranslated(currentLanguage)
 				]);
 
 				setBestSellerProducts(bestSellers);
@@ -39,14 +41,14 @@ const Home = () => {
 
 				setLoading(false);
 			} catch (error) {
-				setError("Không thể tải sản phẩm. Vui lòng thử lại sau.");
+				setError(t('product.loadError', { fallback: 'Không thể tải sản phẩm. Vui lòng thử lại sau.' }));
 				setLoading(false);
 				console.error("Error fetching products:", error);
 			}
 		};
 
 		fetchProducts();
-	}, []);
+	}, [currentLanguage, t]); // Re-fetch when language changes
 
 	const settings = {
 		dots: true,
@@ -107,7 +109,7 @@ const Home = () => {
 
 	// Show loading state
 	if (loading) {
-		return <div className="container text-center p-t-80 p-b-80">Loading products...</div>;
+		return <div className="container text-center p-t-80 p-b-80">{t('common.loading', { fallback: 'Đang tải sản phẩm...' })}</div>;
 	}
 
 	// Show error state
@@ -131,11 +133,11 @@ const Home = () => {
 							<div className="hero-main-banner" style={{backgroundImage: `url('assets/images/banner-10.jpg')`}}>
 								<div className="banner-overlay">
 									<div className="banner-content">
-										<h1 className="main-banner-title">ATLANTIS COLLECTION</h1>
+										<h1 className="main-banner-title">{t('home.banner.title', { fallback: 'ATLANTIS COLLECTION' })}</h1>
 										<p className="main-banner-text">
-											Khám phá bộ sưu tập đồng phục sang trọng với thiết kế tinh tế
+											{t('home.banner.subtitle', { fallback: 'Khám phá bộ sưu tập đồng phục sang trọng với thiết kế tinh tế' })}
 										</p>
-										<button className="main-banner-btn" onClick={() => navigate('/products')}>Mua Ngay</button>
+										<button className="main-banner-btn" onClick={() => navigate('/products')}>{t('home.shopNow', { fallback: 'Mua Ngay' })}</button>
 									</div>
 								</div>
 							</div>

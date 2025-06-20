@@ -29,6 +29,7 @@ import PaymentResult from './user/components/Payment/PaymentResult';
 import OrderSuccess from './user/components/Payment/OrderSuccess';
 import UserOrderDetail from './user/components/Profile/tabs/OrderDetail';
 import ChatWidget from './user/components/Chat/ChatWidget';
+
 import { LanguageProvider } from './i18n/LanguageContext'; // Import Context
 import './i18n'; // Import cấu hình i18n
 const Layout = () => {
@@ -83,22 +84,24 @@ const router = createBrowserRouter([
 function App() {
     return (
         <Provider store={store}>
-            <GoogleOAuthProvider clientId="142819065684-4ulb5ra203pjp7vuop3m2sl0fcdmov5m.apps.googleusercontent.com">
-                <div className="App">
-                    <RouterProvider router={router} />
-                    <ToastContainer
-                        position="top-right"
-                        autoClose={3000}
-                        hideProgressBar={false}
-                        newestOnTop
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                    />
-                </div>
-            </GoogleOAuthProvider>
+            <LanguageProvider>
+                <GoogleOAuthProvider clientId="142819065684-4ulb5ra203pjp7vuop3m2sl0fcdmov5m.apps.googleusercontent.com">
+                    <div className="App">
+                        <RouterProvider router={router} />
+                        <ToastContainer
+                            position="top-right"
+                            autoClose={3000}
+                            hideProgressBar={false}
+                            newestOnTop
+                            closeOnClick
+                            rtl={false}
+                            pauseOnFocusLoss
+                            draggable
+                            pauseOnHover
+                        />
+                    </div>
+                </GoogleOAuthProvider>
+            </LanguageProvider>
         </Provider>
     );
 }

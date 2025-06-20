@@ -1,4 +1,4 @@
-*{ 
+*{
     margin: 0;
     padding: 0;
     border: 0;
@@ -23,7 +23,7 @@
     height: 100vh;
     transition: all 0.5s ease;
 }
-  
+
 .overlay {
     position: absolute;
     top: 0;
@@ -33,17 +33,17 @@
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(3px);
 }
-  
+
 .content {
     position: relative;
     z-index: 1;
     padding: 20px;
 }
-  
+
 .main-container {
     display: flex;
-    justify-content: center; 
-    align-items: center; 
+    justify-content: center;
+    align-items: center;
     height: 100vh;
     overflow: hidden;
     color: #000;
@@ -161,10 +161,10 @@
 
 input {
     border: none;
-    outline: none; 
-    background: none; 
-    padding: 12px 8px; 
-    font-size: 15px; 
+    outline: none;
+    background: none;
+    padding: 12px 8px;
+    font-size: 15px;
     width: 100%;
     color: #333;
 }
@@ -187,15 +187,15 @@ input:focus::placeholder {
 /* Button Styles */
 .login-btn {
     width: 100%;
-    padding: 15px; 
+    padding: 15px;
     margin-top: 15px;
-    border-radius: 50px; 
+    border-radius: 50px;
     background: linear-gradient(135deg, #007bff, #00c6ff);
     color: #fff;
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease; 
+    transition: all 0.3s ease;
     border: none;
     letter-spacing: 1px;
     box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
@@ -353,7 +353,7 @@ input:focus::placeholder {
     .img-container {
         display: none;
     }
-    
+
     .login-container {
         border-radius: 20px;
         width: 90%;
@@ -367,15 +367,15 @@ input:focus::placeholder {
         height: auto;
         min-height: 500px;
     }
-    
+
     .login-container h2 {
         font-size: 24px;
     }
-    
+
     input {
         padding: 12px 8px;
     }
-    
+
     .login-btn {
         padding: 12px;
     }
@@ -458,6 +458,24 @@ input:focus::placeholder {
     color: #28a745 !important;
 }
 
+.auto-login-notice {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #856404 !important;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
 .login-btn.admin-btn {
     background: linear-gradient(135deg, #28a745, #20c997);
     box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
@@ -483,4 +501,121 @@ input:focus::placeholder {
 .back-link:hover {
     color: #007bff;
     text-decoration: underline;
-} 
+}
+/* Sửa lại validation styles */
+.input-field {
+    margin-bottom: 20px;
+    position: relative; /* Thêm position relative */
+}
+
+.form-group {
+    display: flex;
+    align-items: center;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 0;
+    transition: all 0.3s ease;
+    background: white;
+    margin-bottom: 0; /* Đặt margin-bottom về 0 */
+}
+
+.form-group.focused {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group.error {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.form-group.success {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.form-group label {
+    padding: 0 12px;
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+.form-group.focused label {
+    color: #007bff;
+}
+
+.form-group.error label {
+    color: #dc3545;
+}
+
+.form-group.success label {
+    color: #28a745;
+}
+
+.form-group input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 12px;
+    font-size: 14px;
+}
+
+/* Sửa lại error-text để không bị lệch */
+.error-text {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-left: 0; /* Đặt về 0 thay vì 4px */
+    display: block; /* Thay đổi từ flex sang block */
+    position: relative; /* Thêm position relative */
+    /* Loại bỏ animation để tránh bị lệch */
+    /* animation: slideDown 0.3s ease; */
+    font-weight: 500;
+    padding-left: 4px; /* Thêm padding thay vì margin */
+}
+
+.success-text {
+    color: #28a745;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-left: 0; /* Đặt về 0 thay vì 4px */
+    display: block; /* Thay đổi từ flex sang block */
+    position: relative; /* Thêm position relative */
+    /* Loại bỏ animation để tránh bị lệch */
+    /* animation: slideDown 0.3s ease; */
+    font-weight: 500;
+    padding-left: 4px; /* Thêm padding thay vì margin */
+}
+
+/* Nếu muốn giữ animation, sử dụng cách này */
+.error-text-animated {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-left: 0;
+    display: block;
+    font-weight: 500;
+    padding-left: 4px;
+    opacity: 0;
+    transform: translateY(-10px);
+    animation: slideDownFixed 0.3s ease forwards;
+}
+
+@keyframes slideDownFixed {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Disable button khi có lỗi */
+.login-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}

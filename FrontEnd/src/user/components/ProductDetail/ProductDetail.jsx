@@ -4,15 +4,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../../store/Actions';
 import { findProductSizesById } from '../../../sizeColorHelpers';
-import { getProductById } from '../../../api/productApi';
+import { getProductByIdTranslated } from '../../../api/productApi';
 import { API_BASE_URL } from '../../../config';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import ProductReviews from './ProductReviews';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const ProductDetail = () => {
 	const { id } = useParams();
 	const [product, setProduct] = useState(null);
+	const { t, currentLanguage } = useLanguage();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const dispatch = useDispatch();
@@ -30,7 +32,8 @@ const ProductDetail = () => {
 		const fetchProductDetails = async () => {
 			try {
 				setLoading(true);
-				const data = await getProductById(parseInt(id));
+				// Fetch product with backend translation
+				const data = await getProductByIdTranslated(parseInt(id), currentLanguage);
 				setProduct(data);
 				
 				// Fetch sizes for this product
@@ -41,14 +44,14 @@ const ProductDetail = () => {
 				
 				setLoading(false);
 			} catch (error) {
-				setError("Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.");
+				setError(t('product.loadError', { fallback: 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.' }));
 				setLoading(false);
 				console.error("Error fetching product details:", error);
 			}
 		};
 
 		fetchProductDetails();
-	}, [id]);
+	}, [id, currentLanguage, t]); // Re-fetch when language changes
 	
 	// Kiểm tra trạng thái wishlist
 	const checkWishlistStatus = async (productId) => {

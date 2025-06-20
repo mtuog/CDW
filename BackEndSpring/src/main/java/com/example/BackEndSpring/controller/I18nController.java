@@ -36,16 +36,92 @@ public class I18nController {
                     messageSource.getMessage("home.banner.title", null, locale));
             messages.put("home.banner.subtitle",
                     messageSource.getMessage("home.banner.subtitle", null, locale));
+            messages.put("home.shopNow",
+                    messageSource.getMessage("home.shopNow", null, "Mua Ngay", locale));
+            messages.put("home.discover",
+                    messageSource.getMessage("home.discover", null, "Khám Phá", locale));
+            messages.put("home.toShop",
+                    messageSource.getMessage("home.toShop", null, "Đến Shop", locale));
+
+            // ===== HEADER MESSAGES =====
+            messages.put("header.freeShipping",
+                    messageSource.getMessage("header.freeShipping", null, "Miễn phí vận chuyển cho đơn hàng tiêu chuẩn trên $100", locale));
+            messages.put("header.help",
+                    messageSource.getMessage("header.help", null, "Trợ giúp và câu hỏi thường gặp", locale));
+            messages.put("header.myAccount",
+                    messageSource.getMessage("header.myAccount", null, "Tài khoản của tôi", locale));
+            messages.put("header.login",
+                    messageSource.getMessage("header.login", null, "Đăng nhập", locale));
+            messages.put("header.logout",
+                    messageSource.getMessage("header.logout", null, "Đăng xuất", locale));
 
             // ===== MENU NAVIGATION =====
             messages.put("menu.home",
                     messageSource.getMessage("menu.home", null, "Trang chủ", locale));
             messages.put("menu.products",
                     messageSource.getMessage("menu.products", null, "Sản phẩm", locale));
+            messages.put("menu.cart",
+                    messageSource.getMessage("menu.cart", null, "Giỏ hàng", locale));
             messages.put("menu.about",
                     messageSource.getMessage("menu.about", null, "Giới thiệu", locale));
             messages.put("menu.contact",
                     messageSource.getMessage("menu.contact", null, "Liên hệ", locale));
+
+            // ===== COMMON ACTIONS =====
+            messages.put("common.search",
+                    messageSource.getMessage("common.search", null, "Tìm kiếm", locale));
+            messages.put("common.add",
+                    messageSource.getMessage("common.add", null, "Thêm", locale));
+            messages.put("common.loading",
+                    messageSource.getMessage("common.loading", null, "Đang tải...", locale));
+            messages.put("common.save",
+                    messageSource.getMessage("common.save", null, "Lưu", locale));
+            messages.put("common.cancel",
+                    messageSource.getMessage("common.cancel", null, "Hủy", locale));
+            messages.put("common.edit",
+                    messageSource.getMessage("common.edit", null, "Sửa", locale));
+            messages.put("common.delete",
+                    messageSource.getMessage("common.delete", null, "Xóa", locale));
+            messages.put("common.yes",
+                    messageSource.getMessage("common.yes", null, "Có", locale));
+            messages.put("common.no",
+                    messageSource.getMessage("common.no", null, "Không", locale));
+
+            // ===== PRODUCT PAGE =====
+            messages.put("product.filter",
+                    messageSource.getMessage("product.filter", null, "Lọc", locale));
+            messages.put("product.moreCategories",
+                    messageSource.getMessage("product.moreCategories", null, "Nhiều Hơn", locale));
+            messages.put("product.searchPlaceholder",
+                    messageSource.getMessage("product.searchPlaceholder", null, "Tìm kiếm sản phẩm...", locale));
+            messages.put("product.loadError",
+                    messageSource.getMessage("product.loadError", null, "Không thể tải dữ liệu. Vui lòng thử lại sau.", locale));
+            messages.put("product.addToCart",
+                    messageSource.getMessage("product.addToCart", null, "Thêm vào giỏ", locale));
+            messages.put("product.viewDetail",
+                    messageSource.getMessage("product.viewDetail", null, "Xem chi tiết", locale));
+            messages.put("product.outOfStock",
+                    messageSource.getMessage("product.outOfStock", null, "Hết hàng", locale));
+            messages.put("product.inStock",
+                    messageSource.getMessage("product.inStock", null, "Còn hàng", locale));
+            messages.put("product.sortBy",
+                    messageSource.getMessage("product.sortBy", null, "Sắp xếp theo", locale));
+            messages.put("product.sortDefault",
+                    messageSource.getMessage("product.sortDefault", null, "Mặc định", locale));
+            messages.put("product.sortLowToHigh",
+                    messageSource.getMessage("product.sortLowToHigh", null, "Giá: Thấp đến cao", locale));
+            messages.put("product.sortHighToLow",
+                    messageSource.getMessage("product.sortHighToLow", null, "Giá: Cao đến thấp", locale));
+
+            // ===== CART MESSAGES =====
+            messages.put("cart.title",
+                    messageSource.getMessage("cart.title", null, "Giỏ hàng", locale));
+            messages.put("cart.empty",
+                    messageSource.getMessage("cart.empty", null, "Giỏ hàng trống", locale));
+            messages.put("cart.total",
+                    messageSource.getMessage("cart.total", null, "Tổng cộng", locale));
+            messages.put("cart.checkout",
+                    messageSource.getMessage("cart.checkout", null, "Thanh toán", locale));
 
             // ===== COMMON BUTTONS =====
             messages.put("button.submit",
@@ -68,6 +144,12 @@ public class I18nController {
                     messageSource.getMessage("form.phone", null, "Số điện thoại", locale));
             messages.put("form.message",
                     messageSource.getMessage("form.message", null, "Tin nhắn", locale));
+            messages.put("form.address",
+                    messageSource.getMessage("form.address", null, "Địa chỉ", locale));
+            messages.put("form.password",
+                    messageSource.getMessage("form.password", null, "Mật khẩu", locale));
+            messages.put("form.confirmPassword",
+                    messageSource.getMessage("form.confirmPassword", null, "Xác nhận mật khẩu", locale));
 
             // ===== SUCCESS/ERROR MESSAGES =====
             messages.put("message.success",
@@ -76,6 +158,22 @@ public class I18nController {
                     messageSource.getMessage("message.error", null, "Có lỗi xảy ra", locale));
             messages.put("message.loading",
                     messageSource.getMessage("message.loading", null, "Đang tải...", locale));
+            messages.put("message.saved",
+                    messageSource.getMessage("message.saved", null, "Đã lưu thành công", locale));
+            messages.put("message.deleted",
+                    messageSource.getMessage("message.deleted", null, "Đã xóa thành công", locale));
+            messages.put("message.updated",
+                    messageSource.getMessage("message.updated", null, "Đã cập nhật thành công", locale));
+
+            // ===== NAVIGATION =====
+            messages.put("nav.previous",
+                    messageSource.getMessage("nav.previous", null, "Trước", locale));
+            messages.put("nav.next",
+                    messageSource.getMessage("nav.next", null, "Tiếp theo", locale));
+            messages.put("nav.first",
+                    messageSource.getMessage("nav.first", null, "Đầu tiên", locale));
+            messages.put("nav.last",
+                    messageSource.getMessage("nav.last", null, "Cuối cùng", locale));
 
             // Response data
             response.put("success", true);

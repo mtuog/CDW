@@ -6,11 +6,13 @@ import { getProductById } from '../../../api/productApi';
 import { findProductSizesById } from '../../../sizeColorHelpers';
 import discountCodeApi from '../../../api/discountCodeApi';
 import Swal from 'sweetalert2';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const ShoppingCart = () => {
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const cart = useSelector((state) => state.cart);
+	const { t } = useLanguage();
 	const [productDetails, setProductDetails] = useState({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -53,7 +55,7 @@ const ShoppingCart = () => {
 				setProductDetails(detailsObject);
 				setLoading(false);
 			} catch (error) {
-				setError("Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.");
+				setError(t('cart.loadError', { fallback: 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.' }));
 				setLoading(false);
 				console.error("Error fetching product details:", error);
 			}
@@ -72,13 +74,13 @@ const ShoppingCart = () => {
 		
 		if (item && product) {
 			if (item.quantity >= product.quantity) {
-				Swal.fire({
-					title: 'Không thể tăng số lượng',
-					text: `Số lượng tối đa có sẵn cho sản phẩm này là ${product.quantity}`,
-					icon: 'warning',
-					confirmButtonText: 'Đã hiểu',
-					confirmButtonColor: '#e65540'
-				});
+							Swal.fire({
+				title: t('cart.cantIncrease', { fallback: 'Không thể tăng số lượng' }),
+				text: t('cart.maxQuantityReached', { fallback: `Số lượng tối đa có sẵn cho sản phẩm này là ${product.quantity}`, params: { quantity: product.quantity } }),
+				icon: 'warning',
+				confirmButtonText: t('common.understood', { fallback: 'Đã hiểu' }),
+				confirmButtonColor: '#e65540'
+			});
 				return;
 			}
 			

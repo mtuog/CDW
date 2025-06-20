@@ -2,6 +2,7 @@ package com.example.BackEndSpring.controller;
 
 import com.example.BackEndSpring.model.Category;
 import com.example.BackEndSpring.service.CategoryService;
+import com.example.BackEndSpring.service.DatabaseTranslationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,16 +20,40 @@ import java.util.Optional;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final DatabaseTranslationService translationService;
 
     @Autowired
-    public CategoryController(CategoryService categoryService) {
+    public CategoryController(CategoryService categoryService, DatabaseTranslationService translationService) {
         this.categoryService = categoryService;
+        this.translationService = translationService;
     }
 
     @GetMapping
     public ResponseEntity<List<Category>> getAllCategories() {
         List<Category> categories = categoryService.getAllCategories();
         return ResponseEntity.ok(categories);
+    }
+    
+    // GET all categories with translation
+    @GetMapping("/translated")
+    public ResponseEntity<List<Category>> getAllCategoriesTranslated(@RequestParam(defaultValue = "vi") String lang) {
+        System.out.println("=== CATEGORY TRANSLATION REQUEST ===");
+        System.out.println("Language parameter: " + lang);
+        
+        List<Category> categories = categoryService.getAllCategories();
+        System.out.println("Original categories count: " + categories.size());
+        for (Category cat : categories) {
+            System.out.println("Original category: " + cat.getName());
+        }
+        
+        List<Category> translatedCategories = translationService.translateCategories(categories, lang);
+        System.out.println("Translated categories count: " + translatedCategories.size());
+        for (Category cat : translatedCategories) {
+            System.out.println("Translated category: " + cat.getName());
+        }
+        System.out.println("====================================");
+        
+        return ResponseEntity.ok(translatedCategories);
     }
 
     @GetMapping("/{id}")

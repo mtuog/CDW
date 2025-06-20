@@ -5,8 +5,9 @@ import ReactSlider from 'react-slider';
 import './Product.css';
 import './Slider.css';
 import { remove as removeDiacritics } from 'diacritics';
-import { getAllProducts, getProductsByCategory } from '../../../api/productApi';
-import { getAllCategories } from '../../../api/categoryApi';
+import { getAllProductsTranslated, getProductsByCategory } from '../../../api/productApi';
+import { getAllCategoriesTranslated } from '../../../api/categoryApi';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 // Function to format categories for display
 const formatCategories = (categories) => {
@@ -27,30 +28,66 @@ const Product = () => {
 	const itemsPerPage = 20;
 
 	const navigate = useNavigate();
+	const { t, currentLanguage } = useLanguage();
 
 	// Fetch products and categories from API
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
 				setLoading(true);
-				// Fetch products
-				const productsData = await getAllProducts();
+				console.log('=== FRONTEND DEBUG ===');
+				console.log('Current language:', currentLanguage);
+				
+				// Fetch products with backend translation
+				const productsData = await getAllProductsTranslated(currentLanguage);
+				console.log('Products received:', productsData?.slice(0, 2)); // Show first 2 products
 				setProducts(productsData);
 				
-				// Fetch categories from API
-				const categoriesData = await getAllCategories();
+				// Fetch categories with backend translation
+				const categoriesData = await getAllCategoriesTranslated(currentLanguage);
+				console.log('Categories received from API:', categoriesData);
+				console.log('Formatted categories:', formatCategories(categoriesData));
 				setCategories(formatCategories(categoriesData));
 				
 				setLoading(false);
 			} catch (error) {
-				setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
-				setLoading(false);
 				console.error("Error fetching data:", error);
+				
+				// Handle specific timeout error
+				if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+					console.log("Timeout detected, trying fallback...");
+					
+					// Try fallback to non-translated endpoints
+					try {
+						const { getAllProducts } = await import('../../../api/productApi');
+						const { getAllCategories } = await import('../../../api/categoryApi');
+						
+						const fallbackProducts = await getAllProducts();
+						const fallbackCategories = await getAllCategories();
+						
+						setProducts(fallbackProducts);
+						setCategories(formatCategories(fallbackCategories));
+						setLoading(false);
+						
+						console.log("Using fallback data successfully");
+						return;
+					} catch (fallbackError) {
+						console.error("Fallback also failed:", fallbackError);
+					}
+					
+					setError(t('product.timeoutError', { fallback: 'Kết nối bị timeout. Vui lòng thử lại sau.' }));
+				} else if (error.response?.status >= 500) {
+					setError(t('product.serverError', { fallback: 'Lỗi server. Vui lòng thử lại sau.' }));
+				} else {
+					setError(t('product.loadError', { fallback: 'Không thể tải dữ liệu. Vui lòng thử lại sau.' }));
+				}
+				
+				setLoading(false);
 			}
 		};
 
 		fetchData();
-	}, []);
+	}, [currentLanguage, t]); // Re-fetch when language changes
 
 	const handleSort = (order) => {
 		setSortOrder(order);
@@ -137,7 +174,7 @@ const Product = () => {
 
 	// Show loading state
 	if (loading) {
-		return <div className="container text-center p-t-80 p-b-80">Loading products...</div>;
+		return <div className="container text-center p-t-80 p-b-80">{t('common.loading', { fallback: 'Đang tải sản phẩm...' })}</div>;
 	}
 
 	// Show error state
@@ -162,7 +199,7 @@ const Product = () => {
 						))}
 						<div className="dropdown">
 							<button className="dropbtn stext-106 cl6 hov1 bor3 trans-04 m-r-32 m-tb-5">
-								Nhiều Hơn
+								{t('product.moreCategories', { fallback: 'Nhiều Hơn' })}
 							</button>
 							<div className="dropdown-content">
 								{categories.slice(visibleCategoryCount).map((category, index) => (
@@ -182,7 +219,7 @@ const Product = () => {
 						<div className="flex-c-m stext-106 cl6 size-104 bor4 pointer hov-btn3 trans-04 m-r-8 m-tb-4 js-show-filter" onClick={toggleFilterVisibility}>
 							<i className="icon-filter cl2 m-r-6 fs-15 trans-04 zmdi zmdi-filter-list"></i>
 							<i className={`icon-close-filter cl2 m-r-6 fs-15 trans-04 zmdi zmdi-close ${isFilterVisible ? '' : 'dis-none'}`}></i>
-							Filter
+							{t('product.filter', { fallback: 'Filter' })}
 						</div>
 					</div>
 					<div className="panel-search p-t-10 p-b-15">
@@ -194,7 +231,7 @@ const Product = () => {
 								className="mtext-107 cl2 size-114 plh2 p-r-15"
 								type="text"
 								name="search-product"
-								placeholder="Tìm kiếm sản phẩm..."
+								placeholder={t('product.searchPlaceholder', { fallback: 'Tìm kiếm sản phẩm...' })}
 								value={searchTerm}
 								onChange={handleSearchChange}
 							/>
@@ -206,27 +243,27 @@ const Product = () => {
 					<div className="panel-filter visible">
 						<div className="wrap-filter flex-w bg6 w-full p-lr-40 p-t-27 p-lr-15-sm">
 							<div className="filter-col1 p-r-15 p-b-27">
-								<div className="mtext-102 cl2 p-b-15">Sort By</div>
+								<div className="mtext-102 cl2 p-b-15">{t('product.sortBy', { fallback: 'Sắp xếp theo' })}</div>
 								<ul>
 									<li className="p-b-6">
 										<a href="#" className="filter-link stext-106 trans-04" onClick={() => handleSort('default')}>
-											Default
+											{t('product.sortDefault', { fallback: 'Mặc định' })}
 										</a>
 									</li>
 									<li className="p-b-6">
 										<a href="#" className="filter-link stext-106 trans-04" onClick={() => handleSort('priceLowToHigh')}>
-											Price: Low to High
+											{t('product.sortLowToHigh', { fallback: 'Giá: Thấp đến cao' })}
 										</a>
 									</li>
 									<li className="p-b-6">
 										<a href="#" className="filter-link stext-106 trans-04" onClick={() => handleSort('priceHighToLow')}>
-											Price: High to Low
+											{t('product.sortHighToLow', { fallback: 'Giá: Cao đến thấp' })}
 										</a>
 									</li>
 								</ul>
 							</div>
 							<div className="filter-col2 p-r-15 p-b-27">
-								<div className="mtext-102 cl2 p-b-15">Price</div>
+								<div className="mtext-102 cl2 p-b-15">{t('product.price', { fallback: 'Giá' })}</div>
 								<ReactSlider
 									className="horizontal-slider"
 									thumbClassName="example-thumb"
@@ -263,14 +300,14 @@ const Product = () => {
 									<img src={product.img} alt={product.name} />
 									{!product.inStock && (
 										<div className="out-of-stock-overlay">
-											<span>Hết hàng</span>
+											<span>{t('product.outOfStock', { fallback: 'Hết hàng' })}</span>
 										</div>
 									)}
 									<button
 										onClick={() => handleDetail(product.id)}
 										className="block2-btn flex-c-m stext-103 cl2 size-102 bg0 bor2 hov-btn1 p-lr-15 trans-04 js-show-modal1"
 									>
-										Chi tiết
+										{t('product.viewDetail', { fallback: 'Chi tiết' })}
 									</button>
 								</div>
 								<div className="block2-txt flex-w flex-t p-t-14">
@@ -281,7 +318,7 @@ const Product = () => {
 										>
 											{product.name}
 											{!product.inStock && (
-												<span className="product-stock-badge">Hết hàng</span>
+												<span className="product-stock-badge">{t('product.outOfStock', { fallback: 'Hết hàng' })}</span>
 											)}
 										</a>
 										<span className="stext-105 cl3">{product.price.toLocaleString()} VND</span>

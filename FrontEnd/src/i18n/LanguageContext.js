@@ -50,15 +50,28 @@ export const LanguageProvider = ({ children }) => {
             console.log(`🔄 Changing language from ${currentLanguage} to ${newLanguage}`);
             setLoading(true);
 
-            const newMessages = await i18nService.getMessages(newLanguage);
-            setMessages(newMessages);
+            // Cập nhật ngôn ngữ hiện tại trước để UI có thể phản hồi ngay
             setCurrentLanguage(newLanguage);
             i18nService.setCurrentLanguage(newLanguage);
 
+            // Load messages mới
+            const newMessages = await i18nService.getMessages(newLanguage);
+            console.log(`📦 New messages loaded for ${newLanguage}:`, Object.keys(newMessages).length, 'keys');
+            
+            setMessages(newMessages);
             setLoading(false);
-            console.log(`✅ Language changed to ${newLanguage}`);
+            
+            console.log(`✅ Language changed to ${newLanguage} successfully`);
+            
+            // Force re-render toàn bộ app
+            setTimeout(() => {
+                window.dispatchEvent(new Event('languageChanged'));
+            }, 0);
+            
         } catch (error) {
             console.error('❌ Failed to change language:', error);
+            // Rollback nếu fail
+            setCurrentLanguage(currentLanguage);
             setLoading(false);
         }
     };
@@ -67,12 +80,24 @@ export const LanguageProvider = ({ children }) => {
     const t = (key, options = {}) => {
         const { fallback = key, params = {} } = options;
 
-        let translation = messages[key] || fallback;
+        // Lấy translation từ messages
+        let translation = messages[key];
+        
+        // Nếu không có, dùng fallback
+        if (!translation) {
+            translation = fallback;
+            // Log missing translation để debug
+            if (process.env.NODE_ENV === 'development') {
+                console.warn(`🔍 Missing translation for key: ${key} (language: ${currentLanguage})`);
+            }
+        }
 
-        // Replace parameters trong text
-        Object.keys(params).forEach(param => {
-            translation = translation.replace(`{${param}}`, params[param]);
-        });
+        // Replace parameters trong text nếu có
+        if (params && Object.keys(params).length > 0) {
+            Object.keys(params).forEach(param => {
+                translation = translation.replace(new RegExp(`\\{${param}\\}`, 'g'), params[param]);
+            });
+        }
 
         return translation;
     };

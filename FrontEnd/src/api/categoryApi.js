@@ -2,6 +2,15 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api';
 
+// Tạo axios instance với timeout cao cho translation
+const apiClient = axios.create({
+  baseURL: API_URL,
+  timeout: 30000, // 30 giây
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 // Hàm lấy tất cả danh mục
 export const getAllCategories = async () => {
   try {
@@ -9,6 +18,17 @@ export const getAllCategories = async () => {
     return response.data;
   } catch (error) {
     console.error('Error fetching categories:', error);
+    throw error;
+  }
+};
+
+// Hàm lấy tất cả danh mục với dịch
+export const getAllCategoriesTranslated = async (language = 'vi') => {
+  try {
+    const response = await apiClient.get(`/categories/translated?lang=${language}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching translated categories:', error);
     throw error;
   }
 };
@@ -60,9 +80,35 @@ export const updateCategory = async (id, categoryData) => {
 // Hàm xóa danh mục
 export const deleteCategory = async (id) => {
   try {
-    await axios.delete(`${API_URL}/categories/${id}`);
+    const response = await axios.delete(`${API_URL}/categories/${id}`);
+    return response.data;
   } catch (error) {
     console.error(`Error deleting category with ID ${id}:`, error);
     throw error;
   }
+};
+
+// Hàm lấy danh mục với dịch dựa trên ngôn ngữ
+export const getCategoriesWithTranslation = async (language = 'vi') => {
+  try {
+    if (language === 'vi') {
+      return await getAllCategories();
+    } else {
+      return await getAllCategoriesTranslated(language);
+    }
+  } catch (error) {
+    console.error('Error fetching categories with translation:', error);
+    throw error;
+  }
+};
+
+export default {
+  getAllCategories,
+  getAllCategoriesTranslated,
+  getCategoryById,
+  getCategoryByName,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategoriesWithTranslation
 }; 

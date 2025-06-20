@@ -27,17 +27,55 @@ function Login() {
         const fromAdmin = location.state?.from?.pathname?.includes('/admin');
         const adminParam = params.get('admin') === 'true';
         const adminMode = params.get('mode') === 'admin';
-        
+
         return fromAdmin || adminParam || adminMode;
     }, [location]);
 
     // Auto-fill admin credentials when admin intent is detected
     useEffect(() => {
         if (isAdminIntent) {
-            setEmail('admin@cdweb.com');
-            setPassword('admin123');
+            // Check if credentials were passed from redirect
+            const prefillEmail = location.state?.prefillEmail;
+            const prefillPassword = location.state?.prefillPassword;
+            
+            if (prefillEmail && prefillPassword) {
+                console.log('🔄 Using prefilled credentials from redirect');
+                setEmail(prefillEmail);
+                setPassword(prefillPassword);
+                
+                // Auto login after a short delay to ensure state is set
+                setTimeout(async () => {
+                    console.log('🚀 Auto-logging in with admin credentials');
+                    try {
+                        setIsLoading(true);
+                        const response = await axios.post(`${BACKEND_URL_HTTP}/api/UserServices/login`, {
+                            email: prefillEmail,
+                            password: prefillPassword
+                        });
+                        
+                        if (response.status === 200) {
+                            console.log('✅ Auto-login successful');
+                            handleSuccessfulLogin(response.data);
+                        }
+                        setIsLoading(false);
+                    } catch (error) {
+                        console.error('❌ Auto-login failed:', error);
+                        setIsLoading(false);
+                        Swal.fire({
+                            title: 'Đăng nhập tự động thất bại',
+                            text: 'Vui lòng đăng nhập thủ công',
+                            icon: 'warning',
+                            confirmButtonColor: "#3085d6",
+                        });
+                    }
+                }, 1000);
+            } else {
+                // Default admin credentials
+                setEmail('admin@cdweb.com');
+                setPassword('admin123');
+            }
         }
-    }, [isAdminIntent]);
+    }, [isAdminIntent, location.state]);
 
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,19 +85,19 @@ function Login() {
     // Smart redirect logic based on user roles and intent
     const handleSuccessfulLogin = (userData) => {
         console.log('🔍 DEBUG - Full userData:', JSON.stringify(userData, null, 2));
-        
+
         const { userRoles } = userData;
         console.log('🔍 DEBUG - userRoles raw:', userRoles, 'Type:', typeof userRoles, 'isArray:', Array.isArray(userRoles));
-        
+
         // Convert userRoles to array if it's a Set or other format
         let rolesArray = userRoles || [];
         if (typeof rolesArray === 'object' && !Array.isArray(rolesArray)) {
             // If it's a Set or similar object, convert to array
             rolesArray = Object.values(rolesArray);
         }
-        
+
         console.log('🔍 DEBUG - rolesArray after conversion:', rolesArray);
-        
+
         const hasAdminRole = rolesArray && rolesArray.includes('ADMIN');
         const hasUserRole = rolesArray && rolesArray.includes('USER');
 
@@ -109,9 +147,25 @@ function Login() {
             return;
         }
 
-        // If user only has admin role (no user role), go directly to admin dashboard
-        if (hasAdminRole && !hasUserRole) {
-            console.log('🎯 User only has admin role - redirecting to admin dashboard');
+        // If user only has admin role (no user role) and not admin intent, redirect to admin login form
+        if (hasAdminRole && !hasUserRole && !isAdminIntent) {
+            console.log('🔄 Admin-only user detected, redirecting to admin login form');
+            Swal.fire({
+                title: 'Tài khoản quản trị viên',
+                text: 'Tài khoản này là tài khoản quản trị viên. Bạn sẽ được chuyển đến trang đăng nhập quản trị.',
+                icon: 'info',
+                confirmButtonText: 'Chuyển đến admin login',
+                confirmButtonColor: '#28a745',
+            }).then(() => {
+                // Redirect to admin login form with pre-filled credentials
+                navigate('/login?admin=true', { state: { prefillEmail: email, prefillPassword: password } });
+            });
+            return;
+        }
+
+        // If admin intent and admin only role, proceed normally
+        if (hasAdminRole && !hasUserRole && isAdminIntent) {
+            console.log('🎯 Admin-only user logging in via admin form - success');
             storeAdminCredentials(userData);
             navigate('/admin/dashboard');
             return;
@@ -150,7 +204,7 @@ function Login() {
 
     const storeUserCredentials = (userData) => {
         const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = userData;
-        
+
         // Store user credentials
         localStorage.setItem('token', token);
         localStorage.setItem('refreshToken', refreshToken);
@@ -159,7 +213,7 @@ function Login() {
         localStorage.setItem('userRole', userRole);
         localStorage.setItem('userRoles', JSON.stringify(userRoles || []));
         localStorage.setItem('isSuperAdmin', isSuperAdmin);
-        
+
         // Clear admin credentials to avoid conflicts
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminRefreshToken');
@@ -171,13 +225,13 @@ function Login() {
 
         // Trigger auth change event
         window.dispatchEvent(new Event('auth-change'));
-        
+
         console.log('Stored user credentials for:', userName, 'isSuperAdmin:', isSuperAdmin);
     };
 
     const storeAdminCredentials = (userData) => {
         const { token, refreshToken, userId, userName, userRole, userRoles, isSuperAdmin } = userData;
-        
+
         // Store admin credentials
         localStorage.setItem('adminToken', token);
         localStorage.setItem('adminRefreshToken', refreshToken);
@@ -198,7 +252,7 @@ function Login() {
 
         // Trigger auth change event
         window.dispatchEvent(new Event('auth-change'));
-        
+
         console.log('Stored admin credentials for:', userName, 'isSuperAdmin:', isSuperAdmin);
     };
 
@@ -392,7 +446,7 @@ function Login() {
             if (response.status === 200) {
                 const userData = response.data;
                 console.log('Login response:', userData);
-                
+
                 Swal.fire({
                     title: 'Đăng nhập thành công!',
                     icon: 'success',
@@ -452,13 +506,17 @@ function Login() {
                                 <span>Chế độ quản trị viên</span>
                             </div>
                         )}
-                        
+
                         <h2>{isAdminIntent ? 'Đăng nhập quản trị' : 'Đăng nhập'}</h2>
-                        
+
                         {isAdminIntent && (
                             <div className="admin-notice">
                                 <p>🔐 Bạn đang truy cập khu vực quản trị</p>
-                                <p className="admin-demo-hint">Demo: admin@cdweb.com / admin123</p>
+                                {location.state?.prefillEmail && (
+                                    <p className="auto-login-notice">
+                                        ⚡ Đang tự động đăng nhập với tài khoản admin...
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -495,9 +553,9 @@ function Login() {
                                     <Link to="/forgot-password">Quên mật khẩu?</Link>
                                 </div>
 
-                                <button 
-                                    className={`login-btn ${isAdminIntent ? 'admin-btn' : ''}`} 
-                                    type='submit' 
+                                <button
+                                    className={`login-btn ${isAdminIntent ? 'admin-btn' : ''}`}
+                                    type='submit'
                                     disabled={isLoading}
                                 >
                                     {isAdminIntent ? 'ĐĂNG NHẬP QUẢN TRỊ' : 'ĐĂNG NHẬP'}

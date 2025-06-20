@@ -5,6 +5,7 @@ import { clearCartLocalStorage } from "../../../store/Actions.js";
 import { BACKEND_URL_HTTP } from '../../../config.js';
 import authService from '../../../services/authService';
 import axios from 'axios';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const Header = () => {
 	const [loggedIn, setLoggedIn] = useState(false);
@@ -17,6 +18,7 @@ const Header = () => {
 	const dispatch = useDispatch();
 	const cart = useSelector(state => state.cart);
 	const location = useLocation();
+	const { t, currentLanguage, changeLanguage } = useLanguage();
 
 	// Styles inline với màu đen
 	const styles = {
@@ -301,6 +303,10 @@ const Header = () => {
 		localStorage.removeItem('cart');
 	};
 
+	const handleLanguageChange = async (lang) => {
+		await changeLanguage(lang);
+	};
+
 	return (
 		<header className="header-v4" style={styles.headerContainer}>
 			<div className="container-menu-desktop">
@@ -308,7 +314,7 @@ const Header = () => {
 				<div style={styles.topBar}>
 					<div className="content-topbar flex-sb-m h-full container">
 						<div className="left-top-bar">
-							Miễn phí vận chuyển cho đơn hàng tiêu chuẩn trên $100
+							{t('header.freeShipping', { fallback: 'Miễn phí vận chuyển cho đơn hàng tiêu chuẩn trên $100' })}
 						</div>
 						<div className="right-top-bar flex-w h-full">
 							<Link
@@ -317,7 +323,7 @@ const Header = () => {
 								onMouseEnter={(e) => e.target.style.color = '#ccc'}
 								onMouseLeave={(e) => e.target.style.color = 'white'}
 							>
-								Trợ giúp và câu hỏi thường gặp
+								{t('header.help', { fallback: 'Trợ giúp và câu hỏi thường gặp' })}
 							</Link>
 
 							{loggedIn ? (
@@ -342,26 +348,38 @@ const Header = () => {
 									onMouseEnter={(e) => e.target.style.color = '#ccc'}
 									onMouseLeave={(e) => e.target.style.color = 'white'}
 								>
-									<span>Đăng nhập</span>
+									<span>{t('header.login', { fallback: 'Đăng nhập' })}</span>
 								</Link>
 							)}
 
-							<Link
-								to="/home"
-								style={styles.topBarLink}
+							<button
+								onClick={() => handleLanguageChange('en')}
+								style={{
+									...styles.topBarLink,
+									background: 'none',
+									border: 'none',
+									cursor: 'pointer',
+									color: currentLanguage === 'en' ? '#717fe0' : 'white'
+								}}
 								onMouseEnter={(e) => e.target.style.color = '#ccc'}
-								onMouseLeave={(e) => e.target.style.color = 'white'}
+								onMouseLeave={(e) => e.target.style.color = currentLanguage === 'en' ? '#717fe0' : 'white'}
 							>
-								EN
-							</Link>
-							<Link
-								to="/home"
-								style={styles.topBarLink}
+								EN {currentLanguage === 'en' && '✓'}
+							</button>
+							<button
+								onClick={() => handleLanguageChange('vi')}
+								style={{
+									...styles.topBarLink,
+									background: 'none',
+									border: 'none',
+									cursor: 'pointer',
+									color: currentLanguage === 'vi' ? '#717fe0' : 'white'
+								}}
 								onMouseEnter={(e) => e.target.style.color = '#ccc'}
-								onMouseLeave={(e) => e.target.style.color = 'white'}
+								onMouseLeave={(e) => e.target.style.color = currentLanguage === 'vi' ? '#717fe0' : 'white'}
 							>
-								VN
-							</Link>
+								VN {currentLanguage === 'vi' && '✓'}
+							</button>
 						</div>
 					</div>
 				</div>
@@ -404,7 +422,7 @@ const Header = () => {
 											}
 										}}
 									>
-										Trang chủ
+										{t('menu.home', { fallback: 'Trang chủ' })}
 									</Link>
 								</li>
 								<li>
@@ -425,7 +443,7 @@ const Header = () => {
 											}
 										}}
 									>
-										Cửa hàng
+										{t('menu.products', { fallback: 'Cửa hàng' })}
 									</Link>
 								</li>
 								<li>
@@ -448,7 +466,7 @@ const Header = () => {
 											}
 										}}
 									>
-										Giỏ hàng
+										{t('menu.cart', { fallback: 'Giỏ hàng' })}
 									</Link>
 								</li>
 								<li>
@@ -469,7 +487,7 @@ const Header = () => {
 											}
 										}}
 									>
-										Giới Thiệu
+										{t('menu.about', { fallback: 'Giới Thiệu' })}
 									</Link>
 								</li>
 								<li>
@@ -490,7 +508,7 @@ const Header = () => {
 											}
 										}}
 									>
-										Liên Hệ
+										{t('menu.contact', { fallback: 'Liên Hệ' })}
 									</Link>
 								</li>
 							</ul>
@@ -538,7 +556,7 @@ const Header = () => {
 								<input
 									type="text"
 									name="search-product"
-									placeholder="Tìm kiếm"
+									placeholder={t('common.search', { fallback: 'Tìm kiếm' })}
 									value={searchTerm}
 									onChange={handleSearchChange}
 									onKeyDown={handleSearchSubmit}
@@ -574,7 +592,7 @@ const Header = () => {
 									onClick={() => navigate('/login')}
 								>
 									<i className="zmdi zmdi-account" style={styles.userIcon}></i>
-									<span style={styles.userName}>Đăng nhập</span>
+									<span style={styles.userName}>{t('header.login', { fallback: 'Đăng nhập' })}</span>
 								</div>
 							)}
 						</div>
